@@ -14,6 +14,7 @@ use({
     -- require("llm").setup()
     -- or, to customize the prompt
     require("llm").setup({
+      responding_hl_group = "Substitute",
       providers = {
         openai = {
           prompt_builder = function(input, _ctx)
