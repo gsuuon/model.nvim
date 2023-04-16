@@ -55,7 +55,7 @@ function M._create_segment_at(_row, _col, _hl_group)
 
   return {
 
-    add = function(text)
+    add = vim.schedule_wrap(function(text)
       local lines = util.string.split(text, '\n')
 
       if lines == nil then
@@ -77,7 +77,7 @@ function M._create_segment_at(_row, _col, _hl_group)
         end_row = new_end_row,
         hl_group = _hl_group
       })
-    end,
+    end),
 
     highlight = function(hl_group)
       _hl_group = hl_group
