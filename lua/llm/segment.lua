@@ -10,8 +10,13 @@ function M.ns_id()
   return M._ns_id
 end
 
-function M._get_extmark_details(mark_id)
-  local row, col, details = unpack(vim.api.nvim_buf_get_extmark_by_id(0, M.ns_id(), mark_id, { details = true }))
+local function get_extmark_details(mark_id)
+  local row, col, details = unpack(vim.api.nvim_buf_get_extmark_by_id(
+    0,
+    M.ns_id(),
+    mark_id,
+    { details = true }
+  ))
 
   return {
     row = row,
@@ -20,7 +25,7 @@ function M._get_extmark_details(mark_id)
   }
 end
 
-function M._end_diff(lines, origin_row, origin_col)
+local function end_delta(lines, origin_row, origin_col)
   local rows_added = #lines - 1
   local last_line_count = #lines[#lines]
 
@@ -30,7 +35,7 @@ function M._end_diff(lines, origin_row, origin_col)
   return table.unpack { origin_row + rows_added, new_col }
 end
 
-function M._create_segment_at(_row, _col, _hl_group)
+local function create_segment_at(_row, _col, _hl_group)
   local open = function(row_start, col_start, row_end, col_end, hl_group)
     return vim.api.nvim_buf_set_extmark(
       0,
@@ -56,20 +61,20 @@ function M._create_segment_at(_row, _col, _hl_group)
   return {
 
     add = vim.schedule_wrap(function(text)
-      local lines = util.string.split(text, '\n')
+      local lines = util.string.split_char(text, '\n')
 
       if lines == nil then
         error("Tried to add nothing")
       end
 
-      local mark = M._get_extmark_details(_extmark_id)
+      local mark = get_extmark_details(_extmark_id)
 
       local r = mark.details.end_row
       local c = mark.details.end_col
 
       vim.api.nvim_buf_set_text(0, r, c, r, c, lines)
 
-      local new_end_row, new_end_col = M._end_diff(lines, r, c)
+      local new_end_row, new_end_col = end_delta(lines, r, c)
 
       vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, {
         id = _extmark_id,
@@ -82,7 +87,7 @@ function M._create_segment_at(_row, _col, _hl_group)
     highlight = function(hl_group)
       _hl_group = hl_group
 
-      local mark = M._get_extmark_details(_extmark_id)
+      local mark = get_extmark_details(_extmark_id)
 
       mark.details.hl_group = _hl_group
       mark.details.id = _extmark_id
@@ -91,7 +96,7 @@ function M._create_segment_at(_row, _col, _hl_group)
     end,
 
     clear_hl = function()
-      local mark = M._get_extmark_details(_extmark_id)
+      local mark = get_extmark_details(_extmark_id)
 
       close()
       _hl_group = nil
@@ -101,7 +106,7 @@ function M._create_segment_at(_row, _col, _hl_group)
     close = close,
 
     delete = function()
-      local mark = M._get_extmark_details(_extmark_id)
+      local mark = get_extmark_details(_extmark_id)
 
       vim.api.nvim_buf_set_text(0, mark.row, mark.col, mark.details.end_row, mark.details.end_col, {})
     end,
@@ -117,11 +122,11 @@ function M.create_segment_at(_row, _col, _hl_group)
       vim.api.nvim_buf_set_lines(0, -1, -1, false, {""})
     end
 
-    return M._create_segment_at(_row + 1, 0, _hl_group)
+    return create_segment_at(_row + 1, 0, _hl_group)
   else
     local row_length = #vim.api.nvim_buf_get_lines(0, _row, _row + 1, false)[1]
 
-    return M._create_segment_at(_row, math.min(_col, row_length), _hl_group)
+    return create_segment_at(_row, math.min(_col, row_length), _hl_group)
   end
 end
 

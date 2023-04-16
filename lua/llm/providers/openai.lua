@@ -7,25 +7,7 @@ function M.authenticate()
   M.api_key = util.env("OPENAI_API_KEY")
 end
 
-function M.request(endpoint, body, opts)
-  local defaults = {
-    headers = {
-      Authorization = "Bearer " .. M.api_key,
-      ["Content-Type"] = "application/json"
-    },
-    compressed = false,
-    body = vim.json.encode(body),
-    raw = "-N"
-  }
-
-  local options = vim.tbl_deep_extend("force", defaults, opts)
-
-  return curl.post(endpoint, options)
-end
-
--- lua function that splits text into multiple strings delimited by a pattern
-
-function M.extract_data(event_string)
+local function extract_data(event_string)
   local success, data = pcall(util.json.decode, event_string:gsub('^data: ', ''))
 
   if success then
@@ -40,26 +22,25 @@ end
 
 ---@param prompt string
 ---@param handlers StreamHandlers
+---@param params any Additional options for OpenAI endpoint
 ---@return nil
-function M.request_completion_stream(prompt, handlers, _params)
-  local params = _params or {}
-
-  local all_content = ""
+function M.request_completion_stream(prompt, handlers, params)
+  local _all_content = ""
 
   local function handle_raw(raw_data)
     local items = util.string.split_pattern(raw_data, "\n\ndata: ")
 
     for _, item in ipairs(items) do
-      local data = M.extract_data(item)
+      local data = extract_data(item)
 
       if data ~= nil then
         if data.content ~= nil then
-          all_content = all_content .. data.content
+          _all_content = _all_content .. data.content
           handlers.on_partial(data.content)
         end
 
         if data.finish_reason ~= nil then
-          handlers.on_finish(all_content, data.finish_reason)
+          handlers.on_finish(_all_content, data.finish_reason)
         end
       else
         local response = util.json.decode(item)
@@ -75,8 +56,8 @@ function M.request_completion_stream(prompt, handlers, _params)
     end
   end
 
-  local function handle_error()
-    handlers.on_error(error, 'response')
+  local function handle_error(error)
+    handlers.on_error(error, 'curl')
   end
 
   return curl.stream({
@@ -94,7 +75,7 @@ function M.request_completion_stream(prompt, handlers, _params)
           role = "user"
         }
       }
-    }, params)
+    }, (params or {}))
   }, handle_raw, handle_error)
 end
 

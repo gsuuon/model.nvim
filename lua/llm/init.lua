@@ -3,9 +3,8 @@ local util = require("llm.util")
 
 local M = {}
 
-function M._get_prompt_and_segment()
-
-  -- visual mode
+local function get_prompt_and_segment()
+  -- TODO check that we're in visual mode
   local selection = util.cursor.selection()
   local text = util.buf.text(selection)
 
@@ -28,7 +27,7 @@ end
 
 function M.request_completion_stream()
 
-  local prompt_segment = M._get_prompt_and_segment()
+  local prompt_segment = get_prompt_and_segment()
   local seg = prompt_segment.segment
 
   M.provider.request_completion_stream(prompt_segment.prompt, {

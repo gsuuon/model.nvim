@@ -13,17 +13,7 @@ function M.env(name)
   end
 end
 
-function M.delay(timeout, fn)
-  local timer = vim.loop.new_timer()
-  timer:start(timeout, 0, vim.schedule_wrap(fn))
-end
-
 M.table = {}
-
-function M.table.slice(tbl, start, fin)
-  return {table.unpack(tbl, start, fin)}
-end
-
 
 function M.table.map_to_array(table, fn)
   local result = {}
@@ -53,7 +43,7 @@ end
 
 M.string = {}
 
-function M.string.split(text, sep)
+function M.string.split_char(text, sep)
   local res = {}
 
   local _cur = ""
@@ -103,8 +93,6 @@ function M.cursor.selection()
   local start = vim.fn.getpos("'<")
   local stop = vim.fn.getpos("'>")
 
-  -- stop col can be int32 limit, which means entire line
-
   return {
     start = {
       row = start[2] - 1,
@@ -112,7 +100,7 @@ function M.cursor.selection()
     },
     stop = {
       row = stop[2] - 1,
-      col = stop[3]
+      col = stop[3] -- stop col can be vim.v.maxcol which means entire line
     }
   }
 end

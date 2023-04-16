@@ -5,11 +5,12 @@ local M = {}
 
 local function build_args(opts)
   return vim.tbl_flatten({
-    {'-N', '-X', opts.method },
+    '-N',
+    '-X', opts.method,
     util.table.map_to_array(opts.headers, function(k, v)
       return {'-H', k .. ': ' .. v}
     end),
-    { '--data-raw', vim.json.encode(opts.body) },
+    '--data-raw', vim.json.encode(opts.body),
     opts.url
   })
 end
@@ -24,25 +25,23 @@ function M.stream(opts, on_stdout, on_error)
   if stdout == nil then return error("Failed to open stdout pipe") end
   if stderr == nil then return error("Failed to open stderr pipe") end
 
-  local args = build_args(opts)
-
-  local err_out = ""
+  local _error_output = ""
 
   local handle, _ = uv.spawn('curl',
     {
-      args = args,
+      args = build_args(opts),
       stdio = { nil, stdout, stderr }
     },
     function(exit_code)
       if exit_code ~= 0 then
-        on_error(err_out)
+        on_error(_error_output)
       end
     end
   )
 
   uv.read_start(stderr, function(err, text)
     assert(not err, err)
-    if text then err_out = err_out .. text end
+    if text then _error_output = _error_output .. text end
   end)
 
   uv.read_start(stdout, function(err, text)
