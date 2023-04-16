@@ -21,25 +21,34 @@ function M._get_prompt_and_segment()
   }
 end
 
+---@class StreamHandlers
+---@field on_partial (fun(partial_text: string): nil)
+---@field on_finish (fun(complete_text: string, finish_reason: string): nil)
+---@field on_error (fun(data: any, label: string): nil) }
+
 function M.request_completion_stream()
 
   local prompt_segment = M._get_prompt_and_segment()
   local seg = prompt_segment.segment
 
-  M.provider.request_completion_stream(prompt_segment.prompt,
+  M.provider.request_completion_stream(prompt_segment.prompt, {
 
-    vim.schedule_wrap(function(partial)
+    on_partial = vim.schedule_wrap(function(partial)
       seg.add(partial)
     end),
 
-    vim.schedule_wrap(function(_final, reason)
+    on_finish = vim.schedule_wrap(function(_, reason)
       if reason == 'stop' then
         seg.close()
       else
         seg.highlight("Error")
       end
-    end)
-  )
+    end),
+
+    on_error = function(data, label)
+      vim.notify(vim.inspect(data), vim.log.levels.ERROR, {title = 'stream error ' .. label})
+    end
+  })
 end
 
 function M.commands(opts)

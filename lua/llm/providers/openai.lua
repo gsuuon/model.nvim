@@ -1,4 +1,4 @@
-local curl = require("plenary.curl")
+local curl = require("llm.curl")
 local util = require("llm.util")
 
 local M = {}
@@ -23,50 +23,79 @@ function M.request(endpoint, body, opts)
   return curl.post(endpoint, options)
 end
 
+-- lua function that splits text into multiple strings delimited by a pattern
+
 function M.extract_data(event_string)
-  local success, data = pcall(util.json.decode, event_string:gsub('data: ', ''))
+  local success, data = pcall(util.json.decode, event_string:gsub('^data: ', ''))
 
   if success then
-    return {
-      content = data.choices[1].delta.content,
-      finish_reason = data.choices[1].finish_reason
-    }
+    if (data or {}).choices ~= nil then
+      return {
+        content = (data.choices[1].delta or {}).content,
+        finish_reason = data.choices[1].finish_reason
+      }
+    end
   end
 end
 
-function M.request_completion_stream(prompt, on_partial, on_finish, params)
-  local params = params or {}
+---@param prompt string
+---@param handlers StreamHandlers
+---@return nil
+function M.request_completion_stream(prompt, handlers, _params)
+  local params = _params or {}
 
-  local _content = ""
+  local all_content = ""
 
-  return M.request( "https://api.openai.com/v1/chat/completions",
-    vim.tbl_deep_extend("force", {
-      model = "gpt-3.5-turbo",
-      messages = {
-        {
-          role = "user",
-          content = prompt
-        }
-      },
-      stream = true,
-    }, params), {
-      stream = function(_, raw_data)
-        if raw_data ~= "" then
-          local data = M.extract_data(raw_data)
-          if data ~= nil then
-            if data.content ~= nil then
-              _content = _content .. data.content
-              on_partial(data.content)
-            end
+  local function handle_raw(raw_data)
+    local items = util.string.split_pattern(raw_data, "\n\ndata: ")
 
-            if data.finish_reason ~= nil then
-              on_finish(_content, data.finish_reason)
-            end
+    for _, item in ipairs(items) do
+      local data = M.extract_data(item)
+
+      if data ~= nil then
+        if data.content ~= nil then
+          all_content = all_content .. data.content
+          handlers.on_partial(data.content)
+        end
+
+        if data.finish_reason ~= nil then
+          handlers.on_finish(all_content, data.finish_reason)
+        end
+      else
+        local response = util.json.decode(item)
+
+        if response ~= nil then
+          handlers.on_error(response, 'response')
+        else
+          if not item:match("^%[DONE%]") then
+            handlers.on_error(item, 'item')
           end
         end
       end
-    }
-  )
+    end
+  end
+
+  local function handle_error()
+    handlers.on_error(error, 'response')
+  end
+
+  return curl.stream({
+    headers = {
+      Authorization = 'Bearer ' .. util.env('OPENAI_API_KEY'),
+      ['Content-Type']= 'application/json',
+    },
+    method = 'POST',
+    url = 'https://api.openai.com/v1/chat/completions',
+    body = vim.tbl_deep_extend("force", {
+      stream = true,
+      model = "gpt-3.5-turbo",
+      messages = {
+        { content = prompt,
+          role = "user"
+        }
+      }
+    }, params)
+  }, handle_raw, handle_error)
 end
 
 return M
