@@ -81,6 +81,7 @@ end
 function M.setup(opts)
   -- TODO still figuring out this api
   local _opts = vim.tbl_deep_extend("force", {
+    responding_hl_group = "Comment",
     active = "openai",
     providers = {
       openai = {
@@ -91,7 +92,7 @@ function M.setup(opts)
   }, opts or {})
 
 
-  M.responding_hl_group = _opts.responding_hl_group or "Comment"
+  M.responding_hl_group = _opts.responding_hl_group
 
   for _, provider_config in pairs(_opts.providers) do
     local provider = provider_config[1]
