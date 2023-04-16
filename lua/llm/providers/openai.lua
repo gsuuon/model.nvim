@@ -22,20 +22,19 @@ function M.request(endpoint, body, opts)
   return curl.post(endpoint, options)
 end
 
+function M.extract_data(event_string)
+  local success, data = pcall(util.json.decode, event_string:gsub('data: ', ''))
+
+  if success then
+    return {
+      content = data.choices[1].delta.content,
+      finish_reason = data.choices[1].finish_reason
+    }
+  end
+end
+
 function M.request_completion_stream(prompt, on_partial, on_finish, params)
   local params = params or {}
-
-  local function extract_data(event_string)
-    return util.json.decode(event_string:gsub('data: ', ''))
-  end
-
-  local function get_content(data)
-    return data.choices[1].delta.content
-  end
-
-  local function get_finish_reason(data)
-    return data.choices[1].finish_reason
-  end
 
   local _content = ""
 
@@ -48,23 +47,19 @@ function M.request_completion_stream(prompt, on_partial, on_finish, params)
           content = prompt
         }
       },
-      stream = true
+      stream = true,
     }, params), {
       stream = function(_, raw_data)
         if raw_data ~= "" then
-          local success, data = pcall(extract_data, raw_data)
-          if success then
-            local content = get_content(data)
-
-            if content ~= nil then
-              _content = _content .. content
-              on_partial(content)
+          local data = M.extract_data(raw_data)
+          if data ~= nil then
+            if data.content ~= nil then
+              _content = _content .. data.content
+              on_partial(data.content)
             end
 
-            local finish_reason = get_finish_reason(data)
-
-            if finish_reason ~= nil then
-              on_finish(_content, finish_reason)
+            if data.finish_reason ~= nil then
+              on_finish(_content, data.finish_reason)
             end
           end
         end
