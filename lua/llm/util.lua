@@ -1,5 +1,7 @@
 local M = {}
 
+-- All positions should be 0-indexed
+
 function M.env(name)
   local value = os.getenv(name)
 
@@ -72,6 +74,15 @@ function M.cursor.selection()
       row = stop[2] - 1,
       col = stop[3]
     }
+  }
+end
+
+function M.cursor.position()
+  local pos = vim.api.nvim_win_get_cursor(0)
+
+  return {
+    row = pos[1] - 1,
+    col = pos[2]
   }
 end
 
