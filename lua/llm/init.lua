@@ -3,16 +3,9 @@ local util = require("llm.util")
 
 local M = {}
 
-function M.setup(opts)
-  opts = opts or {}
+function M._get_prompt_and_segment()
 
-  M.provider = opts.provider or require("llm.providers.openai")
-  M.provider.authenticate()
-end
-
-function M.request_completion_stream()
-
-  -- should only do this if we're in visual mode
+  -- visual mode
   local selection = util.cursor.selection()
   local text = util.buf.text(selection)
 
@@ -22,7 +15,18 @@ function M.request_completion_stream()
     "Comment"
   )
 
-  M.provider.request_completion_stream(text,
+  return {
+    prompt = text,
+    segment = seg
+  }
+end
+
+function M.request_completion_stream()
+
+  local prompt_segment = M._get_prompt_and_segment()
+  local seg = prompt_segment.segment
+
+  M.provider.request_completion_stream(prompt_segment.prompt,
 
     vim.schedule_wrap(function(partial)
       seg.add(partial)
@@ -36,6 +40,25 @@ function M.request_completion_stream()
       end
     end)
   )
+end
+
+function M.commands(opts)
+  vim.api.nvim_create_user_command("Llm", M.request_completion_stream, {
+    range = true,
+    desc = "Request completion of selection",
+    force = true
+    -- TODO add custom Llm transform functions to complete :command-complete
+    -- complete = function() end
+  })
+end
+
+function M.setup(opts)
+  opts = opts or {}
+
+  M.provider = opts.provider or require("llm.providers.openai")
+  M.provider.authenticate()
+
+  M.commands(opts)
 end
 
 return M
