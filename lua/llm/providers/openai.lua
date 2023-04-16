@@ -14,7 +14,8 @@ function M.request(endpoint, body, opts)
       ["Content-Type"] = "application/json"
     },
     compressed = false,
-    body = vim.json.encode(body)
+    body = vim.json.encode(body),
+    raw = "-N"
   }
 
   local options = vim.tbl_deep_extend("force", defaults, opts)
