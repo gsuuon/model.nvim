@@ -85,7 +85,7 @@ function M.buf.text(selection)
     selection.start.row,
     selection.start.col,
     selection.stop.row,
-    selection.stop.col == M.COL_ENTIRE_LINE and 0 or selection.stop.col,
+    selection.stop.col == M.COL_ENTIRE_LINE and -1 or selection.stop.col,
     {}
   ), "\n")
 end
