@@ -114,20 +114,51 @@ local function create_segment_at(_row, _col, _hl_group)
   }
 end
 
-function M.create_segment_at(_row, _col, _hl_group)
-  if _col == util.COL_ENTIRE_LINE then
-    local target_row = _row + 1
-
-    if target_row >= vim.api.nvim_buf_line_count(0) then
-      vim.api.nvim_buf_set_lines(0, -1, -1, false, {""})
+function M.create_segment_at(row, col, hl_group)
+  local function shift_if_complete_line(pos)
+    if pos.col == util.COL_ENTIRE_LINE then
+      return {
+        col = 0,
+        row = pos.row + 1
+      }
     end
 
-    return create_segment_at(_row + 1, 0, _hl_group)
-  else
-    local row_length = #vim.api.nvim_buf_get_lines(0, _row, _row + 1, false)[1]
-
-    return create_segment_at(_row, math.min(_col, row_length), _hl_group)
+    return pos
   end
+
+  local function shift_to_bounds(pos)
+    local buf_lines_count = vim.api.nvim_buf_line_count(0)
+    local row_out_of_bounds = pos.row >= buf_lines_count
+
+    if row_out_of_bounds then
+      vim.api.nvim_buf_set_lines(0, -1, -1, false, {""})
+
+      return {
+        row = buf_lines_count,
+        col = 0
+      }
+    else
+      local row_length = #vim.api.nvim_buf_get_lines(0, pos.row, pos.row + 1, false)[1]
+
+      local col_out_of_bounds = pos.col > row_length
+
+      if col_out_of_bounds then
+        return {
+          row = pos.row,
+          col = row_length - 1
+        }
+      end
+    end
+
+    return pos
+  end
+
+  local target_pos = shift_to_bounds(shift_if_complete_line({
+    row = row,
+    col = col
+  }))
+
+  return create_segment_at(target_pos.row, target_pos.col, hl_group)
 end
 
 M._debug = {}

@@ -3,21 +3,30 @@ local util = require("llm.util")
 
 local M = {}
 
-local function get_prompt_and_segment()
-  -- TODO check that we're in visual mode
-  local selection = util.cursor.selection()
-  local text = util.buf.text(selection)
+local function get_prompt_and_segment(no_selection)
+  if no_selection then
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local seg = segment.create_segment_at(#lines, 0, M.responding_hl_group)
 
-  local seg = segment.create_segment_at(
-    selection.stop.row,
-    selection.stop.col,
-    "Comment"
-  )
+    return {
+      prompt = table.concat(lines, '\n'),
+      segment = seg
+    }
+  else
+    local selection = util.cursor.selection()
+    local text = util.buf.text(selection)
 
-  return {
-    prompt = text,
-    segment = seg
-  }
+    local seg = segment.create_segment_at(
+      selection.stop.row,
+      selection.stop.col,
+      M.responding_hl_group
+    )
+
+    return {
+      prompt = text,
+      segment = seg
+    }
+  end
 end
 
 ---@class StreamHandlers
@@ -25,9 +34,11 @@ end
 ---@field on_finish (fun(complete_text: string, finish_reason: string): nil)
 ---@field on_error (fun(data: any, label: string): nil) }
 
-function M.request_completion_stream()
+require 'library/std'
+function M.request_completion_stream(args)
+  local no_selection = args.range == 0
 
-  local prompt_segment = get_prompt_and_segment()
+  local prompt_segment = get_prompt_and_segment(no_selection)
   local seg = prompt_segment.segment
 
   M.provider.request_completion_stream(prompt_segment.prompt, {
@@ -62,6 +73,8 @@ end
 
 function M.setup(opts)
   opts = opts or {}
+
+  M.responding_hl_group = opts.responding_hl_group or "Comment"
 
   M.provider = opts.provider or require("llm.providers.openai")
   M.provider.authenticate()
