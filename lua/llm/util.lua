@@ -129,4 +129,8 @@ function M.buf.text(selection)
   ), "\n")
 end
 
+function M.buf.filename()
+  return vim.fs.normalize(vim.fn.expand('%:.'))
+end
+
 return M

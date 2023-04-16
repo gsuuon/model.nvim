@@ -19,6 +19,9 @@ end
 ---@param on_stdout fun(text: string): nil
 ---@param on_error fun(text: string): nil
 function M.stream(opts, on_stdout, on_error)
+  if M._is_debugging then
+    vim.notify(vim.inspect(opts.body), vim.log.levels.INFO, { title = "Request body"})
+  end
   local stdout = uv.new_pipe(false)
   local stderr = uv.new_pipe(false)
 

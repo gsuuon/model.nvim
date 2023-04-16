@@ -34,7 +34,6 @@ end
 ---@field on_finish (fun(complete_text: string, finish_reason: string): nil)
 ---@field on_error (fun(data: any, label: string): nil) }
 
-require 'library/std'
 function M.request_completion_stream(args)
   local no_selection = args.range == 0
 
@@ -71,15 +70,37 @@ function M.commands(opts)
   })
 end
 
+function M.set_active_provider(provider)
+  if provider == nil then
+    error('Tried to set nil provider for Llm')
+  end
+
+  M.provider = provider
+end
+
 function M.setup(opts)
-  opts = opts or {}
+  -- TODO still figuring out this api
+  local _opts = vim.tbl_deep_extend("force", {
+    active = "openai",
+    providers = {
+      openai = {
+        require("llm.providers.openai"),
+        _active = true, -- needs a keyvalue to force table to not behave like an array
+      }
+    }
+  }, opts or {})
 
-  M.responding_hl_group = opts.responding_hl_group or "Comment"
 
-  M.provider = opts.provider or require("llm.providers.openai")
-  M.provider.authenticate()
+  M.responding_hl_group = _opts.responding_hl_group or "Comment"
 
-  M.commands(opts)
+  for _, provider_config in pairs(_opts.providers) do
+    local provider = provider_config[1]
+    provider.initialize(provider_config)
+  end
+
+  M.set_active_provider(_opts.providers[_opts.active][1])
+
+  M.commands(_opts)
 end
 
 return M

@@ -3,21 +3,32 @@ local util = require("llm.util")
 
 local M = {}
 
-function M.authenticate()
+function M.initialize(opts)
+  local _opts = opts or {}
+
   M.api_key = util.env("OPENAI_API_KEY")
+  M.prompt_builder = _opts.prompt_builder or M._default_prompt_builder
 end
 
 local function extract_data(event_string)
   local success, data = pcall(util.json.decode, event_string:gsub('^data: ', ''))
 
-  if success then
-    if (data or {}).choices ~= nil then
-      return {
-        content = (data.choices[1].delta or {}).content,
-        finish_reason = data.choices[1].finish_reason
-      }
-    end
+  if success and (data or {}).choices ~= nil then
+    return {
+      content = (data.choices[1].delta or {}).content,
+      finish_reason = data.choices[1].finish_reason
+    }
   end
+end
+
+function M._default_prompt_builder(input, _)
+  return {
+    messages = {
+      { content = input,
+        role = "user"
+      }
+    }
+  }
 end
 
 ---@param prompt string
@@ -69,13 +80,10 @@ function M.request_completion_stream(prompt, handlers, params)
     url = 'https://api.openai.com/v1/chat/completions',
     body = vim.tbl_deep_extend("force", {
       stream = true,
-      model = "gpt-3.5-turbo",
-      messages = {
-        { content = prompt,
-          role = "user"
-        }
-      }
-    }, (params or {}))
+      model = "gpt-3.5-turbo"
+    }, M.prompt_builder(prompt, {
+        filename = util.buf.filename()
+      }), (params or {}))
   }, handle_raw, handle_error)
 end
 
