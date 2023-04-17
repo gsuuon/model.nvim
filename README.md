@@ -13,7 +13,19 @@ Talk to Large Language Model AI in Neovim.
 ### With [packer.nvim](https://github.com/wbthomason/packer.nvim)
 
 ```lua
-use 'gsuuon/llm.nvim'
+use { 
+  'gsuuon/llm.nvim',
+  config = function()
+    require('llm').setup()
+  end
+}
+```
+### With [lazy.nvim](https://github.com/folke/lazy.nvim)
+
+```lua
+require('lazy').setup({
+  { 'gsuuon/llm.nvim', config = true }
+})
 ```
 
 ## Usage
