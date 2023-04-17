@@ -13,7 +13,7 @@ Talk to Large Language Model AI in Neovim.
 ### With [packer.nvim](https://github.com/wbthomason/packer.nvim)
 
 ```lua
-use '~/code/gsuuon/llm.nvim'
+use 'gsuuon/llm.nvim'
 ```
 
 ## Usage
