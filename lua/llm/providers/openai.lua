@@ -8,7 +8,7 @@ local api_key = (function()
 
   return function()
     if key == nil then
-      local env_key = util.env("OPENAI_API_KEY")
+      key = util.env("OPENAI_API_KEY")
     end
 
     return key
