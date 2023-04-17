@@ -30,22 +30,22 @@ Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform
 - Customize the prompt and highlight group of in-progress responses
 
 ```lua
-use({
-  "gsuuon/llm.nvim",
+use {
+  'gsuuon/llm.nvim',
   config = function()
-    require("llm").setup({
-      responding_hl_group = "Substitute",
+    require('llm').setup({
+      responding_hl_group = 'Substitute',
       providers = {
         openai = {
           prompt_builder = function(input, _ctx)
             return {
               messages = {
                 {
-                  role = "system",
-                  content = "You are a 10x super elite programmer. Continue only with code. Do not write tests, examples, or output of code unless explicitly asked for.",
+                  role = 'system',
+                  content = 'You are a 10x super elite programmer. Continue only with code. Do not write tests, examples, or output of code unless explicitly asked for.',
                 },
                 {
-                  role = "user",
+                  role = 'user',
                   content = input,
                 }
               }
@@ -55,5 +55,5 @@ use({
       }
     })
   end
-})
+}
 ```
