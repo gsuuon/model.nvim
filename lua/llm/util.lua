@@ -114,7 +114,7 @@ function M.cursor.position()
   }
 end
 
-M.COL_ENTIRE_LINE = vim.v.maxcol
+M.COL_ENTIRE_LINE = vim.v.maxcol or 2147483647
 
 M.buf = {}
 
