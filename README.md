@@ -31,7 +31,7 @@ Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform
 
 ```lua
 use({
-  "~/code/gsuuon/llm.nvim",
+  "gsuuon/llm.nvim",
   config = function()
     require("llm").setup({
       responding_hl_group = "Substitute",
