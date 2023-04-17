@@ -3,6 +3,18 @@ local util = require("llm.util")
 
 local M = {}
 
+local api_key = (function()
+  local key
+
+  return function()
+    if key == nil then
+      local env_key = util.env("OPENAI_API_KEY")
+    end
+
+    return key
+  end
+end)()
+
 local function extract_data(event_string)
   local success, data = pcall(util.json.decode, event_string:gsub('^data: ', ''))
 
@@ -66,7 +78,7 @@ function M.request_completion_stream(prompt, handlers, params)
 
   return curl.stream({
     headers = {
-      Authorization = 'Bearer ' .. util.env('OPENAI_API_KEY'),
+      Authorization = 'Bearer ' .. api_key(),
       ['Content-Type']= 'application/json',
     },
     method = 'POST',
@@ -83,7 +95,6 @@ end
 function M.initialize(opts)
   local _opts = opts or {}
 
-  M.api_key = util.env("OPENAI_API_KEY")
   M.prompt_builder = _opts.prompt_builder or default_prompt_builder
 end
 
