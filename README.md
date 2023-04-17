@@ -1,4 +1,4 @@
-# Llm.nvim
+# 🧠 llm.nvim
 
 Talk to Large Language Model AI in Neovim.
 
@@ -6,7 +6,7 @@ Talk to Large Language Model AI in Neovim.
 
 ---
 
-## Setup
+## 🦾 Setup
 
 - Requires Nvim 0.8.0 or higher
 
@@ -28,7 +28,7 @@ require('lazy').setup({
 })
 ```
 
-## Usage
+## 💭 Usage
 
 `:Llm` - complete either the visual selection or the current buffer. Completion is added on the next line in visual line-wise mode, or from the end of the selection in char-wise visual mode.
 
@@ -37,7 +37,7 @@ require('lazy').setup({
 Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform.openai.com/account/api-keys) before starting nvim.
 
 
-## Configuration
+## 🧵Configuration
 
 - Customize the prompt and highlight group of in-progress responses
 
