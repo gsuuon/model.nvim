@@ -40,8 +40,7 @@ function M.request_completion_stream(args)
   local prompt_segment = get_prompt_and_segment(no_selection)
   local seg = prompt_segment.segment
 
-  M.provider.request_completion_stream(prompt_segment.prompt, {
-
+  local success, result = pcall(M.provider.request_completion_stream, prompt_segment.prompt, {
     on_partial = vim.schedule_wrap(function(partial)
       seg.add(partial)
     end),
@@ -58,6 +57,10 @@ function M.request_completion_stream(args)
       vim.notify(vim.inspect(data), vim.log.levels.ERROR, {title = 'stream error ' .. label})
     end
   })
+
+  if not success then
+    util.eshow(result)
+  end
 end
 
 function M.commands(opts)
