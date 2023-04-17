@@ -3,13 +3,6 @@ local util = require("llm.util")
 
 local M = {}
 
-function M.initialize(opts)
-  local _opts = opts or {}
-
-  M.api_key = util.env("OPENAI_API_KEY")
-  M.prompt_builder = _opts.prompt_builder or M._default_prompt_builder
-end
-
 local function extract_data(event_string)
   local success, data = pcall(util.json.decode, event_string:gsub('^data: ', ''))
 
@@ -21,7 +14,7 @@ local function extract_data(event_string)
   end
 end
 
-function M._default_prompt_builder(input, _)
+local function default_prompt_builder(input, _)
   return {
     messages = {
       { content = input,
@@ -85,6 +78,13 @@ function M.request_completion_stream(prompt, handlers, params)
         filename = util.buf.filename()
       }), (params or {}))
   }, handle_raw, handle_error)
+end
+
+function M.initialize(opts)
+  local _opts = opts or {}
+
+  M.api_key = util.env("OPENAI_API_KEY")
+  M.prompt_builder = _opts.prompt_builder or default_prompt_builder
 end
 
 return M
