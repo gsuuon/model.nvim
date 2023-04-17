@@ -11,7 +11,8 @@ With Packer
 use({
   "~/code/gsuuon/llm.nvim",
   config = function()
-    -- require("llm").setup()
+    require("llm").setup()
+
     -- or, to customize the prompt
     require("llm").setup({
       responding_hl_group = "Substitute",
