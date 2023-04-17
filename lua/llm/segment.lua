@@ -17,7 +17,10 @@ local function end_delta(lines, origin_row, origin_col)
   local new_col =
     rows_added > 0 and last_line_count or origin_col + last_line_count
 
-  return table.unpack { origin_row + rows_added, new_col }
+  return {
+    row = origin_row + rows_added,
+    col = new_col
+  }
 end
 
 local function create_segment_at(_row, _col, _hl_group)
@@ -49,17 +52,17 @@ local function create_segment_at(_row, _col, _hl_group)
       error('Extmark for segment no longer exists')
     end
 
-    local row, col, details = unpack(vim.api.nvim_buf_get_extmark_by_id(
+    local extmark = vim.api.nvim_buf_get_extmark_by_id(
       0,
       M.ns_id(),
       _extmark_id,
       { details = true }
-    ))
+    )
 
     return {
-      row = row,
-      col = col,
-      details = details
+      row = extmark[1],
+      col = extmark[2],
+      details = extmark[3]
     }
   end
 
@@ -81,12 +84,12 @@ local function create_segment_at(_row, _col, _hl_group)
 
       vim.api.nvim_buf_set_text(0, r, c, r, c, lines)
 
-      local new_end_row, new_end_col = end_delta(lines, r, c)
+      local end_pos = end_delta(lines, r, c)
 
       vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, {
         id = _extmark_id,
-        end_col = new_end_col,
-        end_row = new_end_row,
+        end_col = end_pos.col,
+        end_row = end_pos.row,
         hl_group = _hl_group
       })
     end),
