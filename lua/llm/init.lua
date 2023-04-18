@@ -40,6 +40,11 @@ function M.request_completion_stream(args)
   local prompt_segment = get_prompt_and_segment(no_selection)
   local seg = prompt_segment.segment
 
+  if M.provider.prompts == nil or #M.provider.prompts == 0 then
+    util.eshow('Provider has no prompt builders')
+    return
+  end
+
   local success, result = pcall(M.provider.request_completion_stream, prompt_segment.prompt, {
     on_partial = vim.schedule_wrap(function(partial)
       seg.add(partial)
@@ -56,7 +61,7 @@ function M.request_completion_stream(args)
     on_error = function(data, label)
       vim.notify(vim.inspect(data), vim.log.levels.ERROR, {title = 'stream error ' .. label})
     end
-  })
+  }, nil, M.provider.prompts[1])
 
   if not success then
     util.eshow(result)

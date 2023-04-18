@@ -18,7 +18,7 @@ end)()
 local function extract_data(event_string)
   local success, data = pcall(util.json.decode, event_string:gsub('^data: ', ''))
 
-  if success and (data or {}).choices ~= nil then
+  if success and data ~= nil and data.choices ~= nil then
     return {
       content = (data.choices[1].delta or {}).content,
       finish_reason = data.choices[1].finish_reason
@@ -26,7 +26,7 @@ local function extract_data(event_string)
   end
 end
 
-local function default_prompt_builder(input, _)
+local function default_prompt(input, _)
   return {
     messages = {
       { content = input,
@@ -36,11 +36,12 @@ local function default_prompt_builder(input, _)
   }
 end
 
----@param prompt string
+---@param input string
 ---@param handlers StreamHandlers
 ---@param params any Additional options for OpenAI endpoint
+---@param prompt fun(input: string, context: table): table Converts input (selection) to a table to be merged into request body
 ---@return nil
-function M.request_completion_stream(prompt, handlers, params)
+function M.request_completion_stream(input, handlers, params, prompt)
   local _all_content = ""
 
   local function handle_raw(raw_data)
@@ -83,19 +84,26 @@ function M.request_completion_stream(prompt, handlers, params)
     },
     method = 'POST',
     url = 'https://api.openai.com/v1/chat/completions',
-    body = vim.tbl_deep_extend("force", {
-      stream = true,
-      model = "gpt-3.5-turbo"
-    }, M.prompt_builder(prompt, {
-        filename = util.buf.filename()
-      }), (params or {}))
+    body =
+      vim.tbl_deep_extend("force",
+        {
+          stream = true,
+          model = "gpt-3.5-turbo"
+        },
+        (params or {}),
+        prompt(input, {
+          filename = util.buf.filename()
+        })
+      )
   }, handle_raw, handle_error)
 end
 
 function M.initialize(opts)
   local _opts = opts or {}
 
-  M.prompt_builder = _opts.prompt_builder or default_prompt_builder
+  M.prompts = vim.tbl_extend("force", {
+    default_prompt
+  }, _opts.prompts or {})
 end
 
 return M
