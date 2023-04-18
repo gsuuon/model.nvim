@@ -39,7 +39,23 @@ Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform
 
 ## 🧵Configuration
 
-- Customize the prompt and highlight group of in-progress responses
+### Prompt builders
+`@alias prompt_builder fun(input: string, context: table): table`
+
+Prompt builders are specific to a provider. They take the input (selected text or entire file), some context (filename) and produce a request body that gets merged into the default body.
+
+- `providers.<provider name>.prompts.1`  
+  — modify the default prompt  
+
+- `providers.<provider name>.prompts.<alternative name>`  
+  — add prompt alternatives  
+  Alternatives can be used with `:Llm` by providing their name, e.g. `:Llm advice`
+
+
+### Appearance
+- `responding_hl_group = <hl_group>`  
+  — Set highlight group of in-progress responses
+  
 
 ```lua
 use {
@@ -49,20 +65,36 @@ use {
       responding_hl_group = 'Substitute',
       providers = {
         openai = {
-          prompt_builder = function(input, _ctx)
-            return {
-              messages = {
-                {
-                  role = 'system',
-                  content = 'You are a 10x super elite programmer. Continue only with code. Do not write tests, examples, or output of code unless explicitly asked for.',
-                },
-                {
-                  role = 'user',
-                  content = input,
+          prompts = {
+            function(input, _ctx)
+              return {
+                messages = {
+                  {
+                    role = 'system',
+                    content = 'You are a 10x super elite programmer. Continue only with code. Do not write tests, examples, or output of code unless explicitly asked for.',
+                  },
+                  {
+                    role = 'user',
+                    content = input,
+                  }
                 }
               }
-            }
-          end
+            end,
+            advice = function(input)
+              return {
+                messages = {
+                  {
+                    role = 'system',
+                    content = 'You are a wise advisor, ',
+                  },
+                  {
+                    role = 'user',
+                    content = input,
+                  }
+                }
+              }
+            end
+          }
         }
       }
     })
