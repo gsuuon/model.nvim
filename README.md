@@ -58,46 +58,43 @@ Prompt builders are specific to a provider. They take the input (selected text o
   
 
 ```lua
-use {
-  'gsuuon/llm.nvim',
-  config = function()
-    require('llm').setup({
-      responding_hl_group = 'Substitute',
-      providers = {
-        openai = {
-          prompts = {
-            function(input, _ctx)
-              return {
-                messages = {
-                  {
-                    role = 'system',
-                    content = 'You are a 10x super elite programmer. Continue only with code. Do not write tests, examples, or output of code unless explicitly asked for.',
-                  },
-                  {
-                    role = 'user',
-                    content = input,
-                  }
-                }
+local llmconfig = {
+  responding_hl_group = 'Substitute',
+  providers = {
+    openai = {
+      prompts = {
+        function(input, _ctx)
+          return {
+            messages = {
+              {
+                role = 'system',
+                content = 'You are a 10x super elite programmer. Continue only with code. Do not write tests, examples, or output of code unless explicitly asked for.',
+              },
+              {
+                role = 'user',
+                content = input,
               }
-            end,
-            advice = function(input)
-              return {
-                messages = {
-                  {
-                    role = 'system',
-                    content = 'You are a wise advisor, ',
-                  },
-                  {
-                    role = 'user',
-                    content = input,
-                  }
-                }
-              }
-            end
+            }
           }
-        }
+        end,
+        advice = function(input)
+          return {
+            messages = {
+              {
+                role = 'system',
+                content = 'You are a wise advisor, ',
+              },
+              {
+                role = 'user',
+                content = input,
+              }
+            }
+          }
+        end
       }
-    })
-  end
+    }
+  }
 }
+
+require('llm').setup(llmconfig)
 ```
