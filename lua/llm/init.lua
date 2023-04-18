@@ -40,12 +40,9 @@ function M.request_completion_stream(args)
   local prompt_segment = get_prompt_and_segment(no_selection)
   local seg = prompt_segment.segment
 
-  if M.provider.prompts == nil or #M.provider.prompts == 0 then
-    util.eshow('Provider has no prompt builders')
-    return
-  end
+  local prompt = M.default_prompt -- TODO get passed in prompt name from args
 
-  local success, result = pcall(M.provider.request_completion_stream, prompt_segment.prompt, {
+  local success, result = pcall(prompt.provider.request_completion_stream, prompt_segment.prompt, {
     on_partial = vim.schedule_wrap(function(partial)
       seg.add(partial)
     end),
@@ -61,7 +58,7 @@ function M.request_completion_stream(args)
     on_error = function(data, label)
       vim.notify(vim.inspect(data), vim.log.levels.ERROR, {title = 'stream error ' .. label})
     end
-  }, nil, M.provider.prompts[1])
+  }, nil, prompt.builder)
 
   if not success then
     util.eshow(result)
@@ -78,36 +75,21 @@ function M.commands(opts)
   })
 end
 
-function M.set_active_provider(provider)
-  if provider == nil then
-    error('Tried to set nil provider for Llm')
-  end
-
-  M.provider = provider
-end
-
 function M.setup(opts)
   -- TODO still figuring out this api
+  local openai = require("llm.providers.openai")
+
   local _opts = vim.tbl_deep_extend("force", {
     responding_hl_group = "Comment",
-    active = "openai",
-    providers = {
-      openai = {
-        require("llm.providers.openai"),
-        _active = true, -- needs a keyvalue to force table to not behave like an array
-      }
-    }
+    default_prompt = {
+      provider = openai,
+      builder = openai.default_builder
+    },
   }, opts or {})
 
+  M.default_prompt = _opts.default_prompt
 
   M.responding_hl_group = _opts.responding_hl_group
-
-  for _, provider_config in pairs(_opts.providers) do
-    local provider = provider_config[1]
-    provider.initialize(provider_config)
-  end
-
-  M.set_active_provider(_opts.providers[_opts.active][1])
 
   M.commands(_opts)
 end

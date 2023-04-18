@@ -26,7 +26,7 @@ local function extract_data(event_string)
   end
 end
 
-local function default_prompt(input, _)
+function M.default_builder(input, _)
   return {
     messages = {
       { content = input,
@@ -99,11 +99,7 @@ function M.request_completion_stream(input, handlers, params, prompt)
 end
 
 function M.initialize(opts)
-  local _opts = opts or {}
-
-  M.prompts = vim.tbl_extend("force", {
-    default_prompt
-  }, _opts.prompts or {})
+  -- TODO use opts as default params
 end
 
 return M
