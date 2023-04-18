@@ -19,7 +19,7 @@ local function get_prompt_and_segment(no_selection)
     local seg = segment.create_segment_at(
       selection.stop.row,
       selection.stop.col,
-      M.responding_hl_group
+      M.opts.responding_hl_group
     )
 
     return {
@@ -40,7 +40,7 @@ function M.request_completion_stream(args)
   local prompt_segment = get_prompt_and_segment(no_selection)
   local seg = prompt_segment.segment
 
-  local prompt = M.default_prompt -- TODO get passed in prompt name from args
+  local prompt = M.opts.default_prompt -- TODO get passed in prompt name from args
 
   local success, result = pcall(prompt.provider.request_completion_stream, prompt_segment.prompt, {
     on_partial = vim.schedule_wrap(function(partial)
@@ -76,21 +76,24 @@ function M.commands(opts)
 end
 
 function M.setup(opts)
-  -- TODO still figuring out this api
-  local openai = require("llm.providers.openai")
-
-  local _opts = vim.tbl_deep_extend("force", {
+  local _opts = {
     responding_hl_group = "Comment",
-    default_prompt = {
+  }
+
+  if opts.default_prompt == nil then
+    local openai = require("llm.providers.openai")
+
+    _opts.default_prompt = {
       provider = openai,
       builder = openai.default_builder
-    },
-  }, opts or {})
+    }
+  end
 
-  M.default_prompt = _opts.default_prompt
+  if opts ~= nil then
+    _opts = vim.tbl_deep_extend("force", _opts, opts)
+  end
 
-  M.responding_hl_group = _opts.responding_hl_group
-
+  M.opts = _opts
   M.commands(_opts)
 end
 
