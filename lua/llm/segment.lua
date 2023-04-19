@@ -25,7 +25,7 @@ local function end_delta(lines, origin_row, origin_col)
   }
 end
 
-local function listen_ref(initial)
+local function ref(initial)
   local _value = initial
   local _on_change
 
@@ -133,7 +133,9 @@ local function create_segment_at(row, col, hl_group)
       vim.api.nvim_buf_set_text(0, mark.row, mark.col, mark.details.end_row, mark.details.end_col, {})
     end),
 
-    ext_id = _ext_id
+    ext_id = _ext_id,
+
+    data = ref()
 
   }
 end
@@ -190,7 +192,7 @@ function M.create_segment_at(row, col, hl_group)
 end
 
 function M.query(pos)
-  local extmark_details = vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, 1, {details = true})
+  local extmark_details = vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, {details = true})
 
   local matches = {}
 

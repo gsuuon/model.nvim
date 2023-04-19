@@ -86,12 +86,36 @@ function M.request_completion_stream(cmd_params)
     end
   }, prompt.builder)
 
-  if not success then
+  if success then
+    local cancel = result
+
+    seg.data.set(cancel)
+  else
     util.eshow(result)
   end
 end
 
 function M.commands(opts)
+  vim.api.nvim_create_user_command('LlmCancel',
+    function()
+      local matches = segment.query(util.cursor.position())
+
+      for _, seg in ipairs(matches) do
+        seg.highlight('Special')
+
+        local cancel = seg.data.get()
+        if cancel ~= nil then
+          cancel()
+        end
+      end
+    end,
+    {
+      range = true,
+      desc = 'Cancel the completion under the cursor',
+      force = true
+    }
+  )
+
   vim.api.nvim_create_user_command('LlmDelete',
     function()
       local matches = segment.query(util.cursor.position())
@@ -120,9 +144,7 @@ function M.commands(opts)
     {
       range = true,
       desc = 'Delete the completion under the cursor',
-      force = true,
-      complete = function()
-      end
+      force = true
     }
   )
 
