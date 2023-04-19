@@ -1,15 +1,27 @@
 local segment = require("llm.segment")
 local util = require("llm.util")
 
+---@class Prompt
+---@field provider Provider The API provider for this prompt
+---@field builder fun(input: string, context: table): table
+--- Takes selected text and converts to data that's merged with the provider's default request body
+---@field hl_group? string Highlight group of active response
+
+
+---@class StreamHandlers
+---@field on_partial (fun(partial_text: string): nil)
+---@field on_finish (fun(complete_text: string, finish_reason: string): nil)
+---@field on_error (fun(data: any, label: string): nil) }
+--
 local M = {}
 
-local function get_prompt_and_segment(no_selection)
+local function get_input_and_segment(no_selection, hl_group)
   if no_selection then
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-    local seg = segment.create_segment_at(#lines, 0, M.responding_hl_group)
+    local seg = segment.create_segment_at(#lines, 0, hl_group)
 
     return {
-      prompt = table.concat(lines, '\n'),
+      input = table.concat(lines, '\n'),
       segment = seg
     }
   else
@@ -19,28 +31,37 @@ local function get_prompt_and_segment(no_selection)
     local seg = segment.create_segment_at(
       selection.stop.row,
       selection.stop.col,
-      M.responding_hl_group
+      hl_group
     )
 
     return {
-      prompt = text,
+      input = text,
       segment = seg
     }
   end
 end
 
----@class StreamHandlers
----@field on_partial (fun(partial_text: string): nil)
----@field on_finish (fun(complete_text: string, finish_reason: string): nil)
----@field on_error (fun(data: any, label: string): nil) }
+function M.request_completion_stream(cmd_params)
 
-function M.request_completion_stream(args)
-  local no_selection = args.range == 0
+  ---@return Prompt
+  local function get_prompt()
+    local prompt_arg = cmd_params.fargs[1]
 
-  local prompt_segment = get_prompt_and_segment(no_selection)
-  local seg = prompt_segment.segment
+    if not prompt_arg then
+      return M.opts.default_prompt
+    end
 
-  local success, result = pcall(M.provider.request_completion_stream, prompt_segment.prompt, {
+    return assert(M.opts.prompts[prompt_arg], "Prompt '" .. prompt_arg .. "' wasn't found")
+  end
+
+  local prompt = get_prompt()
+
+  local no_selection = cmd_params.range == 0
+
+  local input_segment = get_input_and_segment(no_selection, prompt.hl_group or M.opts.hl_group)
+  local seg = input_segment.segment
+
+  local success, result = pcall(prompt.provider.request_completion_stream, input_segment.input, {
     on_partial = vim.schedule_wrap(function(partial)
       seg.add(partial)
     end),
@@ -56,7 +77,7 @@ function M.request_completion_stream(args)
     on_error = function(data, label)
       vim.notify(vim.inspect(data), vim.log.levels.ERROR, {title = 'stream error ' .. label})
     end
-  })
+  }, nil, prompt.builder)
 
   if not success then
     util.eshow(result)
@@ -67,43 +88,41 @@ function M.commands(opts)
   vim.api.nvim_create_user_command("Llm", M.request_completion_stream, {
     range = true,
     desc = "Request completion of selection",
-    force = true
-    -- TODO add custom Llm transform functions to complete :command-complete
-    -- complete = function() end
+    force = true,
+    nargs='?',
+    complete = function(arglead)
+      local prompt_names = {}
+
+      for k, _ in util.module.autopairs(opts.prompts) do
+        table.insert(prompt_names, k)
+      end
+
+      if #arglead == 0 then return prompt_names end
+
+      return vim.fn.matchfuzzy(prompt_names, arglead)
+    end
   })
 end
 
-function M.set_active_provider(provider)
-  if provider == nil then
-    error('Tried to set nil provider for Llm')
-  end
-
-  M.provider = provider
-end
-
 function M.setup(opts)
-  -- TODO still figuring out this api
-  local _opts = vim.tbl_deep_extend("force", {
-    responding_hl_group = "Comment",
-    active = "openai",
-    providers = {
-      openai = {
-        require("llm.providers.openai"),
-        _active = true, -- needs a keyvalue to force table to not behave like an array
-      }
+  local _opts = {
+    hl_group = "Comment",
+  }
+
+  if opts.default_prompt == nil then
+    local openai = require("llm.providers.openai")
+
+    _opts.default_prompt = {
+      provider = openai,
+      builder = openai.default_builder
     }
-  }, opts or {})
-
-
-  M.responding_hl_group = _opts.responding_hl_group
-
-  for _, provider_config in pairs(_opts.providers) do
-    local provider = provider_config[1]
-    provider.initialize(provider_config)
   end
 
-  M.set_active_provider(_opts.providers[_opts.active][1])
+  if opts ~= nil then
+    _opts = vim.tbl_deep_extend("force", _opts, opts)
+  end
 
+  M.opts = _opts
   M.commands(_opts)
 end
 

@@ -172,4 +172,50 @@ function M.buf.filename()
   return vim.fs.normalize(vim.fn.expand('%:.'))
 end
 
+M.module = {}
+
+--- Re-require a module on access. Useful when developing a prompt library to avoid restarting nvim.
+--- Plenty of gotchas here (need special function for pairs, perf is bad) so shouldn't be used always
+function M.module.autoload(package_name)
+  local mod = {} -- TODO iterators (pair)
+
+  local stale = true
+
+  local function load()
+    if stale then
+      package.loaded[package_name] = nil
+    end
+
+    stale = false
+
+    vim.defer_fn(function()
+      stale = true
+    end, 1)
+
+    return require(package_name)
+  end
+
+  setmetatable(mod, {
+    __index = function(_, key)
+      return load()[key]
+    end,
+  })
+
+  mod.__autopairs = function()
+    return pairs(load())
+  end
+
+  return mod
+end
+
+--- Pairs for autoloaded modules. Safe to use on all tables.
+--- __pairs metamethod isn't available in Lua 5.1
+function M.module.autopairs(table)
+  if table.__autopairs ~= nil then
+    return table.__autopairs()
+  end
+
+  return pairs(table)
+end
+
 return M
