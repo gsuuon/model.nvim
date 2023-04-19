@@ -3,10 +3,10 @@ local util = require("llm.util")
 
 local M = {}
 
-local function get_prompt_and_segment(no_selection)
+local function get_input_and_segment(no_selection, hl_group)
   if no_selection then
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-    local seg = segment.create_segment_at(#lines, 0, M.responding_hl_group)
+    local seg = segment.create_segment_at(#lines, 0, hl_group)
 
     return {
       prompt = table.concat(lines, '\n'),
@@ -19,11 +19,11 @@ local function get_prompt_and_segment(no_selection)
     local seg = segment.create_segment_at(
       selection.stop.row,
       selection.stop.col,
-      M.opts.responding_hl_group
+      hl_group
     )
 
     return {
-      prompt = text,
+      input = text,
       segment = seg
     }
   end
@@ -35,10 +35,6 @@ end
 ---@field on_error (fun(data: any, label: string): nil) }
 
 function M.request_completion_stream(cmd_params)
-  local no_selection = cmd_params.range == 0
-
-  local prompt_segment = get_prompt_and_segment(no_selection)
-  local seg = prompt_segment.segment
 
   local function get_prompt()
     local prompt_arg = cmd_params.fargs[1]
@@ -52,7 +48,12 @@ function M.request_completion_stream(cmd_params)
 
   local prompt = get_prompt()
 
-  local success, result = pcall(prompt.provider.request_completion_stream, prompt_segment.prompt, {
+  local no_selection = cmd_params.range == 0
+
+  local input_segment = get_input_and_segment(no_selection, prompt.hl_group or M.opts.hl_group)
+  local seg = input_segment.segment
+
+  local success, result = pcall(prompt.provider.request_completion_stream, input_segment.input, {
     on_partial = vim.schedule_wrap(function(partial)
       seg.add(partial)
     end),
@@ -97,7 +98,7 @@ end
 
 function M.setup(opts)
   local _opts = {
-    responding_hl_group = "Comment",
+    hl_group = "Comment",
   }
 
   if opts.default_prompt == nil then
