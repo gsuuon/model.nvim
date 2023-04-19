@@ -11,12 +11,11 @@ local util = require("llm.util")
 ---@field builder PromptBuilder Converts input and context to request data
 ---@field hl_group? string Highlight group of active response
 
-
 ---@class StreamHandlers
 ---@field on_partial (fun(partial_text: string): nil)
 ---@field on_finish (fun(complete_text: string, finish_reason: string): nil)
 ---@field on_error (fun(data: any, label: string): nil) }
---
+
 local M = {}
 
 local function get_input_and_segment(no_selection, hl_group)
@@ -73,8 +72,12 @@ function M.request_completion_stream(cmd_params)
     on_finish = function(_, reason)
       if reason == 'stop' then
         seg.close()
+      elseif reason == 'length' then
+        seg.highlight('Error')
+        util.eshow('Hit token limit')
       else
-        seg.highlight("Error")
+        seg.highlight('Error')
+        util.eshow('Response ended because: ' .. reason)
       end
     end,
 
