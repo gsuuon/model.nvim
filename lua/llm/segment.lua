@@ -94,7 +94,7 @@ local function create_segment_at(_row, _col, _hl_group)
       })
     end),
 
-    highlight = function(hl_group)
+    highlight = vim.schedule_wrap(function(hl_group)
       _hl_group = hl_group
 
       local mark = get_details()
@@ -103,23 +103,23 @@ local function create_segment_at(_row, _col, _hl_group)
       mark.details.id = _extmark_id
 
       vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, mark.details)
-    end,
+    end),
 
-    clear_hl = function()
+    clear_hl = vim.schedule_wrap(function()
       local mark = get_details()
 
       close()
       _hl_group = nil
       open(mark.row, mark.col, mark.details.end_row, mark.details.end_col)
-    end,
+    end),
 
-    close = close,
+    close = vim.schedule_wrap(close),
 
-    delete = function()
+    delete = vim.schedule_wrap(function()
       local mark = get_details()
 
       vim.api.nvim_buf_set_text(0, mark.row, mark.col, mark.details.end_row, mark.details.end_col, {})
-    end,
+    end),
 
   }
 end

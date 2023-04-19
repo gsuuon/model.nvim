@@ -62,20 +62,20 @@ function M.request_completion_stream(cmd_params)
   local seg = input_segment.segment
 
   local success, result = pcall(prompt.provider.request_completion_stream, input_segment.input, {
-    on_partial = vim.schedule_wrap(function(partial)
+    on_partial = function(partial)
       seg.add(partial)
-    end),
+    end,
 
-    on_finish = vim.schedule_wrap(function(_, reason)
+    on_finish = function(_, reason)
       if reason == 'stop' then
         seg.close()
       else
         seg.highlight("Error")
       end
-    end),
+    end,
 
     on_error = function(data, label)
-      vim.notify(vim.inspect(data), vim.log.levels.ERROR, {title = 'stream error ' .. label})
+      util.eshow(data, 'stream error ' .. label)
     end
   }, nil, prompt.builder)
 
