@@ -82,11 +82,15 @@ function M.commands(opts)
     force = true,
     nargs='?',
     complete = function(arglead)
-      local items = vim.tbl_keys(opts.prompts)
+      local prompt_names = {}
 
-      if #arglead == 0 then return items end
+      for k, _ in util.module.autopairs(opts.prompts) do
+        table.insert(prompt_names, k)
+      end
 
-      return vim.fn.matchfuzzy(items, arglead)
+      if #arglead == 0 then return prompt_names end
+
+      return vim.fn.matchfuzzy(prompt_names, arglead)
     end
   })
 end
