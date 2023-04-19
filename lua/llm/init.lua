@@ -71,7 +71,7 @@ function M.request_completion_stream(cmd_params)
 
     on_finish = function(_, reason)
       if reason == 'stop' then
-        seg.close()
+        seg.clear_hl()
       elseif reason == 'length' then
         seg.highlight('Error')
         util.eshow('Hit token limit')

@@ -133,8 +133,6 @@ local function create_segment_at(row, col, hl_group)
       vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, mark.details)
     end),
 
-    close = vim.schedule_wrap(close),
-
     delete = vim.schedule_wrap(function()
       local mark = get_details()
 
