@@ -26,10 +26,8 @@ local function end_delta(lines, origin_row, origin_col)
 end
 
 local function create_segment_at(row, col, hl_group, bufnr)
-  local _bufnr = bufnr or 0
-
   local _ext_id = vim.api.nvim_buf_set_extmark(
-    _bufnr,
+    bufnr,
     M.ns_id(),
     row,
     col,
@@ -48,7 +46,7 @@ local function create_segment_at(row, col, hl_group, bufnr)
     end
 
     local extmark = vim.api.nvim_buf_get_extmark_by_id(
-      _bufnr,
+      bufnr,
       M.ns_id(),
       _ext_id,
       { details = true }
@@ -76,11 +74,11 @@ local function create_segment_at(row, col, hl_group, bufnr)
       local r = mark.details.end_row
       local c = mark.details.end_col
 
-      vim.api.nvim_buf_set_text(_bufnr, r, c, r, c, lines)
+      vim.api.nvim_buf_set_text(bufnr, r, c, r, c, lines)
 
       local end_pos = end_delta(lines, r, c)
 
-      vim.api.nvim_buf_set_extmark(_bufnr, M.ns_id(), mark.row, mark.col, {
+      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, {
         id = _ext_id,
         end_col = end_pos.col,
         end_row = end_pos.row,
@@ -96,7 +94,7 @@ local function create_segment_at(row, col, hl_group, bufnr)
       mark.details.hl_group = _hl_group
       mark.details.id = _ext_id
 
-      vim.api.nvim_buf_set_extmark(_bufnr, M.ns_id(), mark.row, mark.col, mark.details)
+      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, mark.details)
     end),
 
     clear_hl = vim.schedule_wrap(function()
@@ -105,7 +103,7 @@ local function create_segment_at(row, col, hl_group, bufnr)
       mark.details.hl_group = nil
       mark.details.id = _ext_id
 
-      vim.api.nvim_buf_set_extmark(_bufnr, M.ns_id(), mark.row, mark.col, mark.details)
+      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, mark.details)
     end),
 
     delete = vim.schedule_wrap(function()
@@ -114,7 +112,7 @@ local function create_segment_at(row, col, hl_group, bufnr)
       local replacement = _data.original or {}
 
       vim.api.nvim_buf_set_text(
-        _bufnr,
+        bufnr,
         mark.row,
         mark.col,
         mark.details.end_row,
@@ -131,8 +129,6 @@ local function create_segment_at(row, col, hl_group, bufnr)
 end
 
 function M.create_segment_at(row, col, hl_group, bufnr)
-  local _bufnr = bufnr or 0
-
   local function shift_if_complete_line(pos)
     if pos.col == util.COL_ENTIRE_LINE then
       return {
@@ -145,18 +141,18 @@ function M.create_segment_at(row, col, hl_group, bufnr)
   end
 
   local function shift_to_bounds(pos)
-    local buf_lines_count = vim.api.nvim_buf_line_count(_bufnr)
+    local buf_lines_count = vim.api.nvim_buf_line_count(bufnr)
     local row_out_of_bounds = pos.row >= buf_lines_count
 
     if row_out_of_bounds then
-      vim.api.nvim_buf_set_lines(_bufnr, -1, -1, false, {''})
+      vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {''})
 
       return {
         row = buf_lines_count,
         col = 0
       }
     else
-      local row_length = #vim.api.nvim_buf_get_lines(_bufnr, pos.row, pos.row + 1, false)[1]
+      local row_length = #vim.api.nvim_buf_get_lines(bufnr, pos.row, pos.row + 1, false)[1]
 
       local col_out_of_bounds = pos.col > row_length
 
@@ -176,7 +172,7 @@ function M.create_segment_at(row, col, hl_group, bufnr)
     col = col
   }))
 
-  local segment = create_segment_at(target_pos.row, target_pos.col, hl_group)
+  local segment = create_segment_at(target_pos.row, target_pos.col, hl_group, bufnr)
 
   segments_cache[segment.ext_id] = segment
 
@@ -222,7 +218,7 @@ end
 M.mode = {
   APPEND = "append",
   REPLACE = "replace",
-  -- BUFFER = "buffer"
+  BUFFER = "buffer"
 }
 
 M._debug = {}

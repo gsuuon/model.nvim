@@ -35,6 +35,8 @@ local M = {}
 local function get_input_and_segment(behavior, hl_group)
   -- TODO dry
 
+  local bufnr = vim.fn.bufnr('%')
+
   if behavior.segment_mode == segment.mode.REPLACE then
     if behavior.get_visual_selection then
       local selection = util.cursor.selection()
@@ -45,7 +47,8 @@ local function get_input_and_segment(behavior, hl_group)
       local seg = segment.create_segment_at(
         selection.start.row,
         selection.start.col,
-        hl_group
+        hl_group,
+        bufnr
       )
 
       seg.data.original = lines
@@ -56,7 +59,7 @@ local function get_input_and_segment(behavior, hl_group)
       }
     else
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      local seg = segment.create_segment_at(0, 0, hl_group)
+      local seg = segment.create_segment_at(0, 0, hl_group, bufnr)
       local text = table.concat(lines, '\n') -- TODO use the original separator in file
 
       vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
@@ -78,7 +81,8 @@ local function get_input_and_segment(behavior, hl_group)
       local seg = segment.create_segment_at(
         selection.stop.row,
         selection.stop.col,
-        hl_group
+        hl_group,
+        bufnr
       )
 
       return {
@@ -87,13 +91,19 @@ local function get_input_and_segment(behavior, hl_group)
       }
     else
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      local seg = segment.create_segment_at(#lines, 0, hl_group)
+      local seg = segment.create_segment_at(#lines, 0, hl_group, bufnr)
 
       return {
         input = table.concat(lines, '\n'),
         segment = seg
       }
     end
+  end
+
+  if behavior.segment_mode == segment.mode.BUFFER then
+    -- get the llm buffer
+    -- split it if not visible?
+    -- create segment at end of buffer
   end
 
   error('Unknown mode')
