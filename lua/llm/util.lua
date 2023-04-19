@@ -172,8 +172,8 @@ end
 
 -- pos is between start (inclusive) and final (exclusive)
 -- false if pos == start == final
-function M.position.is_bounded(pos, start, final)
-  return M.position.is_greater_eq(start, pos) and M.position.is_less(final, pos)
+function M.position.is_bounded(pos, start, stop)
+  return M.position.is_greater_eq(start, pos) and M.position.is_less(stop, pos)
 end
 
 M.COL_ENTIRE_LINE = vim.v.maxcol or 2147483647
