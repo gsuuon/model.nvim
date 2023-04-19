@@ -184,13 +184,13 @@ function M.module.autoload(package_name)
   local function load()
     if stale then
       package.loaded[package_name] = nil
+
+      stale = false
+
+      vim.defer_fn(function()
+        stale = true
+      end, 1)
     end
-
-    stale = false
-
-    vim.defer_fn(function()
-      stale = true
-    end, 1)
 
     return require(package_name)
   end
