@@ -187,6 +187,20 @@ function M.request_multi_completion_streams(cmd_params)
 end
 
 function M.commands(opts)
+  local function flash(count, wait, segments, highlight, after)
+    vim.defer_fn(function ()
+      if count == 0 then after() return end
+
+      if count % 2 == 0 then
+        for _, seg in ipairs(segments) do seg.highlight(highlight) end
+      else
+        for _, seg in ipairs(segments) do seg.clear_hl() end
+      end
+
+      return flash(count - 1, wait, segments, highlight, after)
+    end, wait)
+  end
+
   vim.api.nvim_create_user_command('LlmMulti', M.request_multi_completion_streams, {
     force = true,
     range = true,
@@ -229,31 +243,29 @@ function M.commands(opts)
     function()
       local matches = segment.query(util.cursor.position())
 
-      for _, seg in ipairs(matches) do seg.highlight('Error') end
-
-      local function flash(count, wait)
-        vim.defer_fn(function ()
-          if count == 0 then
-            for _, seg in ipairs(matches) do seg.delete() end
-            return
-          end
-
-          if count % 2 == 0 then
-            for _, seg in ipairs(matches) do seg.highlight('Error') end
-          else
-            for _, seg in ipairs(matches) do seg.clear_hl() end
-          end
-
-          return flash(count - 1, wait)
-        end, wait)
-      end
-
-      flash(6, 80)
+      flash(6, 80, matches, 'DiffDelete',
+        function()
+          for _, seg in ipairs(matches) do seg.delete() end
+        end
+      )
     end,
     {
       range = true,
-      desc = 'Delete the completion under the cursor',
+      desc = 'Delete the completion under the cursor, replacing with original text if replacement',
       force = true
+    }
+  )
+
+  vim.api.nvim_create_user_command('LlmShow',
+    function()
+      local matches = segment.query(util.cursor.position())
+
+      flash(10, 80, matches, 'DiffChange', util.noop)
+    end,
+    {
+      range = true,
+      force = true,
+      desc = 'Show the completion under the cursor'
     }
   )
 
