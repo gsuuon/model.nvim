@@ -113,7 +113,7 @@ function M.request_completion_stream(cmd_params)
   if success then
     local cancel = result
 
-    seg.data.set(cancel)
+    seg.data.cancel = cancel
   else
     util.eshow(result)
   end
@@ -127,10 +127,9 @@ function M.commands(opts)
       for _, seg in ipairs(matches) do
         seg.highlight('Special')
 
-        local cancel = seg.data.get()
-        if cancel ~= nil then
-          cancel()
-        end
+        local cancel = seg.data.cancel
+
+        if cancel ~= nil then cancel() end
       end
     end,
     {

@@ -135,7 +135,7 @@ local function create_segment_at(row, col, hl_group)
 
     ext_id = _ext_id,
 
-    data = ref()
+    data = {}
 
   }
 end
