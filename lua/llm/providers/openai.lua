@@ -100,11 +100,14 @@ function M.request_completion_stream(input, handlers, prompt, params)
   }, handle_raw, handle_error)
 end
 
+M.default_request_params = {
+  model = 'gpt-3.5-turbo',
+  stream = true
+}
+
 function M.initialize(opts)
   M.default_request_params = vim.tbl_deep_extend('force',
-    {
-      model = 'gpt-3.5-turbo'
-    },
+    M.default_request_params,
     opts or {},
     {
       stream = true -- force streaming since data parsing will break otherwise

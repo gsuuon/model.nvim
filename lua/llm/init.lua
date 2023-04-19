@@ -172,7 +172,7 @@ function M.setup(opts)
     hl_group = 'Comment',
   }
 
-  if opts.default_prompt == nil then
+  if (opts or {}).default_prompt == nil then
     local openai = require('llm.providers.openai')
 
     _opts.default_prompt = {
