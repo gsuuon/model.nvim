@@ -1,3 +1,5 @@
+-- All positions should be 0-indexed
+
 local M = {}
 
 function M.noop() end
@@ -41,7 +43,6 @@ function M.error(message)
   })
 end
 
--- All positions should be 0-indexed
 function M.env(name)
   local value = os.getenv(name)
 
@@ -177,7 +178,7 @@ M.module = {}
 --- Re-require a module on access. Useful when developing a prompt library to avoid restarting nvim.
 --- Plenty of gotchas here (need special function for pairs, perf is bad) so shouldn't be used always
 function M.module.autoload(package_name)
-  local mod = {} -- TODO iterators (pair)
+  local mod = {}
 
   local stale = true
 

@@ -23,17 +23,19 @@ local function end_delta(lines, origin_row, origin_col)
   }
 end
 
-local function create_segment_at(_row, _col, _hl_group)
+local function create_segment_at(row, col, hl_group)
+
+  local _hl_group = hl_group
   local _extmark_id
 
-  local function open(row_start, col_start, row_end, col_end, hl_group)
+  local function open(row_start, col_start, row_end, col_end, hl)
     _extmark_id = vim.api.nvim_buf_set_extmark(
       0,
       M.ns_id(),
       row_start,
       col_start,
       {
-        hl_group = hl_group,
+        hl_group = hl,
 
         -- these need to be set or else get_details doesn't return end_*s
         end_row = row_end or row_start,
@@ -49,7 +51,7 @@ local function create_segment_at(_row, _col, _hl_group)
 
   local function get_details()
     if _extmark_id == nil then
-      error('Extmark for segment no longer exists')
+      util.error('Extmark for segment no longer exists')
     end
 
     local extmark = vim.api.nvim_buf_get_extmark_by_id(
@@ -66,16 +68,14 @@ local function create_segment_at(_row, _col, _hl_group)
     }
   end
 
-  open(_row, _col, _row, _col, _hl_group)
+  open(row, col, row, col, _hl_group)
 
   return {
 
     add = vim.schedule_wrap(function(text)
       local lines = util.string.split_char(text, '\n')
 
-      if lines == nil then
-        error('Tried to add nothing')
-      end
+      if lines == nil or #lines == 0 then return end
 
       local mark = get_details()
 
@@ -90,12 +90,12 @@ local function create_segment_at(_row, _col, _hl_group)
         id = _extmark_id,
         end_col = end_pos.col,
         end_row = end_pos.row,
-        hl_group = _hl_group
+        hl_group = _hl_group -- need to set hl_group every time we want to update the extmark
       })
     end),
 
-    highlight = vim.schedule_wrap(function(hl_group)
-      _hl_group = hl_group
+    highlight = vim.schedule_wrap(function(hl) -- this seems to be additive only
+      _hl_group = hl
 
       local mark = get_details()
 
