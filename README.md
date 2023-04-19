@@ -34,8 +34,11 @@ require('lazy').setup({
 
 ## 💭 Usage
 
-- `:Llm` — Start a completion of either the visual selection or the current buffer  
-  Streaming text is added on the next line in visual line-wise mode, or from the end of the selection in char-wise visual mode.
+- `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. If you've added alternative [prompts](#prompts) to the config, you can give a prompt name as an argument. Streaming text is added on the next line in visual line-wise mode, or from the end of the selection in char-wise visual mode.
+
+- `:LlmCancel` — Cancel the active response under the cursor
+
+- `:LlmDelete` — Delete the response under the cursor
 
 ## Providers
 ### OpenAI ChatGPT (default)
@@ -234,4 +237,3 @@ return {
   }
 }
 ```
-
