@@ -1,6 +1,18 @@
 local segment = require("llm.segment")
 local util = require("llm.util")
 
+---@class Prompt
+---@field provider Provider The API provider for this prompt
+---@field builder fun(input: string, context: table): table
+--- Takes selected text and converts to data that's merged with the provider's default request body
+---@field hl_group string Highlight group of active response
+
+
+---@class StreamHandlers
+---@field on_partial (fun(partial_text: string): nil)
+---@field on_finish (fun(complete_text: string, finish_reason: string): nil)
+---@field on_error (fun(data: any, label: string): nil) }
+--
 local M = {}
 
 local function get_input_and_segment(no_selection, hl_group)
@@ -29,13 +41,9 @@ local function get_input_and_segment(no_selection, hl_group)
   end
 end
 
----@class StreamHandlers
----@field on_partial (fun(partial_text: string): nil)
----@field on_finish (fun(complete_text: string, finish_reason: string): nil)
----@field on_error (fun(data: any, label: string): nil) }
-
 function M.request_completion_stream(cmd_params)
 
+  ---@return Prompt
   local function get_prompt()
     local prompt_arg = cmd_params.fargs[1]
 
