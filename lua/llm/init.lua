@@ -163,8 +163,6 @@ end
 function M.request_multi_completion_streams(cmd_params)
   local prompt_names = cmd_params.fargs
 
-  show(prompt_names, 'prompt_names')
-
   local prompts = vim.tbl_map(function(name)
     return assert(M.opts.prompts[name], "Prompt '" .. name .. "' wasn't found")
 
