@@ -122,7 +122,7 @@ local openai = require('llm.providers.openai')
 
 -- configure default model params here for the provider
 openai.initialize({
-  max_tokens = 4096,
+  max_tokens = 400,
   temperature = 0.2,
 })
 
