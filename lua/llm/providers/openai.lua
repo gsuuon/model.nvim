@@ -41,7 +41,7 @@ end
 ---@param params any Additional options for OpenAI endpoint
 ---@param prompt fun(input: string, context: table): table Converts input (selection) to a table to be merged into request body
 ---@return nil
-function M.request_completion_stream(input, handlers, params, prompt)
+function M.request_completion_stream(input, handlers, prompt, params)
   local _all_content = ""
 
   local function handle_raw(raw_data)

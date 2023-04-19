@@ -77,7 +77,7 @@ function M.request_completion_stream(cmd_params)
     on_error = function(data, label)
       util.eshow(data, 'stream error ' .. label)
     end
-  }, nil, prompt.builder)
+  }, prompt.builder)
 
   if not success then
     util.eshow(result)
