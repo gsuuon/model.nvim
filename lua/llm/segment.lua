@@ -25,27 +25,6 @@ local function end_delta(lines, origin_row, origin_col)
   }
 end
 
-local function ref(initial)
-  local _value = initial
-  local _on_change
-
-  return {
-    get = function()
-      return _value
-    end,
-    set = function(next_value)
-      if _on_change ~= nil then
-        _on_change(_value, next_value)
-      end
-
-      _value = next_value
-    end,
-    on_change = function(handle)
-      _on_change = handle
-    end
-  }
-end
-
 local function create_segment_at(row, col, hl_group)
 
   local _ext_id = vim.api.nvim_buf_set_extmark(
