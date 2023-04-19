@@ -127,9 +127,10 @@ local function create_segment_at(row, col, hl_group)
     clear_hl = vim.schedule_wrap(function()
       local mark = get_details()
 
-      close()
-      _hl_group = nil
-      open(mark.row, mark.col, mark.details.end_row, mark.details.end_col)
+      mark.details.hl_group = nil
+      mark.details.id = _ext_id.get()
+
+      vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, mark.details)
     end),
 
     close = vim.schedule_wrap(close),
