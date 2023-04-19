@@ -5,7 +5,7 @@ local util = require("llm.util")
 ---@field provider Provider The API provider for this prompt
 ---@field builder fun(input: string, context: table): table
 --- Takes selected text and converts to data that's merged with the provider's default request body
----@field hl_group string Highlight group of active response
+---@field hl_group? string Highlight group of active response
 
 
 ---@class StreamHandlers
