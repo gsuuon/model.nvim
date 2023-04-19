@@ -226,6 +226,13 @@ function M.query(pos)
   return matches
 end
 
+---@enum SegmentMode
+M.mode = {
+  APPEND = "append",
+  REPLACE = "replace",
+  -- BUFFER = "buffer"
+}
+
 M._debug = {}
 
 function M._debug.extmarks()

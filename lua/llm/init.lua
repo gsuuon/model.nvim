@@ -18,29 +18,48 @@ local util = require('llm.util')
 
 local M = {}
 
-local function get_input_and_segment(no_selection, hl_group)
-  if no_selection then
-    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-    local seg = segment.create_segment_at(#lines, 0, hl_group)
+---@class GetInputSegmentBehavior
+---@field get_visual_selection boolean
+---@field segment_mode SegmentMode
 
-    return {
-      input = table.concat(lines, '\n'),
-      segment = seg
-    }
-  else
-    local selection = util.cursor.selection()
-    local text = util.buf.text(selection)
+---@param behavior GetInputSegmentBehavior
+---@param hl_group string
+local function get_input_and_segment(behavior, hl_group)
+  -- replace --
+  if behavior.segment_mode == segment.mode.REPLACE then
+    -- get text (buf lines or selection)
+    -- copy into segment data
+    -- create segment same way
+    -- on delete segment
+    --  remove segment text 
+    --  replace with original text
+    util.error('Not implemented')
+  end
 
-    local seg = segment.create_segment_at(
-      selection.stop.row,
-      selection.stop.col,
-      hl_group
-    )
+  if behavior.segment_mode == segment.mode.APPEND then
+    if behavior.get_visual_selection then
+      local selection = util.cursor.selection()
+      local text = util.buf.text(selection)
 
-    return {
-      input = text,
-      segment = seg
-    }
+      local seg = segment.create_segment_at(
+        selection.stop.row,
+        selection.stop.col,
+        hl_group
+      )
+
+      return {
+        input = text,
+        segment = seg
+      }
+    else
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      local seg = segment.create_segment_at(#lines, 0, hl_group)
+
+      return {
+        input = table.concat(lines, '\n'),
+        segment = seg
+      }
+    end
   end
 end
 
@@ -59,9 +78,14 @@ function M.request_completion_stream(cmd_params)
 
   local prompt = get_prompt()
 
-  local no_selection = cmd_params.range == 0
+  local input_segment = get_input_and_segment(
+    {
+      get_visual_selection = cmd_params.range ~= 0,
+      segment_mode = segment.mode.APPEND
+    },
+    prompt.hl_group or M.opts.hl_group
+  )
 
-  local input_segment = get_input_and_segment(no_selection, prompt.hl_group or M.opts.hl_group)
   local seg = input_segment.segment
 
   local success, result = pcall(prompt.provider.request_completion_stream, input_segment.input, {
