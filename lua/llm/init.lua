@@ -160,7 +160,52 @@ function M.request_completion_stream(cmd_params)
 
 end
 
+function M.request_multi_completion_streams(cmd_params)
+  local prompt_names = cmd_params.fargs
+
+  show(prompt_names, 'prompt_names')
+
+  local prompts = vim.tbl_map(function(name)
+    return assert(M.opts.prompts[name], "Prompt '" .. name .. "' wasn't found")
+
+  end, prompt_names)
+
+  for i, prompt in ipairs(prompts) do
+    local input_segment = get_input_and_segment(
+      {
+        get_visual_selection = false, -- multi-mode always treated as line-wise
+        segment_mode = segment.mode.APPEND -- multi-mode always append only
+      },
+      prompt.hl_group or M.opts.hl_group
+    )
+
+    -- try to avoid ratelimits
+    vim.defer_fn(function()
+      request_completion_input_segment(input_segment, prompt)
+    end, i * 200)
+  end
+end
+
 function M.commands(opts)
+  vim.api.nvim_create_user_command('LlmMulti', M.request_multi_completion_streams, {
+    force = true,
+    range = true,
+    nargs = '+',
+    desc = 'Request multiple prompts at the same time',
+    complete = function(arglead)
+      local prompt_names = {}
+
+      for k, _ in util.module.autopairs(opts.prompts) do
+        local escaped = k:gsub(" ", "\\ ")
+        table.insert(prompt_names, escaped)
+      end
+
+      if #arglead == 0 then return prompt_names end
+
+      return vim.fn.matchfuzzy(prompt_names, arglead)
+    end
+  })
+
   vim.api.nvim_create_user_command('LlmCancel',
     function()
       local matches = segment.query(util.cursor.position())
