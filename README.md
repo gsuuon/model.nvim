@@ -78,25 +78,30 @@ A prompt entry requires the builder and provider fields. The field is a function
 local openai = require('llm.providers.openai')
 local segment = require('llm.segment')
 
-local simple_prompt = {
-  provider = openai,
-  hl_group = 'SpecialComment',
-  builder = function(input)
-    return {
-      messages = {
-        {
-          role = 'system',
-          content = 'Translate to Spanish',
-        },
-        {
-          role = 'user',
-          content = input,
-        }
+require('llm').setup({
+  prompts = {
+    ['to spanish'] =
+      {
+        provider = openai,
+        hl_group = 'SpecialComment',
+        builder = function(input)
+          return {
+            messages = {
+              {
+                role = 'system',
+                content = 'Translate to Spanish',
+              },
+              {
+                role = 'user',
+                content = input,
+              }
+            }
+          }
+        end,
+        mode = segment.mode.REPLACE
       }
-    }
-  end,
-  mode = segment.mode.REPLACE
-}
+  }
+})
 ```
 
 ### Appearance
