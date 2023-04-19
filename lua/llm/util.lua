@@ -181,14 +181,33 @@ M.COL_ENTIRE_LINE = vim.v.maxcol or 2147483647
 M.buf = {}
 
 function M.buf.text(selection)
-  return table.concat(vim.api.nvim_buf_get_text(
+  return vim.api.nvim_buf_get_text(
     0,
     selection.start.row,
     selection.start.col,
     selection.stop.row,
     selection.stop.col == M.COL_ENTIRE_LINE and -1 or selection.stop.col,
     {}
-  ), '\n')
+  )
+end
+
+function M.buf.set_text(selection, lines)
+  local stop_col =
+    selection.stop.col == M.COL_ENTIRE_LINE
+      and #assert(
+            vim.api.nvim_buf_get_lines(0, selection.stop.row, selection.stop.row + 1, true)[1],
+            'No line at ' .. tostring(selection.stop.row)
+          )
+      or selection.stop.col
+
+  vim.api.nvim_buf_set_text(
+    0,
+    selection.start.row,
+    selection.start.col,
+    selection.stop.row,
+    stop_col,
+    lines
+  )
 end
 
 function M.buf.filename()

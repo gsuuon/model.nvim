@@ -82,6 +82,7 @@ local function create_segment_at(row, col, hl_group)
   end
 
   local _hl_group = hl_group
+  local _data = {}
 
   return {
 
@@ -130,12 +131,21 @@ local function create_segment_at(row, col, hl_group)
     delete = vim.schedule_wrap(function()
       local mark = get_details()
 
-      vim.api.nvim_buf_set_text(0, mark.row, mark.col, mark.details.end_row, mark.details.end_col, {})
+      local replacement = _data.original or {}
+
+      vim.api.nvim_buf_set_text(
+        0,
+        mark.row,
+        mark.col,
+        mark.details.end_row,
+        mark.details.end_col,
+        replacement
+      )
     end),
 
     ext_id = _ext_id,
 
-    data = {}
+    data = _data
 
   }
 end

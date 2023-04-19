@@ -22,24 +22,59 @@ local M = {}
 ---@field get_visual_selection boolean
 ---@field segment_mode SegmentMode
 
+---@class Segment
+---@field add fun(text: string): nil
+---@field clear_hl fun(): nil
+---@field data table
+---@field highlight fun(hl_group: string): nil
+
 ---@param behavior GetInputSegmentBehavior
 ---@param hl_group string
+---@return { input: string, segment: Segment }
 local function get_input_and_segment(behavior, hl_group)
-  -- replace --
+  -- TODO dry
+
   if behavior.segment_mode == segment.mode.REPLACE then
-    -- get text (buf lines or selection)
-    -- copy into segment data
-    -- create segment same way
-    -- on delete segment
-    --  remove segment text 
-    --  replace with original text
-    util.error('Not implemented')
+    if behavior.get_visual_selection then
+      local selection = util.cursor.selection()
+      local lines = util.buf.text(selection)
+
+      util.show(selection)
+
+      util.buf.set_text(selection, {})
+
+      local seg = segment.create_segment_at(
+        selection.start.row,
+        selection.start.col,
+        hl_group
+      )
+
+      seg.data.original = lines
+
+      return {
+        input = table.concat(lines, '\n'),
+        segment = seg
+      }
+    else
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      local seg = segment.create_segment_at(0, 0, hl_group)
+      local text = table.concat(lines, '\n') -- TODO use the original separator in file
+
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
+
+      seg.data.original = text
+
+      return {
+        input = text,
+        segment = seg
+      }
+    end
   end
 
   if behavior.segment_mode == segment.mode.APPEND then
     if behavior.get_visual_selection then
       local selection = util.cursor.selection()
-      local text = util.buf.text(selection)
+      local lines = util.buf.text(selection)
 
       local seg = segment.create_segment_at(
         selection.stop.row,
@@ -48,7 +83,7 @@ local function get_input_and_segment(behavior, hl_group)
       )
 
       return {
-        input = text,
+        input = table.concat(lines, '\n'),
         segment = seg
       }
     else
@@ -61,6 +96,8 @@ local function get_input_and_segment(behavior, hl_group)
       }
     end
   end
+
+  error('Unknown mode')
 end
 
 function M.request_completion_stream(cmd_params)
@@ -81,7 +118,7 @@ function M.request_completion_stream(cmd_params)
   local input_segment = get_input_and_segment(
     {
       get_visual_selection = cmd_params.range ~= 0,
-      segment_mode = segment.mode.APPEND
+      segment_mode = prompt.mode or segment.mode.APPEND
     },
     prompt.hl_group or M.opts.hl_group
   )
