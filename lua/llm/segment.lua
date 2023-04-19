@@ -48,35 +48,29 @@ end
 
 local function create_segment_at(row, col, hl_group)
 
-  local _hl_group = hl_group
+  local _ext_id = vim.api.nvim_buf_set_extmark(
+    0,
+    M.ns_id(),
+    row,
+    col,
+    {
+      hl_group = hl,
 
-  local _ext_id = listen_ref()
-
-  local function open(row_start, col_start, row_end, col_end, hl)
-    _ext_id.set(vim.api.nvim_buf_set_extmark(
-      0,
-      M.ns_id(),
-      row_start,
-      col_start,
-      {
-        hl_group = hl,
-
-        -- these need to be set or else get_details doesn't return end_*s
-        end_row = row_end or row_start,
-        end_col = col_end or col_start
-      }
-    ))
-  end
+      -- these need to be set or else get_details doesn't return end_*s
+      end_row = row,
+      end_col = col
+    }
+  )
 
   local function get_details()
-    if _ext_id.get() == nil then
+    if _ext_id == nil then
       util.error('Extmark for segment no longer exists')
     end
 
     local extmark = vim.api.nvim_buf_get_extmark_by_id(
       0,
       M.ns_id(),
-      _ext_id.get(),
+      _ext_id,
       { details = true }
     )
 
@@ -87,7 +81,7 @@ local function create_segment_at(row, col, hl_group)
     }
   end
 
-  open(row, col, row, col, _hl_group)
+  local _hl_group = hl_group
 
   return {
 
@@ -106,7 +100,7 @@ local function create_segment_at(row, col, hl_group)
       local end_pos = end_delta(lines, r, c)
 
       vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, {
-        id = _ext_id.get(),
+        id = _ext_id,
         end_col = end_pos.col,
         end_row = end_pos.row,
         hl_group = _hl_group -- need to set hl_group every time we want to update the extmark
@@ -119,7 +113,7 @@ local function create_segment_at(row, col, hl_group)
       local mark = get_details()
 
       mark.details.hl_group = _hl_group
-      mark.details.id = _ext_id.get()
+      mark.details.id = _ext_id
 
       vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, mark.details)
     end),
@@ -128,7 +122,7 @@ local function create_segment_at(row, col, hl_group)
       local mark = get_details()
 
       mark.details.hl_group = nil
-      mark.details.id = _ext_id.get()
+      mark.details.id = _ext_id
 
       vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, mark.details)
     end),
@@ -190,11 +184,7 @@ function M.create_segment_at(row, col, hl_group)
 
   local segment = create_segment_at(target_pos.row, target_pos.col, hl_group)
 
-  segments_cache[segment.ext_id.get()] = segment
-  segment.ext_id.on_change(function (id, next_id)
-    segments_cache[id] = nil
-    segments_cache[next_id ] = segment
-  end)
+  segments_cache[segment.ext_id] = segment
 
   return segment
 end
