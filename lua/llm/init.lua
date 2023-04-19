@@ -1,10 +1,14 @@
 local segment = require("llm.segment")
 local util = require("llm.util")
 
+---@alias PromptBuilder fun(input: string, context: table): table Converts input and context to request data
+
+---@class Provider
+---@field request_completion_stream fun(input: string, handler: StreamHandlers, builder: PromptBuilder, params?: table): nil Request a completion stream from provider
+
 ---@class Prompt
 ---@field provider Provider The API provider for this prompt
----@field builder fun(input: string, context: table): table
---- Takes selected text and converts to data that's merged with the provider's default request body
+---@field builder PromptBuilder Converts input and context to request data
 ---@field hl_group? string Highlight group of active response
 
 
