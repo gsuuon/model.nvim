@@ -33,7 +33,7 @@ local function create_segment_at(row, col, hl_group)
     row,
     col,
     {
-      hl_group = hl,
+      hl_group = hl_group,
 
       -- these need to be set or else get_details doesn't return end_*s
       end_row = row,
