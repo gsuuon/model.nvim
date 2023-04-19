@@ -40,8 +40,6 @@ local function get_input_and_segment(behavior, hl_group)
       local selection = util.cursor.selection()
       local lines = util.buf.text(selection)
 
-      util.show(selection)
-
       util.buf.set_text(selection, {})
 
       local seg = segment.create_segment_at(

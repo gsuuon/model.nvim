@@ -122,6 +122,7 @@ local openai = require('llm.providers.openai')
 
 -- configure default model params here for the provider
 openai.initialize({
+  model = 'gpt-3.5-turbo-0301',
   max_tokens = 400,
   temperature = 0.2,
 })
@@ -135,7 +136,6 @@ require('llm').setup({
     provider = openai,
     builder = function(input)
       return {
-        model = 'gpt-3.5-turbo-0301',
         temperature = 0.3,
         max_tokens = 120,
         messages = {
