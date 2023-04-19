@@ -34,13 +34,23 @@ end
 ---@field on_finish (fun(complete_text: string, finish_reason: string): nil)
 ---@field on_error (fun(data: any, label: string): nil) }
 
-function M.request_completion_stream(args)
-  local no_selection = args.range == 0
+function M.request_completion_stream(cmd_params)
+  local no_selection = cmd_params.range == 0
 
   local prompt_segment = get_prompt_and_segment(no_selection)
   local seg = prompt_segment.segment
 
-  local prompt = M.opts.default_prompt -- TODO get passed in prompt name from args
+  local function get_prompt()
+    local prompt_arg = cmd_params.fargs[1]
+
+    if not prompt_arg then
+      return M.opts.default_prompt
+    end
+
+    return assert(M.opts.prompts[prompt_arg], "Prompt '" .. prompt_arg .. "' wasn't found")
+  end
+
+  local prompt = get_prompt()
 
   local success, result = pcall(prompt.provider.request_completion_stream, prompt_segment.prompt, {
     on_partial = vim.schedule_wrap(function(partial)
@@ -69,9 +79,15 @@ function M.commands(opts)
   vim.api.nvim_create_user_command("Llm", M.request_completion_stream, {
     range = true,
     desc = "Request completion of selection",
-    force = true
-    -- TODO add custom Llm transform functions to complete :command-complete
-    -- complete = function() end
+    force = true,
+    nargs='?',
+    complete = function(arglead)
+      local items = vim.tbl_keys(opts.prompts)
+
+      if #arglead == 0 then return items end
+
+      return vim.fn.matchfuzzy(items, arglead)
+    end
   })
 end
 
