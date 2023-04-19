@@ -10,6 +10,7 @@ local util = require('llm.util')
 ---@field provider Provider The API provider for this prompt
 ---@field builder PromptBuilder Converts input and context to request data
 ---@field hl_group? string Highlight group of active response
+---@field mode? SegmentMode Response replacement mode ("replace" | "append"). Defaults to "append".
 
 ---@class StreamHandlers
 ---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff

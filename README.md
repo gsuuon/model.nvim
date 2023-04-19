@@ -36,9 +36,9 @@ require('lazy').setup({
 
 - `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. If you've added alternative [prompts](#prompts) to the config, you can give a prompt name as an argument. Streaming text is added on the next line in visual line-wise mode, or from the end of the selection in char-wise visual mode.
 
-- `:LlmCancel` — Cancel the active response under the cursor
+- `:LlmCancel` — Cancel the active response under the cursor.
 
-- `:LlmDelete` — Delete the response under the cursor
+- `:LlmDelete` — Delete the response under the cursor. If `prompt.mode == 'replace'` then replace with the original text.
 
 ## Providers
 ### OpenAI ChatGPT (default)
@@ -58,14 +58,14 @@ require('llm.providers.openai').initialize({
 Options for `require('llm').setup()`
 
 ### Prompts
-A prompt entry requires the builder and provider fields. The builder field of a prompt is a function that converts the input selection into data for the body of a request. You can optionally change the highlighting group of an active response
+A prompt entry requires the builder and provider fields. The field is a function that converts the input selection into data for the body of a request. You can optionally change the highlighting group of an active response, and if the response should replace or append to the selection (defaults to append)
 
 ```lua
 ---@class Prompt
 ---@field provider Provider The API provider for this prompt
----@field builder fun(input: string, context: table): table
---- Takes selected text and converts to data that's merged with the provider's default request body
+---@field builder PromptBuilder Converts input and context to request data
 ---@field hl_group? string Highlight group of active response
+---@field mode? SegmentMode Response replacement mode ("replace" | "append"). Defaults to "append".
 ```
 
 - `default_prompt: Prompt` — modify the default prompt  
@@ -76,20 +76,26 @@ A prompt entry requires the builder and provider fields. The builder field of a 
 #### Example
 ```lua
 local openai = require('llm.providers.openai')
+local segment = require('llm.segment')
 
-{
+local simple_prompt = {
   provider = openai,
   hl_group = 'SpecialComment',
   builder = function(input)
     return {
       messages = {
         {
+          role = 'system',
+          content = 'Translate to Spanish',
+        },
+        {
           role = 'user',
           content = input,
         }
       }
     }
-  end
+  end,
+  mode = segment.mode.REPLACE
 }
 ```
 
@@ -141,12 +147,12 @@ require('llm').setup({
     end
   }
 })
-
 ```
 
 #### `prompt_library.lua`
 ```lua
 local openai = require('llm.providers.openai')
+local segment = require('llm.segment')
 
 return {
   code = {
@@ -166,39 +172,24 @@ return {
       }
     end,
   },
-  comment = {
+  ['to spanish'] = {
     provider = openai,
-    builder = function(input, ctx)
+    hl_group = 'SpecialComment',
+    builder = function(input)
       return {
         messages = {
           {
             role = 'system',
-            content = 'Rewrite the code and add inline comments explaining the code.'
+            content = 'Translate to Spanish',
           },
           {
             role = 'user',
-            content = input
+            content = input,
           }
         }
       }
     end,
-  },
-  explain = {
-    provider = openai,
-    builder = function(input, ctx)
-      return {
-        messages = {
-          {
-            role = 'system',
-            content = 'Explain the code.'
-          },
-          {
-            role = 'user',
-            content = input
-          }
-        }
-      }
-    end,
+    mode = segment.mode.REPLACE
   },
   ['to javascript'] = {
     provider = openai,
