@@ -21,7 +21,7 @@ local function get_input_and_segment(no_selection, hl_group)
     local seg = segment.create_segment_at(#lines, 0, hl_group)
 
     return {
-      prompt = table.concat(lines, '\n'),
+      input = table.concat(lines, '\n'),
       segment = seg
     }
   else
