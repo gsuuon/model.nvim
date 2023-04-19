@@ -62,7 +62,7 @@ local function get_input_and_segment(behavior, hl_group)
 
       vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
 
-      seg.data.original = text
+      seg.data.original = lines
 
       return {
         input = text,
