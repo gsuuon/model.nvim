@@ -2,6 +2,8 @@ local util = require('llm.util')
 
 local M = {}
 
+local segments_cache = {}
+
 function M.ns_id()
   if M._ns_id == nil then
     M._ns_id = vim.api.nvim_create_namespace('llm.nvim')
@@ -23,41 +25,52 @@ local function end_delta(lines, origin_row, origin_col)
   }
 end
 
+local function ref(initial)
+  local _value = initial
+  local _on_change
+
+  return {
+    get = function()
+      return _value
+    end,
+    set = function(next_value)
+      if _on_change ~= nil then
+        _on_change(_value, next_value)
+      end
+
+      _value = next_value
+    end,
+    on_change = function(handle)
+      _on_change = handle
+    end
+  }
+end
+
 local function create_segment_at(row, col, hl_group)
 
-  local _hl_group = hl_group
-  local _extmark_id
+  local _ext_id = vim.api.nvim_buf_set_extmark(
+    0,
+    M.ns_id(),
+    row,
+    col,
+    {
+      hl_group = hl,
 
-  local function open(row_start, col_start, row_end, col_end, hl)
-    _extmark_id = vim.api.nvim_buf_set_extmark(
-      0,
-      M.ns_id(),
-      row_start,
-      col_start,
-      {
-        hl_group = hl,
-
-        -- these need to be set or else get_details doesn't return end_*s
-        end_row = row_end or row_start,
-        end_col = col_end or col_start
-      }
-    )
-  end
-
-  local function close()
-    vim.api.nvim_buf_del_extmark(0, M.ns_id(), _extmark_id)
-    _extmark_id = nil
-  end
+      -- these need to be set or else get_details doesn't return end_*s
+      end_row = row,
+      end_col = col
+    }
+  )
 
   local function get_details()
-    if _extmark_id == nil then
+    if _ext_id == nil then
       util.error('Extmark for segment no longer exists')
     end
 
     local extmark = vim.api.nvim_buf_get_extmark_by_id(
       0,
       M.ns_id(),
-      _extmark_id,
+      _ext_id,
       { details = true }
     )
 
@@ -68,7 +81,7 @@ local function create_segment_at(row, col, hl_group)
     }
   end
 
-  open(row, col, row, col, _hl_group)
+  local _hl_group = hl_group
 
   return {
 
@@ -87,7 +100,7 @@ local function create_segment_at(row, col, hl_group)
       local end_pos = end_delta(lines, r, c)
 
       vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, {
-        id = _extmark_id,
+        id = _ext_id,
         end_col = end_pos.col,
         end_row = end_pos.row,
         hl_group = _hl_group -- need to set hl_group every time we want to update the extmark
@@ -100,7 +113,7 @@ local function create_segment_at(row, col, hl_group)
       local mark = get_details()
 
       mark.details.hl_group = _hl_group
-      mark.details.id = _extmark_id
+      mark.details.id = _ext_id
 
       vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, mark.details)
     end),
@@ -108,18 +121,21 @@ local function create_segment_at(row, col, hl_group)
     clear_hl = vim.schedule_wrap(function()
       local mark = get_details()
 
-      close()
-      _hl_group = nil
-      open(mark.row, mark.col, mark.details.end_row, mark.details.end_col)
-    end),
+      mark.details.hl_group = nil
+      mark.details.id = _ext_id
 
-    close = vim.schedule_wrap(close),
+      vim.api.nvim_buf_set_extmark(0, M.ns_id(), mark.row, mark.col, mark.details)
+    end),
 
     delete = vim.schedule_wrap(function()
       local mark = get_details()
 
       vim.api.nvim_buf_set_text(0, mark.row, mark.col, mark.details.end_row, mark.details.end_col, {})
     end),
+
+    ext_id = _ext_id,
+
+    data = ref()
 
   }
 end
@@ -168,7 +184,46 @@ function M.create_segment_at(row, col, hl_group)
     col = col
   }))
 
-  return create_segment_at(target_pos.row, target_pos.col, hl_group)
+  local segment = create_segment_at(target_pos.row, target_pos.col, hl_group)
+
+  segments_cache[segment.ext_id] = segment
+
+  return segment
+end
+
+function M.query(pos)
+  local extmark_details = vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, {details = true})
+
+  local matches = {}
+
+  -- Tried doing this differently but vim.tbl_flatten was acting weird
+  -- also, debugging deep composition is difficult with lua
+
+  for _, mark in ipairs(extmark_details) do
+    local start = {
+      row = mark[2],
+      col = mark[3]
+    }
+
+    local details = mark[4]
+
+    local final = {
+      row = details.end_row,
+      col = details.end_col
+    }
+
+    if util.position.is_bounded(pos, start, final) then
+      local ext_id = mark[1]
+
+      local seg = segments_cache[ext_id]
+
+      if seg ~= nil then
+        table.insert(matches, seg)
+      end
+    end
+  end
+
+  return matches
 end
 
 M._debug = {}

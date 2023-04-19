@@ -154,6 +154,28 @@ function M.cursor.position()
   }
 end
 
+M.position = {}
+
+-- b is less than a
+function M.position.is_less(a, b)
+  if a.row == b.row then
+    return b.col < a.col
+  end
+
+  return b.row < a.row
+end
+
+-- b is greater or equal to a
+function M.position.is_greater_eq(a, b)
+  return not M.position.is_less(a, b)
+end
+
+-- pos is between start (inclusive) and final (exclusive)
+-- false if pos == start == final
+function M.position.is_bounded(pos, start, final)
+  return M.position.is_greater_eq(start, pos) and M.position.is_less(final, pos)
+end
+
 M.COL_ENTIRE_LINE = vim.v.maxcol or 2147483647
 
 M.buf = {}
