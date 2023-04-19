@@ -92,6 +92,40 @@ function M.request_completion_stream(cmd_params)
 end
 
 function M.commands(opts)
+  vim.api.nvim_create_user_command('LlmDelete',
+    function()
+      local matches = segment.query(util.cursor.position())
+
+      for _, seg in ipairs(matches) do seg.highlight('Error') end
+
+      local function flash(count, wait)
+        vim.defer_fn(function ()
+          if count == 0 then
+            for _, seg in ipairs(matches) do seg.delete() end
+            return
+          end
+
+          if count % 2 == 0 then
+            for _, seg in ipairs(matches) do seg.highlight('Error') end
+          else
+            for _, seg in ipairs(matches) do seg.clear_hl() end
+          end
+
+          return flash(count - 1, wait)
+        end, wait)
+      end
+
+      flash(6, 80)
+    end,
+    {
+      range = true,
+      desc = 'Delete the completion under the cursor',
+      force = true,
+      complete = function()
+      end
+    }
+  )
+
   vim.api.nvim_create_user_command('Llm', M.request_completion_stream, {
     range = true,
     desc = 'Request completion of selection',
