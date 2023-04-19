@@ -76,6 +76,19 @@ function M.request_completion_stream(input, handlers, prompt, params)
     handlers.on_error(error, 'curl')
   end
 
+  local prompt_built_params = assert(
+    prompt(input, {
+      filename = util.buf.filename()
+    }),
+    'prompt builder produced nil'
+  )
+
+  local body = vim.tbl_deep_extend('force',
+    M.default_request_params,
+    (params or {}),
+    prompt_built_params
+  )
+
   return curl.stream({
     headers = {
       Authorization = 'Bearer ' .. api_key(),
@@ -83,14 +96,7 @@ function M.request_completion_stream(input, handlers, prompt, params)
     },
     method = 'POST',
     url = 'https://api.openai.com/v1/chat/completions',
-    body =
-      vim.tbl_deep_extend('force',
-        M.default_request_params,
-        (params or {}),
-        prompt(input, {
-          filename = util.buf.filename()
-        })
-      )
+    body = body
   }, handle_raw, handle_error)
 end
 
