@@ -99,29 +99,7 @@ local function get_input_and_segment(behavior, hl_group)
   error('Unknown mode')
 end
 
-function M.request_completion_stream(cmd_params)
-
-  ---@return Prompt
-  local function get_prompt()
-    local prompt_arg = cmd_params.fargs[1]
-
-    if not prompt_arg then
-      return M.opts.default_prompt
-    end
-
-    return assert(M.opts.prompts[prompt_arg], "Prompt '" .. prompt_arg .. "' wasn't found")
-  end
-
-  local prompt = get_prompt()
-
-  local input_segment = get_input_and_segment(
-    {
-      get_visual_selection = cmd_params.range ~= 0,
-      segment_mode = prompt.mode or segment.mode.APPEND
-    },
-    prompt.hl_group or M.opts.hl_group
-  )
-
+local function request_completion_input_segment(input_segment, prompt)
   local seg = input_segment.segment
 
   local success, result = pcall(prompt.provider.request_completion_stream, input_segment.input, {
@@ -153,6 +131,33 @@ function M.request_completion_stream(cmd_params)
   else
     util.eshow(result)
   end
+end
+
+function M.request_completion_stream(cmd_params)
+
+  ---@return Prompt
+  local function get_prompt()
+    local prompt_arg = cmd_params.fargs[1]
+
+    if not prompt_arg then
+      return M.opts.default_prompt
+    end
+
+    return assert(M.opts.prompts[prompt_arg], "Prompt '" .. prompt_arg .. "' wasn't found")
+  end
+
+  local prompt = get_prompt()
+
+  local input_segment = get_input_and_segment(
+    {
+      get_visual_selection = cmd_params.range ~= 0,
+      segment_mode = prompt.mode or segment.mode.APPEND
+    },
+    prompt.hl_group or M.opts.hl_group
+  )
+
+  request_completion_input_segment(input_segment, prompt)
+
 end
 
 function M.commands(opts)
