@@ -12,9 +12,9 @@ local util = require("llm.util")
 ---@field hl_group? string Highlight group of active response
 
 ---@class StreamHandlers
----@field on_partial (fun(partial_text: string): nil)
----@field on_finish (fun(complete_text: string, finish_reason: string): nil)
----@field on_error (fun(data: any, label: string): nil) }
+---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
+---@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
+---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
 
 local M = {}
 
