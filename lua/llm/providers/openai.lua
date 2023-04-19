@@ -86,10 +86,7 @@ function M.request_completion_stream(input, handlers, params, prompt)
     url = 'https://api.openai.com/v1/chat/completions',
     body =
       vim.tbl_deep_extend("force",
-        {
-          stream = true,
-          model = "gpt-3.5-turbo"
-        },
+        M.default_request_params,
         (params or {}),
         prompt(input, {
           filename = util.buf.filename()
@@ -99,7 +96,14 @@ function M.request_completion_stream(input, handlers, params, prompt)
 end
 
 function M.initialize(opts)
-  -- TODO use opts as default params
+  M.default_request_params = vim.tbl_deep_extend("force",
+    {
+      model = "gpt-3.5-turbo"
+    },
+    opts or {},
+    {
+      stream = true -- force streaming since data parsing will break otherwise
+    })
 end
 
 return M
