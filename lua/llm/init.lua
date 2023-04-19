@@ -1,5 +1,5 @@
-local segment = require("llm.segment")
-local util = require("llm.util")
+local segment = require('llm.segment')
+local util = require('llm.util')
 
 ---@alias PromptBuilder fun(input: string, context: table): table Converts input and context to request data
 
@@ -92,9 +92,9 @@ function M.request_completion_stream(cmd_params)
 end
 
 function M.commands(opts)
-  vim.api.nvim_create_user_command("Llm", M.request_completion_stream, {
+  vim.api.nvim_create_user_command('Llm', M.request_completion_stream, {
     range = true,
-    desc = "Request completion of selection",
+    desc = 'Request completion of selection',
     force = true,
     nargs='?',
     complete = function(arglead)
@@ -113,11 +113,11 @@ end
 
 function M.setup(opts)
   local _opts = {
-    hl_group = "Comment",
+    hl_group = 'Comment',
   }
 
   if opts.default_prompt == nil then
-    local openai = require("llm.providers.openai")
+    local openai = require('llm.providers.openai')
 
     _opts.default_prompt = {
       provider = openai,
@@ -126,7 +126,7 @@ function M.setup(opts)
   end
 
   if opts ~= nil then
-    _opts = vim.tbl_deep_extend("force", _opts, opts)
+    _opts = vim.tbl_deep_extend('force', _opts, opts)
   end
 
   M.opts = _opts

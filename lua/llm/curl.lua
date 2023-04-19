@@ -1,4 +1,4 @@
-local util = require("llm.util")
+local util = require('llm.util')
 local uv = vim.loop
 
 local M = {}
@@ -20,15 +20,15 @@ end
 ---@param on_error fun(text: string): nil
 function M.stream(opts, on_stdout, on_error)
   if M._is_debugging then
-    vim.notify(vim.inspect(opts.body), vim.log.levels.INFO, { title = "Request body"})
+    util.show(opts.body, 'Request body')
   end
   local stdout = uv.new_pipe(false)
   local stderr = uv.new_pipe(false)
 
-  if stdout == nil then return error("Failed to open stdout pipe") end
-  if stderr == nil then return error("Failed to open stderr pipe") end
+  if stdout == nil then return error('Failed to open stdout pipe') end
+  if stderr == nil then return error('Failed to open stderr pipe') end
 
-  local _error_output = ""
+  local _error_output = ''
 
   local handle, _ = uv.spawn('curl',
     {

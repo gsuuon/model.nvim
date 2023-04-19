@@ -1,4 +1,4 @@
-local util = require("llm.util")
+local util = require('llm.util')
 
 local M = {}
 
@@ -74,7 +74,7 @@ local function create_segment_at(_row, _col, _hl_group)
       local lines = util.string.split_char(text, '\n')
 
       if lines == nil then
-        error("Tried to add nothing")
+        error('Tried to add nothing')
       end
 
       local mark = get_details()
@@ -141,7 +141,7 @@ function M.create_segment_at(row, col, hl_group)
     local row_out_of_bounds = pos.row >= buf_lines_count
 
     if row_out_of_bounds then
-      vim.api.nvim_buf_set_lines(0, -1, -1, false, {""})
+      vim.api.nvim_buf_set_lines(0, -1, -1, false, {''})
 
       return {
         row = buf_lines_count,

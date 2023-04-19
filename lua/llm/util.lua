@@ -3,12 +3,12 @@ local M = {}
 function M.noop() end
 
 local function show(item, level, opt)
-  local _body = type(item) == "string" and item or vim.inspect(item)
+  local _body = type(item) == 'string' and item or vim.inspect(item)
   local _level = level or vim.log.levels.INFO
 
   local _opt =
     opt == nil and {} or
-    type(opt) == "string" and { title = opt } or
+    type(opt) == 'string' and { title = opt } or
     opt
 
   vim.notify(_body, _level, _opt)
@@ -19,7 +19,7 @@ function M.show(item, opt)
 end
 
 function M.eshow(item, opt)
-  if type(item) == "table" and item.message ~= nil and item.stack ~= nil then
+  if type(item) == 'table' and item.message ~= nil and item.stack ~= nil then
     show(
       item.message .. '\n' .. item.stack,
       vim.log.levels.ERROR,
@@ -46,7 +46,7 @@ function M.env(name)
   local value = os.getenv(name)
 
   if value == nil then
-    M.error("Missing environment variable: " .. name)
+    M.error('Missing environment variable: ' .. name)
   else
     return value
   end
@@ -85,14 +85,14 @@ M.string = {}
 function M.string.split_char(text, sep)
   local res = {}
 
-  local _cur = ""
+  local _cur = ''
 
   for i = 1, #text do
     local char = text:sub(i, i)
 
     if char == sep then
       table.insert(res, _cur)
-      _cur = ""
+      _cur = ''
     else
       _cur = _cur .. char
     end
@@ -165,7 +165,7 @@ function M.buf.text(selection)
     selection.stop.row,
     selection.stop.col == M.COL_ENTIRE_LINE and -1 or selection.stop.col,
     {}
-  ), "\n")
+  ), '\n')
 end
 
 function M.buf.filename()

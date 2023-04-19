@@ -1,5 +1,5 @@
-local curl = require("llm.curl")
-local util = require("llm.util")
+local curl = require('llm.curl')
+local util = require('llm.util')
 
 local M = {}
 
@@ -8,7 +8,7 @@ local api_key = (function()
 
   return function()
     if key == nil then
-      key = util.env("OPENAI_API_KEY")
+      key = util.env('OPENAI_API_KEY')
     end
 
     return key
@@ -30,7 +30,7 @@ function M.default_builder(input, _)
   return {
     messages = {
       { content = input,
-        role = "user"
+        role = 'user'
       }
     }
   }
@@ -42,10 +42,10 @@ end
 ---@param params? any Additional options for OpenAI endpoint
 ---@return nil
 function M.request_completion_stream(input, handlers, prompt, params)
-  local _all_content = ""
+  local _all_content = ''
 
   local function handle_raw(raw_data)
-    local items = util.string.split_pattern(raw_data, "\n\ndata: ")
+    local items = util.string.split_pattern(raw_data, '\n\ndata: ')
 
     for _, item in ipairs(items) do
       local data = extract_data(item)
@@ -65,7 +65,7 @@ function M.request_completion_stream(input, handlers, prompt, params)
         if response ~= nil then
           handlers.on_error(response, 'response')
         else
-          if not item:match("^%[DONE%]") then
+          if not item:match('^%[DONE%]') then
             handlers.on_error(item, 'item')
           end
         end
@@ -85,7 +85,7 @@ function M.request_completion_stream(input, handlers, prompt, params)
     method = 'POST',
     url = 'https://api.openai.com/v1/chat/completions',
     body =
-      vim.tbl_deep_extend("force",
+      vim.tbl_deep_extend('force',
         M.default_request_params,
         (params or {}),
         prompt(input, {
@@ -96,9 +96,9 @@ function M.request_completion_stream(input, handlers, prompt, params)
 end
 
 function M.initialize(opts)
-  M.default_request_params = vim.tbl_deep_extend("force",
+  M.default_request_params = vim.tbl_deep_extend('force',
     {
-      model = "gpt-3.5-turbo"
+      model = 'gpt-3.5-turbo'
     },
     opts or {},
     {
