@@ -109,10 +109,26 @@ local function get_input_and_segment(behavior, hl_group)
   error('Unknown mode')
 end
 
+local function start_prompt(input, prompt, handlers)
+  local success, pcall_result = pcall(prompt.provider.request_completion_stream, input, handlers, prompt.builder)
+
+  local result = {
+    started = success
+  }
+
+  if success then
+    result.cancel = pcall_result
+  else
+    result.error = pcall_result
+  end
+
+  return result
+end
+
 local function request_completion_input_segment(input_segment, prompt)
   local seg = input_segment.segment
 
-  local success, result = pcall(prompt.provider.request_completion_stream, input_segment.input, {
+  local proc = start_prompt(input_segment.input, prompt, {
     on_partial = function(partial)
       seg.add(partial)
     end,
@@ -132,14 +148,12 @@ local function request_completion_input_segment(input_segment, prompt)
     on_error = function(data, label)
       util.eshow(data, 'stream error ' .. label)
     end
-  }, prompt.builder)
+  })
 
-  if success then
-    local cancel = result
-
-    seg.data.cancel = cancel
+  if proc.started then
+    seg.data.cancel = proc.cancel
   else
-    util.eshow(result)
+    util.eshow(proc.error, 'process')
   end
 end
 
