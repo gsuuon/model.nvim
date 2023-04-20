@@ -1,6 +1,9 @@
 ## hugging face local provider
 Consumes python files, uses StreamHandler to handle output
 
+## Buffer mode
+Response goes to a temporary buffer
+
 ## add to context
 `:LlmCtx add` - add additional selections as context for following calls
 
@@ -22,6 +25,8 @@ end
 ## segment contains original prompt.builder result
 `:LlmCheckPrompt`
 
-## save a log of all prompt/response pairs so can traverse back and pull out responses
+## Can check the prompt of each response segment. Prompt shows in a float.
+
+## see history of prompts and responses
 
 ## reorganize commands
