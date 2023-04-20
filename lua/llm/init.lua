@@ -29,6 +29,24 @@ local M = {}
 ---@field data table
 ---@field highlight fun(hl_group: string): nil
 
+local get_input = {
+  visual_selection = function()
+    local selection = util.cursor.selection()
+    local lines = util.buf.text(selection)
+
+    return {
+      selection = selection,
+      lines = lines
+    }
+  end,
+
+  file = function ()
+    return {
+      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    }
+  end
+}
+
 ---@param behavior GetInputSegmentBehavior
 ---@param hl_group string
 ---@return { input: string, segment: Segment }
@@ -39,35 +57,33 @@ local function get_input_and_segment(behavior, hl_group)
 
   if behavior.segment_mode == segment.mode.REPLACE then
     if behavior.get_visual_selection then
-      local selection = util.cursor.selection()
-      local lines = util.buf.text(selection)
+      local input = get_input.visual_selection()
 
-      util.buf.set_text(selection, {})
+      util.buf.set_text(input.selection, {})
 
       local seg = segment.create_segment_at(
-        selection.start.row,
-        selection.start.col,
+        input.selection.start.row,
+        input.selection.start.col,
         hl_group,
         bufnr
       )
 
-      seg.data.original = lines
+      seg.data.original = input.lines
 
       return {
-        input = table.concat(lines, '\n'),
+        input = table.concat(input.lines, '\n'),
         segment = seg
       }
     else
-      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      local input = get_input.file()
       local seg = segment.create_segment_at(0, 0, hl_group, bufnr)
-      local text = table.concat(lines, '\n') -- TODO use the original separator in file
 
       vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
 
-      seg.data.original = lines
+      seg.data.original = input.lines
 
       return {
-        input = text,
+        input = table.concat(input.lines, '\n'),
         segment = seg
       }
     end
@@ -75,26 +91,25 @@ local function get_input_and_segment(behavior, hl_group)
 
   if behavior.segment_mode == segment.mode.APPEND then
     if behavior.get_visual_selection then
-      local selection = util.cursor.selection()
-      local lines = util.buf.text(selection)
+      local input = get_input.visual_selection()
 
       local seg = segment.create_segment_at(
-        selection.stop.row,
-        selection.stop.col,
+        input.selection.stop.row,
+        input.selection.stop.col,
         hl_group,
         bufnr
       )
 
       return {
-        input = table.concat(lines, '\n'),
+        input = table.concat(input.lines, '\n'),
         segment = seg
       }
     else
-      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      local seg = segment.create_segment_at(#lines, 0, hl_group, bufnr)
+      local input = get_input.file()
+      local seg = segment.create_segment_at(#input.lines, 0, hl_group, bufnr)
 
       return {
-        input = table.concat(lines, '\n'),
+        input = table.concat(input.lines, '\n'),
         segment = seg
       }
     end
@@ -172,6 +187,7 @@ function M.request_completion_stream(cmd_params)
 
   local prompt = get_prompt()
   local prompt_mode = prompt.mode or segment.mode.APPEND
+  local want_visual_selection = cmd_params.range ~= 0
 
   if type(prompt.mode) == 'table' then
     ---@cast prompt_mode StreamHandlers
@@ -182,7 +198,7 @@ function M.request_completion_stream(cmd_params)
   ---@cast prompt_mode SegmentMode
   local input_segment = get_input_and_segment(
     {
-      get_visual_selection = cmd_params.range ~= 0,
+      get_visual_selection = want_visual_selection,
       segment_mode = prompt_mode
     },
     prompt.hl_group or M.opts.hl_group
