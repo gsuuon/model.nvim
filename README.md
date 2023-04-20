@@ -85,6 +85,10 @@ A prompt entry requires the builder and provider fields. The field is a function
   Alternatives can be used by calling `:Llm` with their name, e.g. `:Llm advice` (fuzzy command completion)
 
 #### Example
+
+<details>
+<summary>prompt that replaces text with Spanish</summary>
+
 ```lua
 local openai = require('llm.providers.openai')
 local segment = require('llm.segment')
@@ -110,8 +114,22 @@ require('llm').setup({
           }
         end,
         mode = segment.mode.REPLACE
-      },
-    handlers = {
+      }
+  }
+})
+```
+
+</details>
+
+<details>
+<summary>prompt that notifies each stream part and the complete response</summary>
+
+```lua
+local openai = require('llm.providers.openai')
+
+require('llm').setup({
+  prompts = {
+    ['show parts'] = {
       provider = openai,
       builder = openai.default_builder,
       mode = {
@@ -129,6 +147,9 @@ require('llm').setup({
   }
 })
 ```
+
+</details>
+
 
 ### Appearance
 - `hl_group: string`  
