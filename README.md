@@ -2,7 +2,8 @@
 
 Talk to Large Language Model AI in Neovim.
 
-![demo](https://user-images.githubusercontent.com/6422188/232323471-2fe0bb1f-54a3-4508-b6fb-b9c6d091dde8.gif)
+https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a419-eeec04cb7e99.mp4
+
 
 - 🪁 __Streaming responses__  
 - 📑 __Build a prompt library__  
