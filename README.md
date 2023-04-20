@@ -60,19 +60,25 @@ require('llm.providers.openai').initialize({
 ```
 
 ## 🧵Configuration
-Options for `require('llm').setup()`
-
 ### Prompts
 A prompt entry requires the builder and provider fields. The field is a function that converts the input selection into data for the body of a request. You can optionally change the highlighting group of an active response, and if the response should replace or append to the selection (defaults to append)
 
+#### `@class Prompt`
 ```lua
----@class Prompt
 ---@field provider Provider The API provider for this prompt
 ---@field builder PromptBuilder Converts input and context to request data
 ---@field hl_group? string Highlight group of active response
----@field mode? SegmentMode Response replacement mode ("replace" | "append"). Defaults to "append".
+---@field mode? SegmentMode | StreamHandlers Response handling mode ("replace" | "append" | StreamHandlers). Defaults to "append".
 ```
 
+#### `@class StreamHandlers`
+```lua
+---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
+---@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
+---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
+```
+
+#### `require('llm').setup()`
 - `default_prompt: Prompt` — modify the default prompt  
 
 - `prompts: table<string, Prompt>` — add prompt alternatives  
