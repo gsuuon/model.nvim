@@ -5,10 +5,13 @@ Consumes python files, uses StreamHandler to handle output
 
 ## add to context
 `:LlmCtx add` - add additional selections as context for following calls
+
 `:LLmCtx clear` - remove all ctx
+
 `:LlmCtx show` - show included context (eventually qflist?)
-`ctx.filename : string`
-`ctx.selections : string []`
+
+`ctx.filename : string`  
+`ctx.selections : string []`  
 
 ```lua
 builder = function(input, ctx)
