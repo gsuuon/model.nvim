@@ -71,7 +71,7 @@ local function get_input_and_segment(behavior, hl_group)
       seg.data.original = input.lines
 
       return {
-        input = table.concat(input.lines, '\n'),
+        input = input.lines,
         segment = seg
       }
     else
@@ -83,7 +83,7 @@ local function get_input_and_segment(behavior, hl_group)
       seg.data.original = input.lines
 
       return {
-        input = table.concat(input.lines, '\n'),
+        input = input.lines,
         segment = seg
       }
     end
@@ -101,7 +101,7 @@ local function get_input_and_segment(behavior, hl_group)
       )
 
       return {
-        input = table.concat(input.lines, '\n'),
+        input = input.lines,
         segment = seg
       }
     else
@@ -109,7 +109,7 @@ local function get_input_and_segment(behavior, hl_group)
       local seg = segment.create_segment_at(#input.lines, 0, hl_group, bufnr)
 
       return {
-        input = table.concat(input.lines, '\n'),
+        input = input.lines,
         segment = seg
       }
     end
@@ -124,8 +124,11 @@ local function get_input_and_segment(behavior, hl_group)
   error('Unknown mode')
 end
 
+---@param input string | string[]
 local function start_prompt(input, prompt, handlers)
-  local success, pcall_result = pcall(prompt.provider.request_completion_stream, input, handlers, prompt.builder)
+  local _input = type(input) == 'table' and table.concat(input, '\n') or input
+
+  local success, pcall_result = pcall(prompt.provider.request_completion_stream, _input, handlers, prompt.builder)
 
   local result = {
     started = success
@@ -196,7 +199,7 @@ function M.request_completion_stream(cmd_params)
       want_visual_selection and get_input.visual_selection() or get_input.file()
 
     local result = start_prompt(
-      table.concat(input.lines, '\n'),
+      input.lines,
       prompt,
       prompt_mode
     )
