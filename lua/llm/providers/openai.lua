@@ -43,6 +43,13 @@ end
 function M.request_completion_stream(input, handlers, prompt, params)
   local _all_content = ''
 
+  -- TODO should handlers being optional be a choice at the provider level or always optional for all providers?
+  local _handlers = vim.tbl_extend("force", {
+    on_partial = util.noop,
+    on_finish = util.noop,
+    on_error = util.noop,
+  }, handlers)
+
   local function handle_raw(raw_data)
     local items = util.string.split_pattern(raw_data, '\n\ndata: ')
 
@@ -52,20 +59,20 @@ function M.request_completion_stream(input, handlers, prompt, params)
       if data ~= nil then
         if data.content ~= nil then
           _all_content = _all_content .. data.content
-          handlers.on_partial(data.content)
+          _handlers.on_partial(data.content)
         end
 
         if data.finish_reason ~= nil then
-          handlers.on_finish(_all_content, data.finish_reason)
+          _handlers.on_finish(_all_content, data.finish_reason)
         end
       else
         local response = util.json.decode(item)
 
         if response ~= nil then
-          handlers.on_error(response, 'response')
+          _handlers.on_error(response, 'response')
         else
           if not item:match('^%[DONE%]') then
-            handlers.on_error(item, 'item')
+            _handlers.on_error(item, 'item')
           end
         end
       end
@@ -73,7 +80,7 @@ function M.request_completion_stream(input, handlers, prompt, params)
   end
 
   local function handle_error(error)
-    handlers.on_error(error, 'curl')
+    _handlers.on_error(error, 'curl')
   end
 
   local prompt_built_params = assert(
