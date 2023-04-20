@@ -10,7 +10,7 @@ local util = require('llm.util')
 ---@field provider Provider The API provider for this prompt
 ---@field builder PromptBuilder Converts input and context to request data
 ---@field hl_group? string Highlight group of active response
----@field mode? SegmentMode Response replacement mode ("replace" | "append"). Defaults to "append".
+---@field mode? SegmentMode | StreamHandlers Response handling mode ("replace" | "append" | StreamHandlers). Defaults to "append".
 
 ---@class StreamHandlers
 ---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
@@ -171,11 +171,19 @@ function M.request_completion_stream(cmd_params)
   end
 
   local prompt = get_prompt()
+  local prompt_mode = prompt.mode or segment.mode.APPEND
 
+  if type(prompt.mode) == 'table' then
+    ---@cast prompt_mode StreamHandlers
+    error('Not implemented')
+    return
+  end
+
+  ---@cast prompt_mode SegmentMode
   local input_segment = get_input_and_segment(
     {
       get_visual_selection = cmd_params.range ~= 0,
-      segment_mode = prompt.mode or segment.mode.APPEND
+      segment_mode = prompt_mode
     },
     prompt.hl_group or M.opts.hl_group
   )
