@@ -5,7 +5,8 @@ local M = {}
 
 local function build_args(opts)
   return vim.tbl_flatten({
-    '-N',
+    '-N', -- no buffer
+    '-sS', -- silent (no progress) but show errors
     '-X', opts.method,
     util.table.map_to_array(opts.headers, function(k, v)
       return {'-H', k .. ': ' .. v}
@@ -41,12 +42,7 @@ function M.stream(opts, on_stdout, on_error)
       -- sigint / cancelled
       if exit_code == 1 and signal == 2 then return end
 
-      on_error(
-        vim.inspect({
-          exit_code = exit_code,
-          signal = signal,
-        }) .. '\n' .. _error_output
-      )
+      on_error(_error_output)
     end
   ), 'Failed to open stderr pipe')
 
