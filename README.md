@@ -110,7 +110,22 @@ require('llm').setup({
           }
         end,
         mode = segment.mode.REPLACE
+      },
+    handlers = {
+      provider = openai,
+      builder = openai.default_builder,
+      mode = {
+        on_finish = function (final)
+          vim.notify('final: ' .. final)
+        end,
+        on_partial = function (partial)
+          vim.notify(partial)
+        end,
+        on_error = function (msg)
+          vim.notify('error: ' .. msg)
+        end
       }
+    },
   }
 })
 ```
