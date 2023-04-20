@@ -1,5 +1,3 @@
-## builders can define a handler, on_partial, on_finish, on_error
-
 ## hugging face local provider
 Consumes python files, uses StreamHandler to handle output
 

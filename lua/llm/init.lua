@@ -10,7 +10,7 @@ local util = require('llm.util')
 ---@field provider Provider The API provider for this prompt
 ---@field builder PromptBuilder Converts input and context to request data
 ---@field hl_group? string Highlight group of active response
----@field mode? SegmentMode Response replacement mode ("replace" | "append"). Defaults to "append".
+---@field mode? SegmentMode | StreamHandlers Response handling mode ("replace" | "append" | StreamHandlers). Defaults to "append".
 
 ---@class StreamHandlers
 ---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
@@ -29,6 +29,24 @@ local M = {}
 ---@field data table
 ---@field highlight fun(hl_group: string): nil
 
+local get_input = {
+  visual_selection = function()
+    local selection = util.cursor.selection()
+    local lines = util.buf.text(selection)
+
+    return {
+      selection = selection,
+      lines = lines
+    }
+  end,
+
+  file = function ()
+    return {
+      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    }
+  end
+}
+
 ---@param behavior GetInputSegmentBehavior
 ---@param hl_group string
 ---@return { input: string, segment: Segment }
@@ -39,35 +57,33 @@ local function get_input_and_segment(behavior, hl_group)
 
   if behavior.segment_mode == segment.mode.REPLACE then
     if behavior.get_visual_selection then
-      local selection = util.cursor.selection()
-      local lines = util.buf.text(selection)
+      local input = get_input.visual_selection()
 
-      util.buf.set_text(selection, {})
+      util.buf.set_text(input.selection, {})
 
       local seg = segment.create_segment_at(
-        selection.start.row,
-        selection.start.col,
+        input.selection.start.row,
+        input.selection.start.col,
         hl_group,
         bufnr
       )
 
-      seg.data.original = lines
+      seg.data.original = input.lines
 
       return {
-        input = table.concat(lines, '\n'),
+        input = input.lines,
         segment = seg
       }
     else
-      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      local input = get_input.file()
       local seg = segment.create_segment_at(0, 0, hl_group, bufnr)
-      local text = table.concat(lines, '\n') -- TODO use the original separator in file
 
       vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
 
-      seg.data.original = lines
+      seg.data.original = input.lines
 
       return {
-        input = text,
+        input = input.lines,
         segment = seg
       }
     end
@@ -75,26 +91,25 @@ local function get_input_and_segment(behavior, hl_group)
 
   if behavior.segment_mode == segment.mode.APPEND then
     if behavior.get_visual_selection then
-      local selection = util.cursor.selection()
-      local lines = util.buf.text(selection)
+      local input = get_input.visual_selection()
 
       local seg = segment.create_segment_at(
-        selection.stop.row,
-        selection.stop.col,
+        input.selection.stop.row,
+        input.selection.stop.col,
         hl_group,
         bufnr
       )
 
       return {
-        input = table.concat(lines, '\n'),
+        input = input.lines,
         segment = seg
       }
     else
-      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      local seg = segment.create_segment_at(#lines, 0, hl_group, bufnr)
+      local input = get_input.file()
+      local seg = segment.create_segment_at(#input.lines, 0, hl_group, bufnr)
 
       return {
-        input = table.concat(lines, '\n'),
+        input = input.lines,
         segment = seg
       }
     end
@@ -109,10 +124,29 @@ local function get_input_and_segment(behavior, hl_group)
   error('Unknown mode')
 end
 
+---@param input string | string[]
+local function start_prompt(input, prompt, handlers)
+  local _input = type(input) == 'table' and table.concat(input, '\n') or input
+
+  local success, pcall_result = pcall(prompt.provider.request_completion_stream, _input, handlers, prompt.builder)
+
+  local result = {
+    started = success
+  }
+
+  if success then
+    result.cancel = pcall_result
+  else
+    result.error = pcall_result
+  end
+
+  return result
+end
+
 local function request_completion_input_segment(input_segment, prompt)
   local seg = input_segment.segment
 
-  local success, result = pcall(prompt.provider.request_completion_stream, input_segment.input, {
+  local proc = start_prompt(input_segment.input, prompt, {
     on_partial = function(partial)
       seg.add(partial)
     end,
@@ -132,14 +166,12 @@ local function request_completion_input_segment(input_segment, prompt)
     on_error = function(data, label)
       util.eshow(data, 'stream error ' .. label)
     end
-  }, prompt.builder)
+  })
 
-  if success then
-    local cancel = result
-
-    seg.data.cancel = cancel
+  if proc.started then
+    seg.data.cancel = proc.cancel
   else
-    util.eshow(result)
+    util.eshow(proc.error, 'process')
   end
 end
 
@@ -157,11 +189,34 @@ function M.request_completion_stream(cmd_params)
   end
 
   local prompt = get_prompt()
+  local prompt_mode = prompt.mode or segment.mode.APPEND
+  local want_visual_selection = cmd_params.range ~= 0
 
+  if type(prompt.mode) == 'table' then
+    ---@cast prompt_mode StreamHandlers
+    
+    local input =
+      want_visual_selection and get_input.visual_selection() or get_input.file()
+
+    local result = start_prompt(
+      input.lines,
+      prompt,
+      prompt_mode
+    )
+
+    if not result.started then
+      util.eshow(result.error)
+      -- TODO what can we do with result.cancel?
+    end
+
+    return
+  end
+
+  ---@cast prompt_mode SegmentMode
   local input_segment = get_input_and_segment(
     {
-      get_visual_selection = cmd_params.range ~= 0,
-      segment_mode = prompt.mode or segment.mode.APPEND
+      get_visual_selection = want_visual_selection,
+      segment_mode = prompt_mode
     },
     prompt.hl_group or M.opts.hl_group
   )
