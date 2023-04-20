@@ -191,7 +191,21 @@ function M.request_completion_stream(cmd_params)
 
   if type(prompt.mode) == 'table' then
     ---@cast prompt_mode StreamHandlers
-    error('Not implemented')
+    
+    local input =
+      want_visual_selection and get_input.visual_selection() or get_input.file()
+
+    local result = start_prompt(
+      table.concat(input.lines, '\n'),
+      prompt,
+      prompt_mode
+    )
+
+    if not result.started then
+      util.eshow(result.error)
+      -- TODO what can we do with result.cancel?
+    end
+
     return
   end
 
