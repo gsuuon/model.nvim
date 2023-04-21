@@ -5,9 +5,13 @@ Talk to Large Language Model AI in Neovim.
 https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a419-eeec04cb7e99.mp4
 
 
-- 🪁 __Streaming responses__  
 - 📑 __Build a prompt library__  
+- 🪁 __Stream responses__  
 - 🌞 __Super easy__  
+
+
+Check out the [examples](#examples)
+
 
 ---
 
@@ -88,8 +92,17 @@ A prompt entry requires the builder and provider fields. The field is a function
 - `hl_group: string`  
   — Set the default highlight group of in-progress responses
 
-### Autoload
+### Library autoload
 The `util` module has a helpful function to make developing prompts easier - `M.module.autoload`. Use this instead of `require` on a module that exports your prompt library to always use what's currently on disk.
+
+```diff
++ local util = require('llm.util')
+
+require('llm').setup({
+-  prompts = require('prompt_library')
++  prompts = util.module.autoload('prompt_library')
+})
+```
 
 --- 
 
@@ -100,9 +113,10 @@ The `util` module has a helpful function to make developing prompts easier - `M.
 <details>
 <summary>Modify input to append messages</summary>
 
-https://user-images.githubusercontent.com/6422188/233746951-42297a7a-9d70-4219-a4e3-d2cebee8224e.mp4
+https://user-images.githubusercontent.com/6422188/233748890-5dac719a-eb9a-4f76-ab9d-8eba3694a350.mp4
 
 
+#### `lua/prompt_library.lua`
 ```lua
 --- Looks for `<llm:` at the end and splits into before and after
 --- returns all text if no directive
