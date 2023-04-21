@@ -84,10 +84,94 @@ A prompt entry requires the builder and provider fields. The field is a function
 - `prompts: table<string, Prompt>` — add prompt alternatives  
   Alternatives can be used by calling `:Llm` with their name, e.g. `:Llm advice` (fuzzy command completion)
 
-#### Example
+### Appearance
+- `hl_group: string`  
+  — Set the default highlight group of in-progress responses
+
+### Autoload
+The `util` module has a helpful function to make developing prompts easier - `M.module.autoload`. Use this instead of `require` on a module that exports your prompt library to always use what's currently on disk.
+
+--- 
+
+## 🎮Examples
+
+### Prompts
 
 <details>
-<summary>prompt that replaces text with Spanish</summary>
+<summary>Modify input to append messages</summary>
+
+https://user-images.githubusercontent.com/6422188/233746951-42297a7a-9d70-4219-a4e3-d2cebee8224e.mp4
+
+
+```lua
+--- Looks for `<llm:` at the end and splits into before and after
+--- returns all text if no directive
+local function match_llm_directive(text)
+  local before, _, after = text:match("(.-)(<llm:)%s?(.*)$")
+  if not before and not after then
+    before, after = text, ""
+  elseif not before then
+    before = ""
+  elseif not after then
+    after = ""
+  end
+  return before, after
+end
+
+local instruct_code = 'You are a highly competent programmer. Include only valid code in your response.'
+
+return {
+  ['to code'] = {
+    provider = openai,
+    builder = function(input)
+      local text, directive = match_llm_directive(input)
+
+      local msgs ={
+        {
+          role = 'system',
+          content = instruct_code,
+        },
+        {
+          role = 'user',
+          content = text,
+        }
+      }
+
+      if directive then
+        table.insert(msgs, { role = 'user', content = directive })
+      end
+
+      return {
+        messages = msgs
+      }
+    end,
+    mode = segment.mode.REPLACE
+  },
+  code = {
+    provider = openai,
+    builder = function(input)
+      return {
+        messages = {
+          {
+            role = 'system',
+            content = 'You are a 10x super elite programmer. Continue only with code. Do not write tests, examples, or output of code unless explicitly asked for.',
+          },
+          {
+            role = 'user',
+            content = input,
+          }
+        }
+      }
+    end,
+  },
+}
+```
+
+</details>
+
+
+<details>
+<summary>Replace text with Spanish</summary>
 
 ```lua
 local openai = require('llm.providers.openai')
@@ -122,7 +206,7 @@ require('llm').setup({
 </details>
 
 <details>
-<summary>prompt that notifies each stream part and the complete response</summary>
+<summary>Notifies each stream part and the complete response</summary>
 
 ```lua
 local openai = require('llm.providers.openai')
@@ -151,19 +235,15 @@ require('llm').setup({
 </details>
 
 
-### Appearance
-- `hl_group: string`  
-  — Set the default highlight group of in-progress responses
 
-### Autoload
-The `util` module has a helpful function to make developing prompts easier - `M.module.autoload`. Use this instead of `require` on a module that exports your prompt library to always use what's currently on disk.
-
---- 
-
-### Example configuration
+### Configuration
 You can move prompts into their own file and use `util.module.autoload` to quickly iterate on prompt development.
 
+<details>
+<summary>Setup</summary>
+
 #### `config = function()`
+
 ```lua
 local openai = require('llm.providers.openai')
 
@@ -200,8 +280,14 @@ require('llm').setup({
   }
 })
 ```
+</details>
 
-#### `prompt_library.lua`
+
+<details>
+<summary>Prompt library</summary>
+
+#### `lua/prompt_library.lua`
+
 ```lua
 local openai = require('llm.providers.openai')
 local segment = require('llm.segment')
@@ -280,3 +366,5 @@ return {
   }
 }
 ```
+
+</details>
