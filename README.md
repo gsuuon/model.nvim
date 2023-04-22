@@ -161,6 +161,33 @@ require('llm').setup({
 ### Prompts
 
 <details>
+<summary>Create a commit message based on `git diff --staged`</summary>
+
+https://user-images.githubusercontent.com/6422188/233807212-d1830514-fe3b-4d38-877e-f3ecbdb222aa.mp4
+
+```lua
+  commit = {
+    provider = openai,
+    builder = function()
+      return {
+        messages = {
+          {
+            role = 'system',
+            content = 'Write a commit message according to the Conventional Commits specification for the following git diff. Keep it as short as necessary. If only markdown files are changed, use `docs: `'
+          },
+          {
+            role = 'user',
+            content = vim.fn.system {'git', 'diff', '--staged'}
+          }
+        }
+      }
+    end
+  }
+```
+
+</details>
+
+<details>
 <summary>Modify input to append messages</summary>
 
 https://user-images.githubusercontent.com/6422188/233748890-5dac719a-eb9a-4f76-ab9d-8eba3694a350.mp4
