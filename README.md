@@ -41,13 +41,51 @@ require('lazy').setup({
 
 - `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. If you've added alternative [prompts](#prompts) to the config, you can give a prompt name as an argument. Streaming text is added on the next line in visual line-wise mode, or from the end of the selection in char-wise visual mode.
 
+<details>
+<summary>
+Multiple simultaneous prompts
+</summary>
+
+https://user-images.githubusercontent.com/6422188/233773433-d3b38147-540c-44ba-96ac-af2af8640e7c.mp4
+
+</details>
+
 - `:LlmMulti` — Start multiple prompt completions at the same time with the same input. Must specify prompt names. Escape spaces in names e.g. `to\ spanish`, or use tab completion. Always completes on next line and always `mode = 'append'`.
+
+<details>
+<summary>
+Cancel a long-running prompt
+</summary>
+
+https://user-images.githubusercontent.com/6422188/233773436-3e9d2a15-bc87-47c2-bc5b-d62d62480297.mp4
+
+</details>
 
 - `:LlmCancel` — Cancel the active response under the cursor.
 
-- `:LlmShow` — Flash the response under the cursor.
+<details>
+<summary>
+Show response
+</summary>
+
+https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a699-6a8f5cf4bcd5.mp4
+
+</details>
+
+- `:LlmShow` — Flash the response under the cursor if there is one.
+
+<details>
+<summary>
+Delete response
+</summary>
+
+https://user-images.githubusercontent.com/6422188/233773454-a684854e-6ff9-42da-a301-9a4ae690fcea.mp4
+
+</details>
+
 
 - `:LlmDelete` — Delete the response under the cursor. If `prompt.mode == 'replace'` then replace with the original text.
+
 
 ## Providers
 ### OpenAI ChatGPT (default)
@@ -382,3 +420,4 @@ return {
 ```
 
 </details>
+
