@@ -79,7 +79,7 @@ https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a
 Delete response
 </summary>
 
-https://user-images.githubusercontent.com/6422188/233773454-a684854e-6ff9-42da-a301-9a4ae690fcea.mp4
+https://user-images.githubusercontent.com/6422188/233774216-4e100122-3a93-4dfb-a7c7-df50f1221bdd.mp4
 
 </details>
 
