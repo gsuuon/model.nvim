@@ -32,6 +32,7 @@ class Item(TypedDict):
     id: str
     content_hash: str
     embedder: str
+    meta: Optional[dict] # NotRequired not supported
 
 class Store(TypedDict):
     items: list[Item]
@@ -170,7 +171,8 @@ def _update_embeddings(files: list[File], store: Store, remove_missing, print_up
         item : Item = {
             'id': file['id'],
             'content_hash': file['content_hash'],
-            'embedder': 'openai_ada_002'
+            'embedder': 'openai_ada_002',
+            'meta': None
         }
 
         if file['id'] in id_to_idx:
