@@ -188,15 +188,36 @@ def add_embeddings(files: list[File], store):
 def sync_embeddings(files: list[File], store):
     return _update_embeddings(files, store, remove_missing=True)
 
-def query_store(query: str, store: Store, count=1):
+def query_store(query: str, store: Store, count=1, filter=None):
     assert store['vectors'] is not None
 
+    tap([item['id'] for item in store['items']])
     embedding = get_embeddings([query], print_token_counts=False)[0]
     query_vector = np.array(embedding, dtype=np.float32)
+    tap(query_vector, 'query')
     similarities = np.dot(store['vectors'], query_vector.T)
+    tap(similarities, 'similarities')
     ranks = np.argsort(similarities)[::-1]
+    tap(ranks, 'ranks')
 
-    return [ store['items'][idx] for idx in ranks[:count] ]
+    if filter is None:
+        return [ store['items'][idx] for idx in ranks[:count] ]
+    else:
+        results = []
+
+        for idx in ranks:
+            item = store['items'][idx]
+
+            if filter(item):
+                results.append(item)
+
+            if len(results) >= count:
+                break
+
+        return results
+
+
+
 
 store = load_or_initialize_store('./store.json')
 files = tap(ingest_files('../corpus'), label='ingested files')
