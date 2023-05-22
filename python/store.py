@@ -119,10 +119,14 @@ def get_stale_or_new_file_idxs(files: list[File], store: Store):
             or file['content_hash'] != id_to_content_hash[file['id']]
     ]
 
-def get_removed_file_ids(files: list[File], store: Store):
+def get_removed_file_store_idx(files: list[File], store: Store):
     current_ids = set([file['id'] for file in files])
 
-    return [ id for id in store['items'] if id not in current_ids ]
+    return [
+        idx
+        for idx, item in enumerate(store['items'])
+        if item['id'] not in current_ids
+    ]
 
 def _update_embeddings(files: list[File], store: Store, remove_missing, print_updating_files=True):
     """
@@ -147,11 +151,10 @@ def _update_embeddings(files: list[File], store: Store, remove_missing, print_up
     assert store['vectors'] is not None
 
     if remove_missing:
-        ids = get_removed_file_ids(files, store)
-        for id in ids:
-            del store['items'][id]
-            np.delete(store['vectors'], id, axis=0)
-
+        idxs = get_removed_file_store_idx(files, store)
+        for idx in idxs:
+            del store['items'][idx]
+            np.delete(store['vectors'], idx, axis=0)
 
     id_to_idx = { item['id']: idx for idx, item in enumerate(store['items']) }
 
