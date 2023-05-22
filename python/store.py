@@ -52,7 +52,7 @@ def load_or_initialize_store (store_path: str) -> Store:
         return initialize_empty_store()
 
 def save_store(store: Store, store_path: str):
-    if not store['vectors']: return
+    if store['vectors'] is None: return
 
     store_raw = {
         'items': store['items'],
@@ -138,7 +138,9 @@ def _update_embeddings(files: list[File], store: Store, remove_missing, print_up
 
     embeddings = get_embeddings(needs_update_content)
 
-    if not store['vectors']:
+    if len(embeddings) == 0: return
+
+    if store['vectors'] is None:
         vector_dimensions = len(embeddings[0])
         store['vectors'] = np.empty([0, vector_dimensions], dtype=np.float32)
 
@@ -152,8 +154,6 @@ def _update_embeddings(files: list[File], store: Store, remove_missing, print_up
 
 
     id_to_idx = { item['id']: idx for idx, item in enumerate(store['items']) }
-
-    # if len(store['vectors']) == 0:
 
     for i, embedding in enumerate(embeddings):
         file_idx = needs_update_idx[i]
