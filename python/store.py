@@ -188,20 +188,19 @@ def add_embeddings(files: list[File], store):
 def sync_embeddings(files: list[File], store):
     return _update_embeddings(files, store, remove_missing=True)
 
-def query_store(query: str, store: Store):
-    embedding = get_embeddings([query], print_token_counts=False)
-    # TODO next
-    # similarity comparison
-    # idx -> item
-    # file content should probably be kept in memory but not written again to store
-    # so we can directly return file content rather than re-reading the file
-    # though re-reading isn't problematic
-    # only if the file contents have since changed
+def query_store(query: str, store: Store, count=1):
+    assert store['vectors'] is not None
 
-    # TODO watch for changes
+    embedding = get_embeddings([query], print_token_counts=False)[0]
+    query_vector = np.array(embedding, dtype=np.float32)
+    similarities = np.dot(store['vectors'], query_vector.T)
+    ranks = np.argsort(similarities)[::-1]
+
+    return [ store['items'][idx] for idx in ranks[:count] ]
 
 store = load_or_initialize_store('./store.json')
-print('vectors: ', type(store['vectors']))
-files = ingest_files('../lua')
+files = tap(ingest_files('../corpus'), label='ingested files')
 sync_embeddings(files, store)
+
+print('query:', query_store('bap', store))
 save_store(store, './store.json')
