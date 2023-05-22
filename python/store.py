@@ -222,8 +222,7 @@ def query_store(query: str, store: Store, count=1, filter=None):
 
 
 store = load_or_initialize_store('./store.json')
-files = tap(ingest_files('../corpus'), label='ingested files')
-sync_embeddings(files, store)
+add_embeddings(ingest_files('../lua'), store)
 
-print('query:', query_store('bap', store))
+print('query:', query_store('helpers for neovim segments', store))
 save_store(store, './store.json')
