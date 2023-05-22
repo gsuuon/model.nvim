@@ -13,6 +13,12 @@ enc = tiktoken.encoding_for_model('gpt-4')
 # https://platform.openai.com/docs/api-reference/embeddings/create
 INPUT_TOKEN_LIMIT = 8192
 
+def tap(x, label: Optional[str] = None):
+    if label is not None:
+        print(label)
+    print(x)
+    return x
+
 def count_tokens(text: str) -> int:
     return len(enc.encode(text))
 
@@ -91,7 +97,7 @@ def ingest_files(root_dir='.', glob_pattern='**/*') -> list[File]:
             if os.path.isfile(path)
         ]
 
-    return [ f for f in map(ingest_file, glob_files()) if f ]
+    return [ f for f in map(ingest_file, tap(glob_files())) if f ]
 
 def get_embeddings(inputs: list[str], print_token_counts=True):
     if not inputs: return []
