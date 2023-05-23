@@ -13,6 +13,7 @@ from typing import TypedDict, Optional
 
 # TODO make token counting optional
 # TODO we probably just want to store the entire files in store.json instead of re-reading them
+# TODO all paths relative to store.json
 
 enc = tiktoken.encoding_for_model('gpt-4')
 
@@ -117,7 +118,7 @@ def try_inject_content(item: Item):
                 except:
                     return item
 
-def ingest_files(root_dir='.', glob_pattern='**/*') -> list[Item]:
+def ingest_files(root_dir, glob_pattern) -> list[Item]:
     "Ingest files down from root_dir assuming utf-8 encoding. Skips files which fail to decode."
 
     def ingest_file(filepath: str) -> Optional[Item]:
@@ -235,11 +236,10 @@ class Query(TypedDict):
     prompt: str
     count: int
 
-def query_store(query: Query, store: Store, filter=None):
+def query_store(prompt: str, count: int, store: Store, filter=None):
     assert store['vectors'] is not None
-    count = query['count']
 
-    embedding = get_embeddings([query['prompt']], print_token_counts=False)[0]
+    embedding = get_embeddings([prompt], print_token_counts=False)[0]
     query_vector = np.array(embedding, dtype=np.float32)
     similarities = np.dot(store['vectors'], query_vector.T)
     ranks = np.argsort(similarities)[::-1]
@@ -260,28 +260,45 @@ def query_store(query: Query, store: Store, filter=None):
 
         return results
 
-def get_cli_query() -> Query:
-    def get_count():
-        try:
-            return int(sys.argv[2])
-        except IndexError:
-            return 1
-        except ValueError:
-            raise ValueError('Failed to parse ' + sys.argv[2] + ' as int')
+class Opts(TypedDict):
+    prompt: str
+    count: Optional[int]
+    store_path: str
+    files_ingest_root: Optional[str]
+    files_ingest_glob: Optional[str]
 
+def get_opts() -> Opts:
     if len(sys.argv) < 2:
-        raise ValueError('Missing prompt argument')
+        raise ValueError('Missing options json argument')
 
-    return {
-        'prompt': sys.argv[1],
-        'count': get_count()
-    }
+    opts : Opts = json.loads(sys.argv[1])
 
-prompt = get_cli_query()
-store = load_or_initialize_store('./store.json')
-updated = add_embeddings(ingest_files('../lua'), store)
-if updated: save_store(store, './store.json')
+    assert type(opts['prompt']) == str, 'Missing prompt'
+    assert (opts['count'] == None or type(opts['count']) == int), 'count not a number'
+    assert type(opts['store_path']) == str, 'Missing store_path'
+    assert type(opts['files_ingest_root']) == str, 'Missing files_ingest_root'
+    assert (opts['files_ingest_glob'] == None or type(opts['files_ingest_glob'] == str)), 'files_ingest_glob not a string'
 
-results = list(map(try_inject_content, query_store(prompt, store)))
+    return opts
+
+opts = get_opts()
+store = load_or_initialize_store(opts['store_path'])
+updated = add_embeddings(
+    ingest_files(
+        opts['files_ingest_root'] or '.',
+        opts['files_ingest_glob'] or '**/*'
+    ),
+    store
+)
+if updated: save_store(store, opts['store_path'])
+
+results = list(map(
+    try_inject_content,
+    query_store(
+        opts['prompt'],
+        opts['count'] or 1,
+        store
+    )
+))
 
 print(json.dumps(results))
