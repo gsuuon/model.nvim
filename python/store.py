@@ -3,6 +3,7 @@ import os
 import glob
 import json
 
+import sys
 import numpy as np
 import numpy.typing as npt
 import openai
@@ -17,10 +18,13 @@ enc = tiktoken.encoding_for_model('gpt-4')
 # https://platform.openai.com/docs/api-reference/embeddings/create
 INPUT_TOKEN_LIMIT = 8192
 
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
 def tap(x, label: Optional[str] = None):
     if label is not None:
-        print(label)
-    print(x)
+        eprint(label)
+    eprint(x)
     return x
 
 def count_tokens(text: str) -> int:
@@ -119,15 +123,15 @@ def get_embeddings(inputs: list[str], print_token_counts=True):
     input_tokens = [ (count_tokens(input), input) for input in inputs ]
 
     if print_token_counts:
-        print([ (x[1][:30], x[0]) for x in input_tokens ])
+        eprint([ (x[1][:30], x[0]) for x in input_tokens ])
 
     if all(limit[0] < INPUT_TOKEN_LIMIT for limit in input_tokens):
         response = openai.Embedding.create(input=inputs, model="text-embedding-ada-002")
         return [item['embedding'] for item in response['data']]
     else:
         over_limits = [limit[1][:30] for limit in input_tokens if not limit[0] < INPUT_TOKEN_LIMIT]
-        print('Input(s) over the token limit:')
-        print(over_limits)
+        eprint('Input(s) over the token limit:')
+        eprint(over_limits)
         raise ValueError('Embedding input over token limit')
 
 def get_stale_or_new_item_idxs(items: list[Item], store: Store):
@@ -148,21 +152,21 @@ def get_removed_item_store_idx(items: list[Item], store: Store):
         if item['id'] not in current_ids
     ]
 
-def _update_embeddings(items: list[Item], store: Store, remove_missing, print_updating_items=True):
+def _update_embeddings(items: list[Item], store: Store, remove_missing, print_updating_items=True) -> bool:
     """
-    Update store data. remove_missing removes any items in store that aren't in provided items.
+    Update stale store data returning True if items were updated. remove_missing removes any items in store that aren't in provided items.
     For partial updates (only adding items), disable remove_missing.
     """
     needs_update_idx = get_stale_or_new_item_idxs(items, store)
     needs_update_content = [ items[idx]['content'] for idx in needs_update_idx ]
 
     if print_updating_items:
-        print('Updating items:')
-        print([ items[idx]['id'] for idx in needs_update_idx ])
+        eprint('Updating items:')
+        eprint([ items[idx]['id'] for idx in needs_update_idx ])
 
     embeddings = get_embeddings(needs_update_content)
 
-    if len(embeddings) == 0: return
+    if len(embeddings) == 0: return False
 
     if store['vectors'] is None:
         vector_dimensions = len(embeddings[0])
@@ -192,6 +196,8 @@ def _update_embeddings(items: list[Item], store: Store, remove_missing, print_up
         else:
             store['items'].append(item)
             store['vectors'] = np.vstack((store['vectors'], embedding))
+
+    return True
 
 def add_embeddings(items: list[Item], store):
     return _update_embeddings(items, store, remove_missing=False)
@@ -227,9 +233,16 @@ def query_store(query: str, store: Store, count=1, filter=None):
 
         return results
 
+def get_cli_arg_prompt():
+    if len(sys.argv) < 2:
+        raise ValueError('Missing prompt argument')
 
+    return sys.argv[1]
+
+prompt = get_cli_arg_prompt()
 store = load_or_initialize_store('./store.json')
-add_embeddings(ingest_files('../lua'), store)
+updated = add_embeddings(ingest_files('../lua'), store)
+if updated: save_store(store, './store.json')
 
-print('query:', query_store('helpers for neovim segments', store))
-save_store(store, './store.json')
+result = tap(query_store(prompt, store), 'result')
+print(json.dumps(result))
