@@ -12,6 +12,7 @@ import tiktoken
 from typing import TypedDict, Optional
 
 # TODO make token counting optional
+# TODO we probably just want to store the entire files in store.json instead of re-reading them
 
 enc = tiktoken.encoding_for_model('gpt-4')
 
@@ -23,8 +24,10 @@ def eprint(*args, **kwargs):
 
 def tap(x, label: Optional[str] = None):
     if label is not None:
-        eprint(label)
+        eprint('<<', label)
     eprint(x)
+    if label is not None:
+        eprint(label, '>>')
     return x
 
 def count_tokens(text: str) -> int:
@@ -93,6 +96,27 @@ def cache_content(content: str):
     content_cache[hash] = content
     return hash
 
+def try_inject_content(item: Item):
+    if item['content_hash'] in content_cache:
+        return { **item, 'content':content_cache[item['content_hash']] }
+    else:
+        match item['meta']:
+            case {'type': 'file'}:
+                # this seems problematic
+                # assuming id is path
+                # path should always be relative to store.json
+                # need to add path util to re-normalize paths
+                # this can fail
+                # file content can be stale
+                try:
+                    with open(item['id'], mode='r') as f:
+                        return {
+                            **item,
+                            'content': f.read()
+                        }
+                except:
+                    return item
+
 def ingest_files(root_dir='.', glob_pattern='**/*') -> list[Item]:
     "Ingest files down from root_dir assuming utf-8 encoding. Skips files which fail to decode."
 
@@ -103,7 +127,9 @@ def ingest_files(root_dir='.', glob_pattern='**/*') -> list[Item]:
                 return {
                     'id': normalize_filepath(filepath),
                     'content_hash': cache_content(content),
-                    'meta': None
+                    'meta': {
+                        'type': 'file'
+                    }
                 }
             except:
                 return None
@@ -205,17 +231,18 @@ def add_embeddings(items: list[Item], store):
 def sync_embeddings(items: list[Item], store):
     return _update_embeddings(items, store, remove_missing=True)
 
-def query_store(query: str, store: Store, count=1, filter=None):
-    assert store['vectors'] is not None
+class Query(TypedDict):
+    prompt: str
+    count: int
 
-    tap([item['id'] for item in store['items']])
-    embedding = get_embeddings([query], print_token_counts=False)[0]
+def query_store(query: Query, store: Store, filter=None):
+    assert store['vectors'] is not None
+    count = query['count']
+
+    embedding = get_embeddings([query['prompt']], print_token_counts=False)[0]
     query_vector = np.array(embedding, dtype=np.float32)
-    tap(query_vector, 'query')
     similarities = np.dot(store['vectors'], query_vector.T)
-    tap(similarities, 'similarities')
     ranks = np.argsort(similarities)[::-1]
-    tap(ranks, 'ranks')
 
     if filter is None:
         return [ store['items'][idx] for idx in ranks[:count] ]
@@ -233,16 +260,28 @@ def query_store(query: str, store: Store, count=1, filter=None):
 
         return results
 
-def get_cli_arg_prompt():
+def get_cli_query() -> Query:
+    def get_count():
+        try:
+            return int(sys.argv[2])
+        except IndexError:
+            return 1
+        except ValueError:
+            raise ValueError('Failed to parse ' + sys.argv[2] + ' as int')
+
     if len(sys.argv) < 2:
         raise ValueError('Missing prompt argument')
 
-    return sys.argv[1]
+    return {
+        'prompt': sys.argv[1],
+        'count': get_count()
+    }
 
-prompt = get_cli_arg_prompt()
+prompt = get_cli_query()
 store = load_or_initialize_store('./store.json')
 updated = add_embeddings(ingest_files('../lua'), store)
 if updated: save_store(store, './store.json')
 
-result = tap(query_store(prompt, store), 'result')
-print(json.dumps(result))
+results = list(map(try_inject_content, query_store(prompt, store)))
+
+print(json.dumps(results))
