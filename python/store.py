@@ -1,10 +1,11 @@
-import numpy as np
-import numpy.typing as npt
-import openai
 import zlib
 import os
 import glob
 import json
+
+import numpy as np
+import numpy.typing as npt
+import openai
 import tiktoken
 
 from typing import TypedDict, Optional
