@@ -9,7 +9,10 @@ import tiktoken
 
 from typing import TypedDict, Optional
 
+# TODO make token counting optional
+
 enc = tiktoken.encoding_for_model('gpt-4')
+
 # https://platform.openai.com/docs/api-reference/embeddings/create
 INPUT_TOKEN_LIMIT = 8192
 
@@ -31,11 +34,13 @@ def normalize_filepath(filepath: str) -> str:
 class Item(TypedDict):
     id: str
     content_hash: str
-    embedder: str
     meta: Optional[dict] # NotRequired not supported
 
+class StoreItem(Item):
+    embedder: str
+
 class Store(TypedDict):
-    items: list[Item]
+    items: list[StoreItem]
     vectors: npt.NDArray[np.float32] | None
 
 def load_or_initialize_store (store_path: str) -> Store:
@@ -76,17 +81,24 @@ class File(TypedDict):
     content: str
     content_hash: str
 
-def ingest_files(root_dir='.', glob_pattern='**/*') -> list[File]:
+content_cache = {}
+
+def cache_content(content: str):
+    hash = hash_content(content.encode('utf-8'))
+    content_cache[hash] = content
+    return hash
+
+def ingest_files(root_dir='.', glob_pattern='**/*') -> list[Item]:
     "Ingest files down from root_dir assuming utf-8 encoding. Skips files which fail to decode."
 
-    def ingest_file(filepath: str) -> Optional[File]:
-        with open(filepath, mode='rb') as f:
-            content_bytes = f.read()
+    def ingest_file(filepath: str) -> Optional[Item]:
+        with open(filepath, mode='r') as f:
+            content = f.read()
             try:
                 return {
                     'id': normalize_filepath(filepath),
-                    'content': content_bytes.decode('utf-8'),
-                    'content_hash': hash_content(content_bytes)
+                    'content_hash': cache_content(content),
+                    'meta': None
                 }
             except:
                 return None
@@ -117,17 +129,17 @@ def get_embeddings(inputs: list[str], print_token_counts=True):
         print(over_limits)
         raise ValueError('Embedding input over token limit')
 
-def get_stale_or_new_file_idxs(files: list[File], store: Store):
-    id_to_content_hash = {f['id']: f['content_hash'] for f in store['items'] }
+def get_stale_or_new_item_idxs(items: list[Item], store: Store):
+    id_to_content_hash = {x['id']: x['content_hash'] for x in store['items'] }
 
     return [
-        idx for idx, file in enumerate(files) if
-            file['id'] not in id_to_content_hash
-            or file['content_hash'] != id_to_content_hash[file['id']]
+        idx for idx, item in enumerate(items) if
+            item['id'] not in id_to_content_hash
+            or item['content_hash'] != id_to_content_hash[item['id']]
     ]
 
-def get_removed_file_store_idx(files: list[File], store: Store):
-    current_ids = set([file['id'] for file in files])
+def get_removed_item_store_idx(items: list[Item], store: Store):
+    current_ids = set([item['id'] for item in items])
 
     return [
         idx
@@ -135,17 +147,17 @@ def get_removed_file_store_idx(files: list[File], store: Store):
         if item['id'] not in current_ids
     ]
 
-def _update_embeddings(files: list[File], store: Store, remove_missing, print_updating_files=True):
+def _update_embeddings(items: list[Item], store: Store, remove_missing, print_updating_items=True):
     """
-    Update store data. remove_missing removes any files in store that aren't in files.
-    For partial updates (only adding files), disable remove_missing.
+    Update store data. remove_missing removes any items in store that aren't in provided items.
+    For partial updates (only adding items), disable remove_missing.
     """
-    needs_update_idx = get_stale_or_new_file_idxs(files, store)
-    needs_update_content = [ files[i]['content'] for i in needs_update_idx ]
+    needs_update_idx = get_stale_or_new_item_idxs(items, store)
+    needs_update_content = [ items[idx]['content'] for idx in needs_update_idx ]
 
-    if print_updating_files:
-        print('Updating files:')
-        print([ files[i]['id'] for i in needs_update_idx ])
+    if print_updating_items:
+        print('Updating items:')
+        print([ items[idx]['id'] for idx in needs_update_idx ])
 
     embeddings = get_embeddings(needs_update_content)
 
@@ -158,7 +170,7 @@ def _update_embeddings(files: list[File], store: Store, remove_missing, print_up
     assert store['vectors'] is not None
 
     if remove_missing:
-        idxs = get_removed_file_store_idx(files, store)
+        idxs = get_removed_item_store_idx(items, store)
         for idx in idxs:
             del store['items'][idx]
             np.delete(store['vectors'], idx, axis=0)
@@ -166,17 +178,13 @@ def _update_embeddings(files: list[File], store: Store, remove_missing, print_up
     id_to_idx = { item['id']: idx for idx, item in enumerate(store['items']) }
 
     for i, embedding in enumerate(embeddings):
-        file_idx = needs_update_idx[i]
-        file = files[file_idx]
-        item : Item = {
-            'id': file['id'],
-            'content_hash': file['content_hash'],
-            'embedder': 'openai_ada_002',
-            'meta': None
-        }
+        item_idx = needs_update_idx[i]
+        item = items[item_idx]
+        item['embedder'] = 'openai_ada_002'
+        # NOTE pretty sure mutation here has no consequences?
 
-        if file['id'] in id_to_idx:
-            idx = id_to_idx[file['id']]
+        if item['id'] in id_to_idx:
+            idx = id_to_idx[item['id']]
 
             store['items'][idx] = item
             store['vectors'][idx] = np.array(embedding).astype(np.float32)
@@ -184,11 +192,11 @@ def _update_embeddings(files: list[File], store: Store, remove_missing, print_up
             store['items'].append(item)
             store['vectors'] = np.vstack((store['vectors'], embedding))
 
-def add_embeddings(files: list[File], store):
-    return _update_embeddings(files, store, remove_missing=False)
+def add_embeddings(items: list[Item], store):
+    return _update_embeddings(items, store, remove_missing=False)
 
-def sync_embeddings(files: list[File], store):
-    return _update_embeddings(files, store, remove_missing=True)
+def sync_embeddings(items: list[Item], store):
+    return _update_embeddings(items, store, remove_missing=True)
 
 def query_store(query: str, store: Store, count=1, filter=None):
     assert store['vectors'] is not None
@@ -217,8 +225,6 @@ def query_store(query: str, store: Store, count=1, filter=None):
                 break
 
         return results
-
-
 
 
 store = load_or_initialize_store('./store.json')
