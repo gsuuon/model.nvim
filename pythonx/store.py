@@ -48,11 +48,8 @@ class Item(TypedDict):
     content: str
     meta: Optional[dict] # NotRequired not supported
 
-class StoreItem(TypedDict):
-    id: str
-    content_hash: str
+class StoreItem(Item):
     embedder: str
-    meta: Optional[dict] # NotRequired not supported
 
 class Store(TypedDict):
     items: list[StoreItem]
@@ -97,45 +94,18 @@ class File(TypedDict):
     content: str
     content_hash: str
 
-content_cache = {}
-
-def cache_content(content: str):
-    hash = hash_content(content.encode('utf-8'))
-    content_cache[hash] = content
-    return hash
-
-def try_inject_content(item: StoreItem):
-    if item['content_hash'] in content_cache:
-        return { **item, 'content':content_cache[item['content_hash']] }
-    else:
-        match item['meta']:
-            case {'type': 'file'}:
-                # this seems problematic
-                # assuming id is path
-                # path should always be relative to store.json
-                # need to add path util to re-normalize paths
-                # this can fail
-                # file content can be stale
-                try:
-                    with open(item['id'], mode='r') as f:
-                        return {
-                            **item,
-                            'content': f.read()
-                        }
-                except:
-                    return item
-
 def ingest_files(root_dir, glob_pattern) -> list[Item]:
     "Ingest files down from root_dir assuming utf-8 encoding. Skips files which fail to decode."
 
     def ingest_file(filepath: str) -> Optional[Item]:
-        with open(filepath, mode='r') as f:
-            content = f.read()
+        with open(filepath, mode='rb') as f:
+            content_bytes = f.read()
+
             try:
                 return {
                     'id': normalize_filepath(filepath),
-                    'content': content,
-                    'content_hash': cache_content(content),
+                    'content': content_bytes.decode('utf-8'),
+                    'content_hash': hash_content(content_bytes),
                     'meta': {
                         'type': 'file'
                     }
@@ -237,34 +207,6 @@ def update_embeddings(
 
     return [ items[idx]['id'] for idx in needs_update_idx ]
 
-class Query(TypedDict):
-    prompt: str
-    count: int
-
-def _query_store(prompt: str, count: int, store: Store, filter=None):
-    assert store['vectors'] is not None
-
-    embedding = get_embeddings([prompt], print_token_counts=False)[0]
-    query_vector = np.array(embedding, dtype=np.float32)
-    similarities = np.dot(store['vectors'], query_vector.T)
-    ranks = np.argsort(similarities)[::-1]
-
-    if filter is None:
-        return [ store['items'][idx] for idx in ranks[:count] ]
-    else:
-        results = []
-
-        for idx in ranks:
-            item = store['items'][idx]
-
-            if filter(item):
-                results.append(item)
-
-            if len(results) >= count:
-                break
-
-        return results
-
 class UpdateStoreOpts(TypedDict):
     sync: bool
     store_path: Optional[str]
@@ -322,15 +264,29 @@ def update_store(updateOpts: UpdateStoreOpts, store: Store):
 
     return updated
 
-def query_store(queryOpts: QueryOpts, store: Store):
-    return list(map(
-        try_inject_content,
-        _query_store(
-            queryOpts['prompt'],
-            queryOpts.get('count') or 1,
-            store
-        )
-    ))
+def query_store(prompt: str, count: int, store: Store, filter=None):
+    assert store['vectors'] is not None
+
+    embedding = get_embeddings([prompt], print_token_counts=False)[0]
+    query_vector = np.array(embedding, dtype=np.float32)
+    similarities = np.dot(store['vectors'], query_vector.T)
+    ranks = np.argsort(similarities)[::-1]
+
+    if filter is None:
+        return [ store['items'][idx] for idx in ranks[:count] ]
+    else:
+        results = []
+
+        for idx in ranks:
+            item = store['items'][idx]
+
+            if filter(item):
+                results.append(item)
+
+            if len(results) >= count:
+                break
+
+        return results
 
 if __name__ == '__main__':
     opts = get_opts()
@@ -339,4 +295,8 @@ if __name__ == '__main__':
     if is_update_store(opts):
         print(json.dumps(update_store(opts, store)))
     elif is_query(opts):
-        print(json.dumps(query_store(opts, store)))
+        print(json.dumps(query_store(
+            opts['prompt'],
+            opts.get('count') or 1,
+            store
+        )))
