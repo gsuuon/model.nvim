@@ -86,7 +86,8 @@ def save_store(store: Store, store_path: str):
         'vectors': [ v.tolist() for v in store['vectors'] ]
     }
 
-    os.makedirs(os.path.dirname(store_path), exist_ok=True)
+    dir = os.path.dirname(store_path)
+    if len(dir) > 0: os.makedirs(dir, exist_ok=True)
 
     with open(store_path, mode='w', encoding='utf-8') as f:
         f.write(json.dumps(store_raw))
@@ -317,7 +318,7 @@ def update_store(updateOpts: UpdateStoreOpts, store: Store):
     )
 
     if len(updated) > 0:
-        save_store(store, opts.get('store_path') or DEFAULT_STORE_PATH)
+        save_store(store, updateOpts.get('store_path') or DEFAULT_STORE_PATH)
 
     return updated
 
