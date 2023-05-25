@@ -24,12 +24,18 @@ function M.add_files(root_path)
   vim.cmd([[py store.update_with_files_and_save(s, files_root=']].. root_path .. [[')]])
 end
 
-function M.query_store(prompt, count)
-  local results = vim.fn.py3eval(
-    [[store.query_store(']] .. prompt .. [[', ]] .. count .. [[, s)]]
-  )
+function M.query_store(prompt, count, similarity)
+  if similarity == nil then
+    return vim.fn.py3eval(
+      [[store.query_store(']] .. prompt .. [[', ]] .. count .. [[, s)]]
+    )
+  else
+    local filter = [[lambda item, similarity: similarity > ]] .. similarity
 
-  return results
+    return vim.fn.py3eval(
+      [[store.query_store(']] .. prompt .. [[', ]] .. count .. [[, s, filter=]] .. filter ..[[)]]
+    )
+  end
 end
 
 function M.add_items()
@@ -50,9 +56,9 @@ function M.add_items()
   ]])
 end
 
--- M.init()
+M.init()
 -- M.add_files('.')
 -- M.check_store()
--- show(M.query_store([[add a segment mode that inserts text at cursor position]], 1))
+show(M.query_store([[add a segment mode that inserts text at cursor position]], 1, 0.8))
 
 return M
