@@ -223,11 +223,17 @@ def update_store_and_save(items, store, sync=False):
     return updated
 
 def update_with_files_and_save(store, files_root=None, files_glob=None, sync=False):
+    files = ingest_files(files_root or '.', files_glob or '**/*')
+
+    # Convert ids (paths) from relative to cwd to relative to store
+    for file in files:
+        file['id'] = os.path.relpath(
+            os.path.abspath(file['id']),
+            os.path.dirname(store['abs_path'])
+        )
+
     return update_store_and_save(
-        ingest_files(
-            files_root or '.',
-            files_glob or '**/*'
-        ),
+        files,
         store,
         sync=sync
     )
