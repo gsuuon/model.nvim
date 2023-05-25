@@ -55,7 +55,7 @@ class Store(TypedDict):
     items: list[StoreItem]
     vectors: npt.NDArray[np.float32] | None
 
-def load_or_initialize_store (store_path: str) -> Store:
+def load_or_initialize_store (store_dir: str) -> Store:
     # TODO should I write store on load if it doesn't exist?
     def initialize_empty_store (abs_path) -> Store:
         return {
@@ -64,10 +64,10 @@ def load_or_initialize_store (store_path: str) -> Store:
             'vectors': np.array([])
         }
 
-    abs_path = os.path.abspath(store_path)
+    abs_path = os.path.abspath(os.path.join(store_dir, '.llm_store.json'))
 
     try:
-        with open(store_path, encoding='utf-8') as f:
+        with open(abs_path, encoding='utf-8') as f:
             store_raw = json.loads(f.read()) 
             store: Store = {
                 'abs_path': abs_path,
@@ -87,9 +87,6 @@ def save_store(store: Store):
         'items': store['items'],
         'vectors': [ v.tolist() for v in store['vectors'] ]
     }
-
-    dir = os.path.dirname(store['abs_path'])
-    if len(dir) > 0: os.makedirs(dir, exist_ok=True)
 
     with open(store['abs_path'], mode='w', encoding='utf-8') as f:
         f.write(json.dumps(store_raw))
@@ -216,7 +213,7 @@ def update_store(
 
     return [ items[idx]['id'] for idx in needs_update_idx ]
 
-def update_store_and_save(items, sync, store):
+def update_store_and_save(items, store, sync=False):
     updated = update_store(items, store, sync)
 
     if len(updated) > 0:
@@ -224,14 +221,14 @@ def update_store_and_save(items, sync, store):
 
     return updated
 
-def update_with_files_and_save(sync, store, files_root=None, files_glob=None):
+def update_with_files_and_save(store, files_root=None, files_glob=None, sync=False):
     return update_store_and_save(
         ingest_files(
             files_root or '.',
             files_glob or '**/*'
         ),
-        sync,
-        store
+        store,
+        sync=sync
     )
 
 def query_store(prompt: str, count: int, store: Store, filter=None):
