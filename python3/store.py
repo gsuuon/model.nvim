@@ -9,7 +9,7 @@ import numpy.typing as npt
 import openai
 import tiktoken
 
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Sequence, List, cast
 from typing_extensions import TypeGuard
 
 # TODO make token counting optional
@@ -36,7 +36,8 @@ def tap(x, label: Optional[str] = None):
 def count_tokens(text: str) -> int:
     return len(enc.encode(text))
 
-def hash_content(data: bytes) -> str:
+def hash_content(text: str) -> str:
+    data = text.encode('utf-8')
     return f'{zlib.adler32(data):08x}'
 
 def normalize_filepath(filepath: str) -> str:
@@ -44,12 +45,12 @@ def normalize_filepath(filepath: str) -> str:
 
 class Item(TypedDict):
     id: str
-    content_hash: str
     content: str
     meta: Optional[dict] # NotRequired not supported
 
 class StoreItem(Item):
     embedder: str
+    content_hash: str
 
 class Store(TypedDict):
     items: list[StoreItem]
@@ -89,23 +90,15 @@ def save_store(store: Store, store_path: str):
     with open(store_path, mode='w', encoding='utf-8') as f:
         f.write(json.dumps(store_raw))
 
-class File(TypedDict):
-    id: str
-    content: str
-    content_hash: str
-
 def ingest_files(root_dir, glob_pattern) -> list[Item]:
     "Ingest files down from root_dir assuming utf-8 encoding. Skips files which fail to decode."
 
     def ingest_file(filepath: str) -> Optional[Item]:
-        with open(filepath, mode='rb') as f:
-            content_bytes = f.read()
-
+        with open(filepath, mode='r') as f:
             try:
                 return {
                     'id': normalize_filepath(filepath),
-                    'content': content_bytes.decode('utf-8'),
-                    'content_hash': hash_content(content_bytes),
+                    'content': f.read(),
                     'meta': {
                         'type': 'file'
                     }
@@ -139,7 +132,7 @@ def get_embeddings(inputs: list[str], print_token_counts=True):
         eprint(over_limits)
         raise ValueError('Embedding input over token limit')
 
-def get_stale_or_new_item_idxs(items: list[Item], store: Store):
+def get_stale_or_new_item_idxs(items: Sequence[StoreItem], store: Store):
     id_to_content_hash = {x['id']: x['content_hash'] for x in store['items'] }
 
     return [
@@ -148,7 +141,7 @@ def get_stale_or_new_item_idxs(items: list[Item], store: Store):
             or item['content_hash'] != id_to_content_hash[item['id']]
     ]
 
-def get_removed_item_store_idx(items: list[Item], store: Store):
+def get_removed_item_store_idx(items: Sequence[StoreItem], store: Store):
     current_ids = set([item['id'] for item in items])
 
     return [
@@ -157,15 +150,28 @@ def get_removed_item_store_idx(items: list[Item], store: Store):
         if item['id'] not in current_ids
     ]
 
-def update_embeddings(
-    items: list[Item],
+def as_store_items(items: Sequence[Item]) -> List[StoreItem]:
+    "Mutates Item seq to StoreItem list in place"
+    items = cast(List[StoreItem], items)
+
+    for item in items:
+        item['content_hash'] = hash_content(item['content'])
+        item['embedder'] = 'openai_ada_002'
+
+    return items
+
+def update_store(
+    items: Sequence[Item],
     store: Store,
-    sync
+    sync: bool
 ) -> list[str]:
     """
     Update stale store data returning updated item ids. sync=True removes any items in store that aren't in provided items.
     For partial updates (only adding items), set sync=False.
     """
+
+    items = as_store_items(items)
+
     needs_update_idx = get_stale_or_new_item_idxs(items, store)
 
     if len(needs_update_idx) == 0:
@@ -193,7 +199,6 @@ def update_embeddings(
     for i, embedding in enumerate(embeddings):
         item_idx = needs_update_idx[i]
         item = items[item_idx]
-        item['embedder'] = 'openai_ada_002'
         # NOTE pretty sure mutation here has no consequences?
 
         if item['id'] in id_to_idx:
@@ -209,7 +214,7 @@ def update_embeddings(
 
 class UpdateStoreOpts(TypedDict):
     sync: bool
-    store_path: Optional[str]
+    store_path: str
     files_ingest_root: Optional[str]
     files_ingest_glob: Optional[str]
 
@@ -249,18 +254,18 @@ def get_opts() -> Opts:
 
     return opts
 
-def update_store(updateOpts: UpdateStoreOpts, store: Store):
-    updated = update_embeddings(
+def update_store_with_files(sync, store, store_path, files_root=None, files_glob=None):
+    updated = update_store(
         ingest_files(
-            updateOpts.get('files_ingest_root') or '.',
-            updateOpts.get('files_ingest_glob') or '**/*'
+            files_root or '.',
+            files_glob or '**/*'
         ),
         store,
-        updateOpts['sync']
+        sync
     )
 
     if len(updated) > 0:
-        save_store(store, updateOpts.get('store_path') or DEFAULT_STORE_PATH)
+        save_store(store, store_path=store_path)
 
     return updated
 
@@ -293,7 +298,12 @@ if __name__ == '__main__':
     store = load_or_initialize_store(opts['store_path'] or DEFAULT_STORE_PATH)
 
     if is_update_store(opts):
-        print(json.dumps(update_store(opts, store)))
+        print(json.dumps(update_store_with_files(
+            opts['sync'],
+            store,
+            opts.get('files_ingest_root'),
+            opts.get('files_ingest_glob')
+        )))
     elif is_query(opts):
         print(json.dumps(query_store(
             opts['prompt'],
