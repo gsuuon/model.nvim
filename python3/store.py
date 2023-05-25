@@ -26,10 +26,10 @@ def eprint(*args, **kwargs):
 
 def tap(x, label: Optional[str] = None):
     if label is not None:
-        eprint('<<', label)
-    eprint(x)
+        print('<<', label)
+    print(x)
     if label is not None:
-        eprint(label, '>>')
+        print(label, '>>')
     return x
 
 def count_tokens(text: str) -> int:
@@ -123,7 +123,7 @@ def get_embeddings(inputs: list[str], print_token_counts=True):
     input_tokens = [ (count_tokens(input), input) for input in inputs ]
 
     if print_token_counts:
-        eprint([ (x[1][:30], x[0]) for x in input_tokens ])
+        print([ (x[1][:30], x[0]) for x in input_tokens ])
 
     if all(limit[0] < INPUT_TOKEN_LIMIT for limit in input_tokens):
         response = openai.Embedding.create(input=inputs, model="text-embedding-ada-002")
