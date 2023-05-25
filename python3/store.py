@@ -250,7 +250,7 @@ def query_store(prompt: str, count: int, store: Store, filter=None):
 
     embedding = get_embeddings([prompt])[0]
     query_vector = np.array(embedding, dtype=np.float32)
-    similarities = np.dot(store['vectors'], query_vector.T)
+    similarities = np.dot(store['vectors'], query_vector.T).flatten()
     ranks = np.argsort(similarities)[::-1]
 
     if filter is None:
