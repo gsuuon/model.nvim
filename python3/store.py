@@ -10,7 +10,6 @@ import openai
 import tiktoken
 
 from typing import TypedDict, Optional, Sequence, List, cast
-from typing_extensions import TypeGuard
 
 # TODO make token counting optional
 # TODO we probably just want to store the entire files in store.json instead of re-reading them
@@ -20,7 +19,6 @@ enc = tiktoken.encoding_for_model('gpt-4')
 
 # https://platform.openai.com/docs/api-reference/embeddings/create
 INPUT_TOKEN_LIMIT = 8192
-DEFAULT_STORE_PATH = 'store.json'
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -53,20 +51,26 @@ class StoreItem(Item):
     content_hash: str
 
 class Store(TypedDict):
+    abs_path: str
     items: list[StoreItem]
     vectors: npt.NDArray[np.float32] | None
 
 def load_or_initialize_store (store_path: str) -> Store:
-    def initialize_empty_store () -> Store:
+    # TODO should I write store on load if it doesn't exist?
+    def initialize_empty_store (abs_path) -> Store:
         return {
+            'abs_path': abs_path,
             'items': [],
             'vectors': np.array([])
         }
+
+    abs_path = os.path.abspath(store_path)
 
     try:
         with open(store_path, encoding='utf-8') as f:
             store_raw = json.loads(f.read()) 
             store: Store = {
+                'abs_path': abs_path,
                 'items': store_raw['items'],
                 'vectors': np.array(store_raw['vectors'])
             }
@@ -74,9 +78,9 @@ def load_or_initialize_store (store_path: str) -> Store:
             return store
 
     except FileNotFoundError:
-        return initialize_empty_store()
+        return initialize_empty_store(abs_path)
 
-def save_store(store: Store, store_path: str):
+def save_store(store: Store):
     if store['vectors'] is None: return
 
     store_raw = {
@@ -84,10 +88,10 @@ def save_store(store: Store, store_path: str):
         'vectors': [ v.tolist() for v in store['vectors'] ]
     }
 
-    dir = os.path.dirname(store_path)
+    dir = os.path.dirname(store['abs_path'])
     if len(dir) > 0: os.makedirs(dir, exist_ok=True)
 
-    with open(store_path, mode='w', encoding='utf-8') as f:
+    with open(store['abs_path'], mode='w', encoding='utf-8') as f:
         f.write(json.dumps(store_raw))
 
 def ingest_files(root_dir, glob_pattern) -> list[Item]:
@@ -212,13 +216,23 @@ def update_store(
 
     return [ items[idx]['id'] for idx in needs_update_idx ]
 
-def update_store_and_save(items, store_path, sync, store):
+def update_store_and_save(items, sync, store):
     updated = update_store(items, store, sync)
 
     if len(updated) > 0:
-        save_store(store, store_path=store_path)
+        save_store(store)
 
     return updated
+
+def update_with_files_and_save(sync, store, files_root=None, files_glob=None):
+    return update_store_and_save(
+        ingest_files(
+            files_root or '.',
+            files_glob or '**/*'
+        ),
+        sync,
+        store
+    )
 
 def query_store(prompt: str, count: int, store: Store, filter=None):
     assert store['vectors'] is not None
