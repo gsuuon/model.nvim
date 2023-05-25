@@ -212,48 +212,6 @@ def update_store(
 
     return [ items[idx]['id'] for idx in needs_update_idx ]
 
-class UpdateStoreOpts(TypedDict):
-    sync: bool
-    store_path: str
-    files_ingest_root: Optional[str]
-    files_ingest_glob: Optional[str]
-
-class QueryOpts(TypedDict):
-    prompt: str
-    count: Optional[int]
-    store_path: str
-
-Opts = QueryOpts | UpdateStoreOpts
-
-def is_query(opts: Opts) -> TypeGuard[QueryOpts]:
-    return 'prompt' in opts
-
-def is_update_store(opts: Opts) -> TypeGuard[UpdateStoreOpts]:
-    return 'sync' in opts
-
-def get_opts() -> Opts:
-    if len(sys.argv) < 2:
-        raise ValueError('Missing options json argument')
-
-    def assert_query():
-        assert type(opts['prompt']) == str, 'Missing prompt'
-        assert opts.get('count') == None or type(opts['count']) == int, 'count not a number'
-
-    def assert_update_store():
-        assert type(opts['sync'] == bool), 'Missing sync option'
-        assert opts.get('store_path') == None or type(opts['store_path']) == str, 'Missing store_path'
-        assert opts.get('files_ingest_root') == None or type(opts.get('files_ingest_root')) == str, 'Missing files_ingest_root'
-        assert opts.get('files_ingest_glob') == None or type(opts.get('files_ingest_glob') == str), 'files_ingest_glob not a string'
-
-    opts = json.loads(sys.argv[1])
-
-    if is_query(opts):
-        assert_query()
-    else:
-        assert_update_store()
-
-    return opts
-
 def update_store_and_save(items, store_path, sync, store):
     updated = update_store(items, store, sync)
 
@@ -285,26 +243,3 @@ def query_store(prompt: str, count: int, store: Store, filter=None):
                 break
 
         return results
-
-if __name__ == '__main__':
-    opts = get_opts()
-    store = load_or_initialize_store(opts['store_path'] or DEFAULT_STORE_PATH)
-
-    if is_update_store(opts):
-        print(json.dumps(
-            update_store_and_save(
-                ingest_files(
-                    opts.get('files_ingest_root'),
-                    opts.get('files_ingest_glob')
-                ),
-                opts['store_path'],
-                opts['sync'],
-                store
-            )
-        ))
-    elif is_query(opts):
-        print(json.dumps(query_store(
-            opts['prompt'],
-            opts.get('count') or 1,
-            store
-        )))
