@@ -253,10 +253,19 @@ def query_store(prompt: str, count: int, store: Store, filter=None):
     similarities = np.dot(store['vectors'], query_vector.T).flatten()
     ranks = np.argsort(similarities)[::-1]
 
-    if filter is None:
-        return [ store['items'][idx] for idx in ranks[:count] ]
-    else:
-        results = []
+    results = []
+
+    for idx in ranks[::]:
+        item = store['items'][idx]
+        similarity = similarities[idx]
+
+        if filter == None or filter(item, similarity):
+            results.append({ **item, 'similarity': similarity })
+
+        if len(results) >= count:
+            break
+
+    return results
 
         for idx in ranks:
             item = store['items'][idx]
