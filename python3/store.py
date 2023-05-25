@@ -117,19 +117,20 @@ def ingest_files(root_dir, glob_pattern) -> list[Item]:
 
     return [ f for f in map(ingest_file, tap(glob_files())) if f ]
 
-def get_embeddings(inputs: list[str], print_token_counts=True):
+def get_embeddings(inputs: list[str]):
     if not inputs: return []
 
-    input_tokens = [ (count_tokens(input), input) for input in inputs ]
+    token_counts = [ count_tokens(input) for input in inputs ]
 
-    if print_token_counts:
-        print([ (x[1][:30], x[0]) for x in input_tokens ])
-
-    if all(limit[0] < INPUT_TOKEN_LIMIT for limit in input_tokens):
+    if all(token_count < INPUT_TOKEN_LIMIT for token_count in token_counts):
         response = openai.Embedding.create(input=inputs, model="text-embedding-ada-002")
-        return [item['embedding'] for item in response['data']]
+        return [item['embedding'] for item in response['data']], token_counts
     else:
-        over_limits = [limit[1][:30] for limit in input_tokens if not limit[0] < INPUT_TOKEN_LIMIT]
+        over_limits = [
+            idx
+            for idx, count in enumerate(token_counts)
+            if not count < INPUT_TOKEN_LIMIT
+        ]
         eprint('Input(s) over the token limit:')
         eprint(over_limits)
         raise ValueError('Embedding input over token limit')
@@ -166,7 +167,7 @@ def update_store(
     items: Sequence[Item],
     store: Store,
     sync: bool
-) -> list[str]:
+) -> tuple[list[str], list[int]]:
     """
     Update stale store data returning updated item ids. sync=True removes any items in store that aren't in provided items.
     For partial updates (only adding items), set sync=False.
@@ -177,12 +178,12 @@ def update_store(
     needs_update_idx = get_stale_or_new_item_idxs(items, store)
 
     if len(needs_update_idx) == 0:
-        eprint('all ' + str(len(items)) + ' were stale')
-        return []
+        print('all ' + str(len(items)) + ' items were stale')
+        return [], []
 
     needs_update_content = [ items[idx]['content'] for idx in needs_update_idx ]
 
-    embeddings = get_embeddings(needs_update_content)
+    embeddings, token_counts = get_embeddings(needs_update_content)
 
     if store['vectors'] is None:
         vector_dimensions = len(embeddings[0])
@@ -212,13 +213,17 @@ def update_store(
             store['items'].append(item)
             store['vectors'] = np.vstack((store['vectors'], embedding))
 
-    return [ items[idx]['id'] for idx in needs_update_idx ]
+    return [ items[idx]['id'] for idx in needs_update_idx ], token_counts
 
 def update_store_and_save(items, store, sync=False):
-    updated = update_store(items, store, sync)
+    updated, token_counts = update_store(items, store, sync)
 
     if len(updated) > 0:
+        print("saving")
+        print(list(zip(updated, token_counts)))
         save_store(store)
+    else:
+        print("no updates, not saving")
 
     return updated
 
@@ -241,7 +246,7 @@ def update_with_files_and_save(store, files_root=None, files_glob=None, sync=Fal
 def query_store(prompt: str, count: int, store: Store, filter=None):
     assert store['vectors'] is not None
 
-    embedding = get_embeddings([prompt], print_token_counts=False)[0]
+    embedding = get_embeddings([prompt])[0]
     query_vector = np.array(embedding, dtype=np.float32)
     similarities = np.dot(store['vectors'], query_vector.T)
     ranks = np.argsort(similarities)[::-1]
