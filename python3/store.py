@@ -267,13 +267,12 @@ def query_store(prompt: str, count: int, store: Store, filter=None):
 
     return results
 
-        for idx in ranks:
-            item = store['items'][idx]
+if __name__ == '__main__':
+    s = load_or_initialize_store('.')
 
-            if filter(item):
-                results.append(item)
+    # update_with_files_and_save(s, files_root='.', files_glob='**/*.py')
 
-            if len(results) >= count:
-                break
+    # print([ i['id'] for i in s['items']])
 
-        return results
+    matches = query_store('add function that requests the bard api using curl helpers', 10, s, lambda item, similarity: similarity > 0.6)
+    print([ (match['id'], match['similarity']) for match in matches])
