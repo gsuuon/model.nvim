@@ -62,7 +62,7 @@ def load_or_initialize_store (store_dir: str) -> Store:
         return {
             'abs_path': abs_path,
             'items': [],
-            'vectors': np.array([])
+            'vectors': np.array([], dtype=np.float32)
         }
 
     abs_path = os.path.abspath(os.path.join(store_dir, STORE_FILE_NAME))
@@ -73,7 +73,7 @@ def load_or_initialize_store (store_dir: str) -> Store:
             store: Store = {
                 'abs_path': abs_path,
                 'items': store_raw['items'],
-                'vectors': np.array(store_raw['vectors'])
+                'vectors': np.array(store_raw['vectors'], dtype=np.float32)
             }
 
             return store
