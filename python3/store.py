@@ -254,15 +254,8 @@ def get_opts() -> Opts:
 
     return opts
 
-def update_store_with_files(sync, store, store_path, files_root=None, files_glob=None):
-    updated = update_store(
-        ingest_files(
-            files_root or '.',
-            files_glob or '**/*'
-        ),
-        store,
-        sync
-    )
+def update_store_and_save(items, store_path, sync, store):
+    updated = update_store(items, store, sync)
 
     if len(updated) > 0:
         save_store(store, store_path=store_path)
@@ -298,12 +291,17 @@ if __name__ == '__main__':
     store = load_or_initialize_store(opts['store_path'] or DEFAULT_STORE_PATH)
 
     if is_update_store(opts):
-        print(json.dumps(update_store_with_files(
-            opts['sync'],
-            store,
-            opts.get('files_ingest_root'),
-            opts.get('files_ingest_glob')
-        )))
+        print(json.dumps(
+            update_store_and_save(
+                ingest_files(
+                    opts.get('files_ingest_root'),
+                    opts.get('files_ingest_glob')
+                ),
+                opts['store_path'],
+                opts['sync'],
+                store
+            )
+        ))
     elif is_query(opts):
         print(json.dumps(query_store(
             opts['prompt'],
