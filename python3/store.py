@@ -96,7 +96,7 @@ def ingest_files(root_dir, glob_pattern) -> list[Item]:
     "Ingest files down from root_dir assuming utf-8 encoding. Skips files which fail to decode."
 
     def ingest_file(filepath: str) -> Optional[Item]:
-        with open(filepath, mode='r') as f:
+        with open(filepath, mode='r', encoding='utf-8') as f:
             try:
                 return {
                     'id': normalize_filepath(filepath),
@@ -105,7 +105,9 @@ def ingest_files(root_dir, glob_pattern) -> list[Item]:
                         'type': 'file'
                     }
                 }
-            except:
+            except Exception as e:
+                print("Failed to read ", filepath)
+                print(e)
                 return None
 
     def glob_files():
