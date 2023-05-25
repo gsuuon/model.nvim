@@ -19,6 +19,7 @@ enc = tiktoken.encoding_for_model('gpt-4')
 
 # https://platform.openai.com/docs/api-reference/embeddings/create
 INPUT_TOKEN_LIMIT = 8192
+STORE_FILE_NAME = '.llm_store.json'
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -64,7 +65,7 @@ def load_or_initialize_store (store_dir: str) -> Store:
             'vectors': np.array([])
         }
 
-    abs_path = os.path.abspath(os.path.join(store_dir, '.llm_store.json'))
+    abs_path = os.path.abspath(os.path.join(store_dir, STORE_FILE_NAME))
 
     try:
         with open(abs_path, encoding='utf-8') as f:
