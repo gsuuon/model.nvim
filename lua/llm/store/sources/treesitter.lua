@@ -2,12 +2,12 @@ local ts_utils = require('nvim-treesitter.ts_utils')
 local M = {}
 
 ---@class File
----@field filename string
+---@field filepath string
 ---@field content string
 
 ---@param file File
 function M.ts_extract(file, extract_child)
-  local lang = vim.treesitter.get_lang(vim.filetype.match({filename = file.filename}))
+  local lang = vim.treesitter.get_lang(vim.filetype.match({filename = file.filepath}))
   local parser = vim.treesitter.get_string_parser(file.content, lang)
   local tree = parser:parse()[1]
   local root = tree:root()
@@ -37,31 +37,15 @@ function M.ts_extract_function(opts)
 
   return function (child, file)
     if child:type() == type then
-      local store_rel_path = vim.fn.pyeval('store.path_relative_to_store("' .. file.filename .. '", s)')
+      local store_rel_path = vim.fn.pyeval('store.path_relative_to_store("' .. file.filepath .. '", s)')
 
       return {
         content = node_get_text(child, file.content),
-        name = store_rel_path .. ':' .. node_get_text(get_name(child), file.content)
+        id = store_rel_path .. ':' .. node_get_text(get_name(child), file.content)
       }
     end
   end
 end
-
-local foo_content = [[
-local M = {}
-
-function M.foo()
-  print()
-end
--- aefeas
-function M.bar()
-  print()
-end
--- aefeas
-function M.baz()
-  print()
-end
-]]
 
 M.lang = {}
 M.lang.lua = {}
@@ -79,15 +63,23 @@ function M.lang.lua.functions(file)
   )
 end
 
-(function()
-  local files = {
-    {
-      filename = 'foo.lua',
-      content = foo_content
-    }
-  }
+function M.ingest_file(filepath)
+  local file = io.open(filepath, 'r')
+  if file == nil then
+    error('Unable to open file: ' .. filepath)
+  end
 
-  show(M.lang.lua.functions(files[1]))
-end)()
+  local content = file:read("*a")
+
+  return {
+    filepath = filepath,
+    content = content
+  }
+end
+
+-- (function()
+--   local file = ingest_file('treesitter.lua')
+--   show(M.lang.lua.functions(file))
+-- end)()
 
 return M
