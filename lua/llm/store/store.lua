@@ -9,6 +9,7 @@ function M.init(opts)
   M.store_root_dir = store_root_dir
 
   vim.cmd([[
+    py import json
     py import store
     py s = store.load_or_initialize_store(']] .. M.store_root_dir .. [[')
   ]])
@@ -38,27 +39,53 @@ function M.query_store(prompt, count, similarity)
   end
 end
 
-function M.add_items()
-  local xs = {
-    {
-      id = 'someid',
-      content = 'somecontent',
-      meta = {
-        type = 'file'
-      }
-    }
-  }
+--- Assumes json has been imported in python repl
+local function to_python(o)
+  local as_json = vim.json.encode(o)
+  if as_json == nil then
+    error("failed to encode json")
+  end
+  local sanitized = [[r"""]] .. as_json:gsub([["""]], [[\"\"\"]]) .. [["""]]
 
-  local xs_json = json_encode(xs)
-
-  vim.cmd([[
-    py store.add_items(json.loads(']] .. xs_json .. [['), s)
-  ]])
+  return [[json.loads(]] .. sanitized .. [[, strict=False)]]
 end
 
-M.init()
+function M.add_items(items)
+  vim.cmd([[py store.update_store_and_save(]] .. to_python(items) .. [[,s)]])
+end
+
+local ts_source = require('llm.store.sources.treesitter')
+
+local function to_lua_functions(file)
+  return ts_source.lang.lua.functions(file)
+end
+
+local function glob_to_items(glob, to_items)
+  local filepaths = vim.fn.glob(glob,nil,true)
+
+  local results = {}
+
+  for _, filepath in ipairs(filepaths) do
+    -- show(filepath)
+    local file = ts_source.ingest_file(filepath)
+    local items = to_items(file)
+
+    for _, item in ipairs(items) do
+      table.insert(results, item)
+    end
+  end
+
+  return results
+end
+
+-- M.init()
+
+-- M.add_items(glob_to_items('**/*.lua', to_lua_functions))
+
 -- M.add_files('.')
 -- M.check_store()
-show(M.query_store([[add a segment mode that inserts text at cursor position]], 1, 0.8))
+show(M.query_store([[add a segment mode that inserts text at cursor position]], 5, 0.5))
+
+-- test(ts_source.lang.lua.functions(ts_source.ingest_file('store.lua')))
 
 return M
