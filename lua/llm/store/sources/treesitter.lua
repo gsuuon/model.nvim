@@ -37,7 +37,7 @@ function M.ts_extract_function(opts)
 
   return function (child, file)
     if child:type() == type then
-      local store_rel_path = vim.fn.pyeval('store.path_relative_to_store("' .. file.filepath .. '", s)')
+      local store_rel_path = vim.fn.pyeval('store.path_relative_to_store(r"' .. file.filepath .. '", s)')
 
       return {
         content = node_get_text(child, file.content),
