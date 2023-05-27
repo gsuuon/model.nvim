@@ -263,7 +263,7 @@ def query_store(prompt: str, count: int, store: Store, filter=None):
         similarity = similarities[idx]
 
         if filter == None or filter(item, similarity):
-            results.append({ **item, 'similarity': similarity })
+            results.append({ **item, 'similarity': similarity.item() })
 
         if len(results) >= count:
             break
