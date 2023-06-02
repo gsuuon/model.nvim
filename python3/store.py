@@ -12,8 +12,6 @@ import tiktoken
 from typing import TypedDict, Optional, Sequence, List, cast
 
 # TODO make token counting optional
-# TODO we probably just want to store the entire files in store.json instead of re-reading them
-# TODO all paths relative to store.json
 
 enc = tiktoken.encoding_for_model('gpt-4')
 
