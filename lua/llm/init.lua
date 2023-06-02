@@ -349,6 +349,39 @@ function M.commands(opts)
       return vim.fn.matchfuzzy(prompt_names, arglead)
     end
   })
+
+  local store = require('llm.store.store')
+
+  local handle_llm_store = {
+    query = function(args)
+      local query_prompt = args.args:sub(7)
+      -- TODO figure out sane defaults for count and similarity threshold
+      local results = store.query_store(query_prompt, 5, 0.5)
+      vim.notify(vim.inspect(results))
+    end,
+    init = function()
+      store.init()
+    end
+  }
+
+  vim.api.nvim_create_user_command('LlmStore', function(a)
+    -- local args = a.fargs
+    local command = a.fargs[1]
+
+    local handler = handle_llm_store[command]
+    if handler == nil then
+      error('Unknown LlmStore command ' .. command)
+    else
+      return handler(a)
+    end
+  end, {
+      desc = 'LlmStore',
+      force = true,
+      nargs='+',
+      complete = function(arglead)
+        return vim.fn.matchfuzzy(vim.tbl_keys(handle_llm_store), arglead)
+      end
+    })
 end
 
 function M.setup(opts)

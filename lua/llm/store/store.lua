@@ -18,6 +18,10 @@ function M.init(opts)
     py import store
     py s = store.load_or_initialize_store(']] .. M.store_root_dir .. [[')
   ]])
+
+  local store_items_count = vim.fn.pyeval("len(s['items'])")
+  local store_location = vim.fn.pyeval("s['abs_path']")
+  vim.notify('Loaded ' .. store_items_count .. ' items in store.json at ' .. store_location)
 end
 
 function M.store_get_known_ids()
