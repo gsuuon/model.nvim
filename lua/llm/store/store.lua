@@ -1,5 +1,10 @@
 local M = {}
 
+---@class FunctionItem
+---@field content string
+---@field filepath string
+---@field name string
+
 local function get_git_root()
   return vim.fn.systemlist('git rev-parse --show-toplevel')[1]
 end
@@ -15,10 +20,8 @@ function M.init(opts)
   ]])
 end
 
-function M.check_store()
-  -- vim.cmd("py print(s)")
-  -- vim.cmd("py print(s['abs_path'])")
-  vim.cmd("py print([ i['id'] for i in s['items'] ])")
+function M.store_get_known_ids()
+  return vim.fn.pyeval("[ i['id'] for i in s['items'] ]")
 end
 
 function M.add_files(root_path)
@@ -56,8 +59,18 @@ end
 
 local ts_source = require('llm.store.sources.treesitter')
 
+---@param function_item FunctionItem
+local function normalize_function_item_filepath_to_store(function_item)
+  local store_rel_path = vim.fn.pyeval('store.path_relative_to_store(r"' .. function_item.filepath .. '", s)')
+
+  return {
+    id = store_rel_path .. ':' .. function_item.name,
+    content = function_item.content
+  }
+end
+
 local function to_lua_functions(file)
-  return ts_source.lang.lua.functions(file)
+  return vim.tbl_map(normalize_function_item_filepath_to_store, ts_source.lang.lua.functions(file))
 end
 
 local function glob_to_items(glob, to_items)
@@ -77,15 +90,5 @@ local function glob_to_items(glob, to_items)
 
   return results
 end
-
--- M.init()
-
--- M.add_items(glob_to_items('**/*.lua', to_lua_functions))
-
--- M.add_files('.')
--- M.check_store()
-show(M.query_store([[add a segment mode that inserts text at cursor position]], 5, 0.5))
-
--- test(ts_source.lang.lua.functions(ts_source.ingest_file('store.lua')))
 
 return M

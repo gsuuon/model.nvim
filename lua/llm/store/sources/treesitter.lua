@@ -1,4 +1,3 @@
-local ts_utils = require('nvim-treesitter.ts_utils')
 local M = {}
 
 ---@class File
@@ -37,11 +36,10 @@ function M.ts_extract_function(opts)
 
   return function (child, file)
     if child:type() == type then
-      local store_rel_path = vim.fn.pyeval('store.path_relative_to_store(r"' .. file.filepath .. '", s)')
-
       return {
         content = node_get_text(child, file.content),
-        id = store_rel_path .. ':' .. node_get_text(get_name(child), file.content)
+        filepath = file.filepath,
+        name = node_get_text(get_name(child), file.content)
       }
     end
   end
