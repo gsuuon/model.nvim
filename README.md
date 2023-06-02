@@ -6,7 +6,7 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 
 
 - 📑 __Build a prompt library__  
-- 🐘 __Local vectorstore__
+- 🐘 __Local vectorstore (wip)__
 - 🪁 __Stream responses__  
 - 🌞 __Super easy__  
 
@@ -43,7 +43,9 @@ require('lazy').setup({
 - `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. If you've added alternative [prompts](#prompts) to the config, you can give a prompt name as an argument. Streaming text is added on the next line in visual line-wise mode, or from the end of the selection in char-wise visual mode.
 
 - `:LlmStore [command]` (🚧 under construction)  
-  - __Setup__ `pip install numpy openai tiktoken`
+  - __Setup__
+    - Python 3.10+
+    - `pip install numpy openai tiktoken`
   - `:LlmStore init` — initialize a store.json file at the closest git root directory
   - `:LlmStore query <query text>` — query a store.json
   - To add items call into the `llm.store.store` lua module functions, e.g.
