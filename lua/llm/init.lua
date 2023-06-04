@@ -128,7 +128,7 @@ end
 ---@param input string | string[]
 ---@param prompt Prompt
 ---@param handlers StreamHandlers
----@param args string[]
+---@param args string
 local function start_prompt(input, prompt, handlers, args)
   local _input = type(input) == 'table' and table.concat(input, '\n') or input
 
@@ -181,16 +181,16 @@ end
 
 function M.request_completion_stream(cmd_params)
 
-  ---@return Prompt, string[]
+  ---@return Prompt, string
   local function get_prompt_and_args(args)
     local prompt_arg = table.remove(args, 1)
 
     if not prompt_arg then
-      return M.opts.default_prompt, {}
+      return M.opts.default_prompt, ''
     end
 
     local prompt = assert(M.opts.prompts[prompt_arg], "Prompt '" .. prompt_arg .. "' wasn't found")
-    return prompt, args
+    return prompt, table.concat(args, ' ')
   end
 
   local prompt, args = get_prompt_and_args(cmd_params.fargs)
