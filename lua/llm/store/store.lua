@@ -9,7 +9,11 @@ local function get_git_root()
   return vim.fn.systemlist('git rev-parse --show-toplevel')[1]
 end
 
-function M.init(opts)
+function M.init(opts, force)
+  if M.store_did_init == true and not force then
+    return
+  end
+
   local store_root_dir = (opts or {}).store_root_dir or get_git_root()
   M.store_root_dir = store_root_dir
 
@@ -22,6 +26,8 @@ function M.init(opts)
   local store_items_count = vim.fn.pyeval("len(s['items'])")
   local store_location = vim.fn.pyeval("s['abs_path']")
   vim.notify('Loaded ' .. store_items_count .. ' items in store.json at ' .. store_location)
+
+  M.store_did_init = true
 end
 
 function M.store_get_known_ids()
