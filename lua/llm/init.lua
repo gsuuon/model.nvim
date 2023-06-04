@@ -11,6 +11,7 @@ local util = require('llm.util')
 ---@field builder PromptBuilder Converts input and context to request data
 ---@field hl_group? string Highlight group of active response
 ---@field mode? SegmentMode | StreamHandlers Response handling mode ("replace" | "append" | StreamHandlers). Defaults to "append".
+---@field params? any Additional parameters to add to request body
 
 ---@class StreamHandlers
 ---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
@@ -128,7 +129,7 @@ end
 local function start_prompt(input, prompt, handlers)
   local _input = type(input) == 'table' and table.concat(input, '\n') or input
 
-  local success, pcall_result = pcall(prompt.provider.request_completion_stream, _input, handlers, prompt.builder)
+  local success, pcall_result = pcall(prompt.provider.request_completion_stream, _input, handlers, prompt.builder, prompt.params)
 
   local result = {
     started = success
