@@ -126,10 +126,13 @@ local function get_input_and_segment(behavior, hl_group)
 end
 
 ---@param input string | string[]
-local function start_prompt(input, prompt, handlers)
+---@param prompt Prompt
+---@param handlers StreamHandlers
+---@param args string[]
+local function start_prompt(input, prompt, handlers, args)
   local _input = type(input) == 'table' and table.concat(input, '\n') or input
 
-  local success, pcall_result = pcall(prompt.provider.request_completion_stream, _input, handlers, prompt.builder, prompt.params)
+  local success, pcall_result = pcall(prompt.provider.request_completion_stream, _input, handlers, prompt.builder, prompt.params, args)
 
   local result = {
     started = success
@@ -144,7 +147,7 @@ local function start_prompt(input, prompt, handlers)
   return result
 end
 
-local function request_completion_input_segment(input_segment, prompt)
+local function request_completion_input_segment(input_segment, prompt, args)
   local seg = input_segment.segment
 
   local proc = start_prompt(input_segment.input, prompt, {
@@ -167,7 +170,7 @@ local function request_completion_input_segment(input_segment, prompt)
     on_error = function(data, label)
       util.eshow(data, 'stream error ' .. label)
     end
-  })
+  }, args)
 
   if proc.started then
     seg.data.cancel = proc.cancel
@@ -178,31 +181,33 @@ end
 
 function M.request_completion_stream(cmd_params)
 
-  ---@return Prompt
-  local function get_prompt()
-    local prompt_arg = cmd_params.fargs[1]
+  ---@return Prompt, string[]
+  local function get_prompt_and_args(args)
+    local prompt_arg = table.remove(args, 1)
 
     if not prompt_arg then
-      return M.opts.default_prompt
+      return M.opts.default_prompt, {}
     end
 
-    return assert(M.opts.prompts[prompt_arg], "Prompt '" .. prompt_arg .. "' wasn't found")
+    local prompt = assert(M.opts.prompts[prompt_arg], "Prompt '" .. prompt_arg .. "' wasn't found")
+    return prompt, args
   end
 
-  local prompt = get_prompt()
+  local prompt, args = get_prompt_and_args(cmd_params.fargs)
   local prompt_mode = prompt.mode or segment.mode.APPEND
   local want_visual_selection = cmd_params.range ~= 0
 
   if type(prompt.mode) == 'table' then
     ---@cast prompt_mode StreamHandlers
-    
+
     local input =
       want_visual_selection and get_input.visual_selection() or get_input.file()
 
     local result = start_prompt(
       input.lines,
       prompt,
-      prompt_mode
+      prompt_mode,
+      args
     )
 
     if not result.started then
@@ -222,7 +227,7 @@ function M.request_completion_stream(cmd_params)
     prompt.hl_group or M.opts.hl_group
   )
 
-  request_completion_input_segment(input_segment, prompt)
+  request_completion_input_segment(input_segment, prompt, args)
 
 end
 
@@ -337,12 +342,13 @@ function M.commands(opts)
     range = true,
     desc = 'Request completion of selection',
     force = true,
-    nargs='?',
+    nargs='*',
     complete = function(arglead)
       local prompt_names = {}
 
       for k, _ in util.module.autopairs(opts.prompts) do
-        table.insert(prompt_names, k)
+        local escaped = k:gsub(" ", "\\ ")
+        table.insert(prompt_names, escaped)
       end
 
       if #arglead == 0 then return prompt_names end

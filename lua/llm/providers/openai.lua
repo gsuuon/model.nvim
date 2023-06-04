@@ -40,7 +40,8 @@ end
 ---@param handlers StreamHandlers
 ---@param prompt fun(input: string, context: table): table Converts input (selection) to a table to be merged into request body
 ---@param params? any Additional options for OpenAI endpoint
-function M.request_completion_stream(input, handlers, prompt, params)
+---@param args? string[] Additional args passed to command
+function M.request_completion_stream(input, handlers, prompt, params, args)
   local _all_content = ''
 
   -- TODO should handlers being optional be a choice at the provider level or always optional for all providers?
@@ -85,7 +86,8 @@ function M.request_completion_stream(input, handlers, prompt, params)
 
   local prompt_built_params = assert(
     prompt(input, {
-      filename = util.buf.filename()
+      filename = util.buf.filename(),
+      args = args
     }),
     'prompt builder produced nil'
   )
