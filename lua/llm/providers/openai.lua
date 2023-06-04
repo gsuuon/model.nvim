@@ -123,4 +123,47 @@ function M.initialize(opts)
     })
 end
 
+M.prompt = {}
+
+function M.prompt.input_as_message(input)
+  return {
+    role = 'user',
+    content = input
+  }
+end
+
+function M.prompt.add_args_as_last_message(messages, context)
+  if #context.args > 0 then
+    table.insert(messages, {
+      role = 'user',
+      content = context.args
+    })
+  end
+
+  return messages
+end
+
+function M.prompt.input_and_args_as_messages(input, context)
+  return {
+    messages =
+      M.add_args_as_last_message(
+        M.input_as_message(input),
+        context
+      )
+  }
+end
+
+function M.prompt.with_system_message(text)
+  return function(input, context)
+    local body = M.input_and_args_as_messages(input, context)
+
+    table.insert(body.messages, 1, {
+      role = 'system',
+      content = text
+    })
+
+    return body
+  end
+end
+
 return M

@@ -105,4 +105,21 @@ function M.add_items(items)
   vim.cmd([[py store.update_store_and_save(]] .. to_python(items) .. [[,s)]])
 end
 
+M.prompt = {}
+
+function M.prompt.query_store(input, count, similarity)
+  M.init()
+
+  local context_results = M.query_store(input, count, similarity)
+
+  local context = table.concat(
+    vim.tbl_map(function(x)
+      return '```' .. x.id .. '\n' .. x.content .. '\n```'
+    end, context_results)
+  )
+
+  return context
+end
+
+
 return M
