@@ -38,6 +38,7 @@ function M.add_files(root_path)
   vim.cmd([[py store.update_with_files_and_save(s, files_root=']].. root_path .. [[')]])
 end
 
+---@return { id: string, content: string, similarity: number }[]
 function M.query_store(prompt, count, similarity)
   if similarity == nil then
     return vim.fn.py3eval(
