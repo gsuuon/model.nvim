@@ -131,6 +131,16 @@ A prompt entry requires the builder and provider fields. The field is a function
 
 </details>
 
+<details>
+<summary>
+@class PromptBuilder
+</summary>
+
+```lua
+---@alias PromptBuilder fun(input: string, context: table): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results for use with callbacks.
+```
+
+</details>
 
 <details>
 <summary>@class StreamHandlers</summary>
