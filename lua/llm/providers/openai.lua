@@ -99,7 +99,7 @@ function M.request_completion_stream(input, handlers, prompt, params, args)
       prompt_built_params
     )
 
-    curl.stream({
+    return curl.stream({
       headers = {
         Authorization = 'Bearer ' .. api_key(),
         ['Content-Type']= 'application/json',
@@ -111,9 +111,18 @@ function M.request_completion_stream(input, handlers, prompt, params, args)
   end
 
   if type(prompt_built) == 'function' then
-    prompt_built(resolve)
+    -- FIXME the provider api needs a rework
+    local cancel
+
+    prompt_built(function(x)
+      cancel = resolve(x)
+    end)
+
+    return function()
+      cancel()
+    end
   else
-    resolve(prompt_built)
+    return resolve(prompt_built)
   end
 end
 
