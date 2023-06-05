@@ -18,8 +18,6 @@ local util = require('llm.util')
 ---@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
 ---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
 
-local M = {}
-
 ---@class GetInputSegmentBehavior
 ---@field get_visual_selection boolean
 ---@field segment_mode SegmentMode
@@ -29,6 +27,8 @@ local M = {}
 ---@field clear_hl fun(): nil
 ---@field data table
 ---@field highlight fun(hl_group: string): nil
+
+local M = {}
 
 local get_input = {
   visual_selection = function()
