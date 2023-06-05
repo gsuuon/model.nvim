@@ -130,6 +130,7 @@ end
 ---@param handlers StreamHandlers
 ---@param args string
 local function start_prompt(input, prompt, handlers, args)
+  -- TODO args to prompts is probably less useful than the prompt buffer / helper
   local _input = type(input) == 'table' and table.concat(input, '\n') or input
 
   local success, pcall_result = pcall(prompt.provider.request_completion_stream, _input, handlers, prompt.builder, prompt.params, args)
@@ -298,7 +299,11 @@ function M.commands(opts)
 
         local cancel = seg.data.cancel
 
-        if cancel ~= nil then cancel() end
+        if cancel ~= nil then
+          cancel()
+        else
+          vim.notify('Not cancellable', vim.log.levels.WARN)
+        end
       end
     end,
     {
