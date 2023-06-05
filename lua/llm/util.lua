@@ -214,7 +214,7 @@ function M.buf.filename()
   return vim.fs.normalize(vim.fn.expand('%:.'))
 end
 
----@param callback function
+---@param callback fun(user_input: string, prompt_content: string)
 ---@param initial_content? string | string[]
 ---@param title? string
 function M.buf.prompt(callback, initial_content, title)
@@ -290,6 +290,16 @@ function M.module.autopairs(table)
   end
 
   return pairs(table)
+end
+
+M.builder = {}
+
+function M.builder.user_prompt(callback, input, title)
+  return function(resolve)
+    M.buf.prompt(function(user_input, buffer_content)
+      resolve(callback(user_input, buffer_content))
+    end, input, title)
+  end
 end
 
 return M
