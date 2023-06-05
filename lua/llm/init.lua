@@ -117,9 +117,38 @@ local function get_input_and_segment(behavior, hl_group)
   end
 
   if behavior.segment_mode == segment.mode.BUFFER then
-    -- get the llm buffer
-    -- split it if not visible?
-    -- create segment at end of buffer
+    -- Determine input lines based on behavior.get_visual_selection
+    local input
+    if behavior.get_visual_selection then
+      input = get_input.visual_selection()
+    else
+      input = get_input.file()
+    end
+
+    -- Find or create a scratch buffer for this plugin
+    local llm_bfnr = vim.fn.bufnr('llm-scratch', true)
+
+    if llm_bfnr == -1 then
+      llm_bfnr = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_name(llm_bfnr, 'llm-scratch')
+    end
+
+    vim.api.nvim_buf_set_option(llm_bfnr, 'buftype', 'nowrite')
+    vim.api.nvim_buf_set_lines(llm_bfnr, -2, -1, false, input.lines)
+
+    -- Open the existing buffer or create a new one
+    vim.api.nvim_set_current_buf(llm_bfnr)
+
+    -- Create a segment at the end of the buffer
+    local line_count = vim.api.nvim_buf_line_count(llm_bfnr)
+
+    local seg = segment.create_segment_at(line_count, 0, hl_group, llm_bfnr)
+
+    -- Return a table with the segment and input
+    return {
+      input = input.lines,
+      segment = seg
+    }
   end
 
   error('Unknown mode')
