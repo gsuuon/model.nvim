@@ -214,6 +214,38 @@ function M.buf.filename()
   return vim.fs.normalize(vim.fn.expand('%:.'))
 end
 
+---@param callback function
+---@param initial_content? string | string[]
+---@param title? string
+function M.buf.prompt(callback, initial_content, title)
+  local bufnr = vim.api.nvim_create_buf(true, true)
+  vim.api.nvim_buf_set_option(bufnr, 'buftype', 'prompt')
+
+  vim.cmd(':b ' .. bufnr)
+
+  vim.api.nvim_set_option_value('winbar', title or 'Prompt', { scope = 'local' })
+
+  if initial_content ~= nil then
+    if type(initial_content) == "string" then
+      initial_content = vim.fn.split(initial_content, '\n')
+    end
+    vim.api.nvim_buf_set_text(bufnr, 0, 0, 0, 0, initial_content)
+  end
+
+  vim.fn.prompt_setcallback(bufnr, function(user_input)
+    local buf_content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -3, false), '\n')
+    local success, result = pcall(callback, user_input, buf_content)
+
+    if not success then
+      vim.notify(result, vim.log.levels.ERROR)
+    end
+
+    vim.cmd(':bd! ' .. bufnr)
+  end)
+
+  vim.cmd.startinsert()
+end
+
 M.module = {}
 
 --- Re-require a module on access. Useful when developing a prompt library to avoid restarting nvim.
