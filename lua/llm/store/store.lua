@@ -38,17 +38,21 @@ function M.add_files(root_path)
   vim.cmd([[py store.update_with_files_and_save(s, files_root=']].. root_path .. [[')]])
 end
 
+local function escape_quotes(str)
+  return [[r"""]] .. str:gsub([["""]], [[\"\"\"]]) .. [["""]]
+end
+
 ---@return { id: string, content: string, similarity: number }[]
 function M.query_store(prompt, count, similarity)
   if similarity == nil then
     return vim.fn.py3eval(
-      [[store.query_store(']] .. prompt .. [[', ]] .. count .. [[, s)]]
+      [[store.query_store(]] .. escape_quotes(prompt) .. [[, ]] .. count .. [[, s)]]
     )
   else
     local filter = [[lambda item, similarity: similarity > ]] .. similarity
 
     return vim.fn.py3eval(
-      [[store.query_store(']] .. prompt .. [[', ]] .. count .. [[, s, filter=]] .. filter ..[[)]]
+      [[store.query_store(]] .. escape_quotes(prompt) .. [[, ]] .. count .. [[, s, filter=]] .. filter ..[[)]]
     )
   end
 end
@@ -59,9 +63,9 @@ local function to_python(o)
   if as_json == nil then
     error("failed to encode json")
   end
-  local sanitized = [[r"""]] .. as_json:gsub([["""]], [[\"\"\"]]) .. [["""]]
+  local escaped = escape_quotes(as_json)
 
-  return [[json.loads(]] .. sanitized .. [[, strict=False)]]
+  return [[json.loads(]] .. escaped .. [[, strict=False)]]
 end
 
 local ts_source = require('llm.store.sources.treesitter')
@@ -115,7 +119,8 @@ function M.prompt.query_store(input, count, similarity)
   local context = table.concat(
     vim.tbl_map(function(x)
       return '```' .. x.id .. '\n' .. x.content .. '\n```'
-    end, context_results)
+    end, context_results),
+    '\n'
   )
 
   return context
