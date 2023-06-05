@@ -182,6 +182,38 @@ require('llm').setup({
 ### Prompts
 
 <details>
+<summary>Prompt for user input</summary>
+
+https://github.com/gsuuon/llm.nvim/assets/6422188/0e4b2b68-5873-42af-905c-3bd5a0bdfe46
+
+```lua
+local util = require('llm.util')
+...
+  prompt = {
+    provider = openai,
+    builder = function(input)
+      return util.builder.user_prompt(function(user_input)
+        return {
+          messages = {
+            {
+              role = 'user',
+              content = input
+            },
+            {
+              role = 'user',
+              content = user_input
+            }
+          }
+        }
+      end, input)
+    end,
+    mode = segment.mode.REPLACE
+  }
+```
+
+</details>
+
+<details>
 <summary>Create a commit message based on `git diff --staged`</summary>
 
 https://user-images.githubusercontent.com/6422188/233807212-d1830514-fe3b-4d38-877e-f3ecbdb222aa.mp4
