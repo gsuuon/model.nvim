@@ -1,7 +1,7 @@
 local segment = require('llm.segment')
 local util = require('llm.util')
 
----@alias PromptBuilder fun(input: string, context: table): table Converts input and context to request data
+---@alias PromptBuilder fun(input: string, context: table): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
 
 ---@class Provider
 ---@field request_completion_stream fun(input: string, handler: StreamHandlers, builder: PromptBuilder, params?: table): nil Request a completion stream from provider
