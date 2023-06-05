@@ -84,7 +84,7 @@ function M.request_completion_stream(input, handlers, prompt, params, args)
     _handlers.on_error(error, 'curl')
   end
 
-  local prompt_built_params = assert(
+  local prompt_built = assert(
     prompt(input, {
       filename = util.buf.filename(),
       args = args
@@ -92,27 +92,36 @@ function M.request_completion_stream(input, handlers, prompt, params, args)
     'prompt builder produced nil'
   )
 
-  local body = vim.tbl_deep_extend('force',
-    M.default_request_params,
-    (params or {}),
-    prompt_built_params
-  )
+  local function resolve(prompt_built_params)
+    local body = vim.tbl_deep_extend('force',
+      M.default_request_params,
+      (params or {}),
+      prompt_built_params
+    )
 
-  return curl.stream({
-    headers = {
-      Authorization = 'Bearer ' .. api_key(),
-      ['Content-Type']= 'application/json',
-    },
-    method = 'POST',
-    url = 'https://api.openai.com/v1/chat/completions',
-    body = body
-  }, handle_raw, handle_error)
+    curl.stream({
+      headers = {
+        Authorization = 'Bearer ' .. api_key(),
+        ['Content-Type']= 'application/json',
+      },
+      method = 'POST',
+      url = 'https://api.openai.com/v1/chat/completions',
+      body = body
+    }, handle_raw, handle_error)
+  end
+
+  if type(prompt_built) == 'function' then
+    prompt_built(resolve)
+  else
+    resolve(prompt_built)
+  end
 end
 
 M.default_request_params = {
   model = 'gpt-3.5-turbo',
   stream = true
 }
+
 
 function M.initialize(opts)
   M.default_request_params = vim.tbl_deep_extend('force',
