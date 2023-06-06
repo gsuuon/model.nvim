@@ -54,6 +54,7 @@ function M.request_completion_stream(input, handlers, prompt, params, args)
 
   local function handle_raw(raw_data)
     local items = util.string.split_pattern(raw_data, '\n\ndata: ')
+    -- FIXME it seems like sometimes we don't get the two newlines (e.g. before the last [DONE])
 
     for _, item in ipairs(items) do
       local data = extract_data(item)
@@ -73,7 +74,7 @@ function M.request_completion_stream(input, handlers, prompt, params, args)
         if response ~= nil then
           _handlers.on_error(response, 'response')
         else
-          if not item:match('^%[DONE%]') then
+          if not item:match('%[DONE%]') then
             _handlers.on_error(item, 'item')
           end
         end
