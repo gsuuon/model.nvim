@@ -50,7 +50,7 @@ local get_input = {
 
 ---@param behavior GetInputSegmentBehavior
 ---@param hl_group string
----@return { input: string, segment: Segment }
+---@return { input: string[], segment: Segment }
 local function get_input_and_segment(behavior, hl_group)
   -- TODO dry
 

@@ -26,11 +26,12 @@ local function extract_data(event_string)
   end
 end
 
-function M.default_builder(input, _)
+function M.default_builder(input)
   return {
     messages = {
-      { content = input,
-        role = 'user'
+      {
+        content = input,
+        role = 'user',
       }
     }
   }

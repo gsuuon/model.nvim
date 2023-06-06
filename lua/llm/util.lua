@@ -83,6 +83,7 @@ end
 
 M.string = {}
 
+-- TODO remove this and just use vim.fn.split
 function M.string.split_char(text, sep)
   local res = {}
 
