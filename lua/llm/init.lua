@@ -198,19 +198,28 @@ local function start_prompt(input, prompt, handlers, args)
     'prompt builder produced nil'
   )
 
+  local function do_request(built_params)
+    local params = vim.tbl_extend(
+      (prompt.params or {}),
+      built_params
+    )
+
+    return prompt.provider.request_completion_stream(handlers, params)
+  end
+
   if type(prompt_built) == 'function' then
     local cancel
 
     prompt_built(function(prompt_params)
       -- x are the built params here
-      cancel = prompt.provider.request_completion_stream(handlers, prompt_params)
+      cancel = do_request(prompt_params)
     end)
 
     return function()
       cancel()
     end
   else
-    return prompt.provider.request_completion_stream(handlers, prompt_built)
+    return do_request(prompt_built)
   end
 end
 

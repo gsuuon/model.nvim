@@ -83,25 +83,17 @@ function M.request_completion_stream(handlers, params)
     _handlers.on_error(error, 'curl')
   end
 
-  local function resolve(prompt_built_params)
-    local body = vim.tbl_deep_extend('force',
-      M.default_request_params,
-      (params or {}),
-      prompt_built_params
-    )
+  local body = vim.tbl_deep_extend('force', M.default_request_params, params)
 
-    return curl.stream({
-      headers = {
-        Authorization = 'Bearer ' .. api_key(),
-        ['Content-Type']= 'application/json',
-      },
-      method = 'POST',
-      url = 'https://api.openai.com/v1/chat/completions',
-      body = body
-    }, handle_raw, handle_error)
-  end
-
-  return resolve(params)
+  return curl.stream({
+    headers = {
+      Authorization = 'Bearer ' .. api_key(),
+      ['Content-Type']= 'application/json',
+    },
+    method = 'POST',
+    url = 'https://api.openai.com/v1/chat/completions',
+    body = body
+  }, handle_raw, handle_error)
 end
 
 M.default_request_params = {
