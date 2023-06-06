@@ -36,18 +36,11 @@ function M.eshow(item, opt)
   end
 end
 
-function M.error(message)
-  error({
-    message = message,
-    stack = debug.traceback('', 2)
-  })
-end
-
 function M.env(name)
   local value = os.getenv(name)
 
   if value == nil then
-    M.error('Missing environment variable: ' .. name)
+    error('Missing environment variable: ' .. name)
   else
     return value
   end

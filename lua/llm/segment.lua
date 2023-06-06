@@ -42,7 +42,7 @@ local function create_segment_at(row, col, hl_group, bufnr)
 
   local function get_details()
     if _ext_id == nil then
-      util.error('Extmark for segment no longer exists')
+      error('Extmark for segment no longer exists')
     end
 
     local extmark = vim.api.nvim_buf_get_extmark_by_id(
