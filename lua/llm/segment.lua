@@ -256,7 +256,8 @@ end
 M.mode = {
   APPEND = "append",
   REPLACE = "replace",
-  BUFFER = "buffer"
+  BUFFER = "buffer",
+  INSERT = "insert"
 }
 
 M._debug = {}

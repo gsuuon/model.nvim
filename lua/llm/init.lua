@@ -151,6 +151,24 @@ local function get_input_and_segment(behavior, hl_group)
     }
   end
 
+  if behavior.segment_mode == segment.mode.INSERT then
+    local input
+    if behavior.get_visual_selection then
+      input = get_input.visual_selection()
+    else
+      input = get_input.file()
+    end
+
+    local pos = util.cursor.position()
+
+    local seg = segment.create_segment_at(pos.row, pos.col, hl_group, bufnr)
+
+    return {
+      input = input.lines,
+      segment = seg
+    }
+  end
+
   error('Unknown mode')
 end
 
