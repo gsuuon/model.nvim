@@ -175,9 +175,9 @@ end
 ---@param input string | string[]
 ---@param prompt Prompt
 ---@param handlers StreamHandlers
----@param args string
+---@param context table
 ---@return function cancel callback
-local function start_prompt(input, prompt, handlers, args)
+local function start_prompt(input, prompt, handlers, context)
   -- TODO args to prompts is probably less useful than the prompt buffer / helper
 
   local function as_string(str_or_strs)
@@ -188,15 +188,7 @@ local function start_prompt(input, prompt, handlers, args)
     end
   end
 
-  local _input = as_string(input)
-
-  local prompt_built = assert(
-    prompt.builder(_input, {
-      filename = util.buf.filename(),
-      args = args
-    }),
-    'prompt builder produced nil'
-  )
+  local prompt_built = assert(prompt.builder(as_string(input), context), 'prompt builder produced nil')
 
   local function do_request(built_params)
     local params = vim.tbl_extend(
@@ -223,7 +215,7 @@ local function start_prompt(input, prompt, handlers, args)
   end
 end
 
-local function request_completion_input_segment(input_segment, prompt, args)
+local function request_completion_input_segment(input_segment, prompt, context)
   local seg = input_segment.segment
 
   local cancel = start_prompt(input_segment.input, prompt, {
@@ -246,7 +238,7 @@ local function request_completion_input_segment(input_segment, prompt, args)
     on_error = function(data, label)
       util.eshow(data, 'stream error ' .. label)
     end
-  }, args)
+  }, context)
 
   seg.data.cancel = cancel
 end
@@ -269,6 +261,11 @@ function M.request_completion_stream(cmd_params)
   local prompt_mode = prompt.mode or segment.mode.APPEND
   local want_visual_selection = cmd_params.range ~= 0
 
+  local context = {
+    filename = util.buf.filename(),
+    args = args
+  }
+
   if type(prompt.mode) == 'table' then
     ---@cast prompt_mode StreamHandlers
 
@@ -279,7 +276,7 @@ function M.request_completion_stream(cmd_params)
       input.lines,
       prompt,
       prompt_mode,
-      args
+      context
     )
 
     if not result.started then
@@ -299,7 +296,7 @@ function M.request_completion_stream(cmd_params)
     prompt.hl_group or M.opts.hl_group
   )
 
-  request_completion_input_segment(input_segment, prompt, args)
+  request_completion_input_segment(input_segment, prompt, context)
 
 end
 
