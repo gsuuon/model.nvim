@@ -4,7 +4,7 @@ local util = require('llm.util')
 ---@alias PromptBuilder fun(input: string, context: table): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
 
 ---@class Provider
----@field request_completion_stream fun(input: string, handler: StreamHandlers, builder: PromptBuilder, params?: table): nil Request a completion stream from provider
+---@field request_completion_stream fun(handler: StreamHandlers, params?: table): function Request a completion stream from provider, returning a cancel callback
 
 ---@class Prompt
 ---@field provider Provider The API provider for this prompt
@@ -176,29 +176,48 @@ end
 ---@param prompt Prompt
 ---@param handlers StreamHandlers
 ---@param args string
+---@return function cancel callback
 local function start_prompt(input, prompt, handlers, args)
   -- TODO args to prompts is probably less useful than the prompt buffer / helper
-  local _input = type(input) == 'table' and table.concat(input, '\n') or input
 
-  local success, pcall_result = pcall(prompt.provider.request_completion_stream, _input, handlers, prompt.builder, prompt.params, args)
-
-  local result = {
-    started = success
-  }
-
-  if success then
-    result.cancel = pcall_result
-  else
-    result.error = pcall_result
+  local function as_string(str_or_strs)
+    if type(input) == 'string' then
+      return str_or_strs
+    else
+      return table.concat(str_or_strs, '\n')
+    end
   end
 
-  return result
+  local _input = as_string(input)
+
+  local prompt_built = assert(
+    prompt.builder(_input, {
+      filename = util.buf.filename(),
+      args = args
+    }),
+    'prompt builder produced nil'
+  )
+
+  if type(prompt_built) == 'function' then
+    local cancel
+
+    prompt_built(function(prompt_params)
+      -- x are the built params here
+      cancel = prompt.provider.request_completion_stream(handlers, prompt_params)
+    end)
+
+    return function()
+      cancel()
+    end
+  else
+    return prompt.provider.request_completion_stream(handlers, prompt_built)
+  end
 end
 
 local function request_completion_input_segment(input_segment, prompt, args)
   local seg = input_segment.segment
 
-  local proc = start_prompt(input_segment.input, prompt, {
+  local cancel = start_prompt(input_segment.input, prompt, {
     on_partial = function(partial)
       seg.add(partial)
     end,
@@ -220,11 +239,7 @@ local function request_completion_input_segment(input_segment, prompt, args)
     end
   }, args)
 
-  if proc.started then
-    seg.data.cancel = proc.cancel
-  else
-    util.eshow(proc.error, 'process')
-  end
+  seg.data.cancel = cancel
 end
 
 function M.request_completion_stream(cmd_params)

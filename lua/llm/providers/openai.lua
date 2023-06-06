@@ -37,12 +37,9 @@ function M.default_builder(input)
   }
 end
 
----@param input string
 ---@param handlers StreamHandlers
----@param prompt fun(input: string, context: table): table Converts input (selection) to a table to be merged into request body
 ---@param params? any Additional options for OpenAI endpoint
----@param args? string[] Additional args passed to command
-function M.request_completion_stream(input, handlers, prompt, params, args)
+function M.request_completion_stream(handlers, params)
   local _all_content = ''
 
   -- TODO should handlers being optional be a choice at the provider level or always optional for all providers?
@@ -86,14 +83,6 @@ function M.request_completion_stream(input, handlers, prompt, params, args)
     _handlers.on_error(error, 'curl')
   end
 
-  local prompt_built = assert(
-    prompt(input, {
-      filename = util.buf.filename(),
-      args = args
-    }),
-    'prompt builder produced nil'
-  )
-
   local function resolve(prompt_built_params)
     local body = vim.tbl_deep_extend('force',
       M.default_request_params,
@@ -112,20 +101,7 @@ function M.request_completion_stream(input, handlers, prompt, params, args)
     }, handle_raw, handle_error)
   end
 
-  if type(prompt_built) == 'function' then
-    -- FIXME the provider api needs a rework
-    local cancel
-
-    prompt_built(function(x)
-      cancel = resolve(x)
-    end)
-
-    return function()
-      cancel()
-    end
-  else
-    return resolve(prompt_built)
-  end
+  return resolve(params)
 end
 
 M.default_request_params = {
