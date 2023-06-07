@@ -60,6 +60,32 @@ function M.table.map_to_array(table, fn)
   return result
 end
 
+-- Gets the 0-indexed subslice of a list table
+function M.table.slice(tbl, start, stop)
+  local function idx(x)
+    if x >= 0 then
+      return x
+    else
+      return #tbl + x
+    end
+  end
+
+  local start_idx = start == nil and 0 or idx(start)
+  local stop_idx = stop == nil and #tbl or idx(stop)
+
+  if stop_idx < start_idx then
+    error('stop (' .. stop_idx .. ') is less than start (' .. start_idx .. ')')
+  end
+
+  local results = {}
+
+  for i = start_idx + 1, stop_idx do
+    table.insert(results, tbl[i])
+  end
+
+  return results
+end
+
 M.json = {}
 
 function M.json.decode(string)
@@ -119,6 +145,10 @@ function M.string.split_pattern(text, pattern)
   until start_index > #text
 
   return parts
+end
+
+function M.string.join_lines(lines)
+  return table.concat(lines, '\n')
 end
 
 M.cursor = {}
