@@ -258,21 +258,14 @@ function M.request_completion_stream(prompt, args, want_visual_selection, defaul
   request_completion_input_segment(input_segment, prompt, context)
 end
 
-function M.request_multi_completion_streams(cmd_params)
-  local prompt_names = cmd_params.fargs
-
-  local prompts = vim.tbl_map(function(name)
-    return assert(M.opts.prompts[name], "Prompt '" .. name .. "' wasn't found")
-
-  end, prompt_names)
-
+function M.request_multi_completion_streams(prompts, default_hl_group)
   for i, prompt in ipairs(prompts) do
     local input_segment = get_input_and_segment(
       {
         get_visual_selection = false, -- multi-mode always treated as line-wise
         segment_mode = segment.mode.APPEND -- multi-mode always append only
       },
-      prompt.hl_group or M.opts.hl_group
+      prompt.hl_group or default_hl_group
     )
 
     -- try to avoid ratelimits

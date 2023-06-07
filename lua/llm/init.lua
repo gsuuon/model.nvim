@@ -50,6 +50,17 @@ local function command_request_completion_stream(cmd_params)
   return provider.request_completion_stream(prompt, args, want_visual_selection, M.opts.hl_group)
 end
 
+local function command_request_multi_completion_streams(cmd_params)
+  local prompt_names = cmd_params.fargs
+
+  local prompts = vim.tbl_map(function(name)
+    return assert(M.opts.prompts[name], "Prompt '" .. name .. "' wasn't found")
+
+  end, prompt_names)
+
+  return provider.request_multi_completion_streams(prompts, M.opts.default_prompt)
+end
+
 function M.commands(opts)
   local function flash(count, wait, segments, highlight, after)
     vim.defer_fn(function ()
@@ -65,7 +76,7 @@ function M.commands(opts)
     end, wait)
   end
 
-  vim.api.nvim_create_user_command('LlmMulti', provider.request_multi_completion_streams, {
+  vim.api.nvim_create_user_command('LlmMulti', command_request_multi_completion_streams, {
     force = true,
     range = true,
     nargs = '+',
