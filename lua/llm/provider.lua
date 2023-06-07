@@ -3,18 +3,6 @@ local util = require('llm.util')
 
 local M = {}
 
-
----@class Context
----@field before string
----@field after string
----@field filename string
----@field args string
-
----@class RequestCompletionHandleParams
----@field input string[]
----@field segment Segment
----@field context Context
-
 local function get_segment(input, segment_mode, hl_group)
   if segment_mode == segment.mode.REPLACE then
     if input.selection ~= nil then
@@ -116,6 +104,17 @@ local function get_before_after(input)
   }
 end
 
+---@class Context
+---@field before string
+---@field after string
+---@field filename string
+---@field args string
+
+---@class RequestCompletionHandleParams
+---@field input string[]
+---@field segment Segment
+---@field context Context
+
 ---@param segment_mode SegmentMode
 ---@param want_visual_selection boolean
 ---@param hl_group string
@@ -216,7 +215,7 @@ end
 function M.request_completion_stream(prompt, args, want_visual_selection, default_hl_group)
   local prompt_mode = prompt.mode or segment.mode.APPEND
 
-  if type(prompt_mode) == 'table' then
+  if type(prompt_mode) == 'table' then -- prompt_mode is StreamHandlers
     -- TODO probably want to just remove streamhandlers prompt mode
     local stream_handlers = prompt_mode
 
@@ -250,16 +249,16 @@ end
 
 function M.request_multi_completion_streams(prompts, default_hl_group)
   for i, prompt in ipairs(prompts) do
-    local input_segment = build_request_handle_params(
+    local handle_params = build_request_handle_params(
       segment.mode.APPEND, -- multi-mode always append only
-      false,
+      want_visual_selection,
       prompt.hl_group or default_hl_group,
       ''
     )
 
     -- try to avoid ratelimits
     vim.defer_fn(function()
-      request_completion_input_segment(input_segment, prompt)
+      request_completion_input_segment(handle_params, prompt)
     end, i * 200)
   end
 end
