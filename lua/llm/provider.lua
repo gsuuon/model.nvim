@@ -3,23 +3,6 @@ local util = require('llm.util')
 
 local M = {}
 
-local get_input = {
-  visual_selection = function()
-    local selection = util.cursor.selection()
-    local lines = util.buf.text(selection)
-
-    return {
-      selection = selection,
-      lines = lines
-    }
-  end,
-
-  file = function ()
-    return {
-      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-    }
-  end
-}
 
 ---@class Context
 ---@field before string
@@ -32,92 +15,43 @@ local get_input = {
 ---@field segment Segment
 ---@field context Context
 
----@param segment_mode SegmentMode
----@param want_visual_selection boolean
----@param hl_group string
----@param args string
----@return RequestCompletionHandleParams
-local function build_request_handle_params(segment_mode, want_visual_selection, hl_group, args)
-  local bufnr = vim.fn.bufnr('%')
-
-  local context = {
-    filename = util.buf.filename(),
-    args = args
-  }
-
+local function get_segment(input, segment_mode, hl_group)
   if segment_mode == segment.mode.REPLACE then
-    if want_visual_selection then
-      local input = get_input.visual_selection()
-
+    if input.selection ~= nil then
+      -- clear selection
       util.buf.set_text(input.selection, {})
-
       local seg = segment.create_segment_at(
         input.selection.start.row,
         input.selection.start.col,
         hl_group,
-        bufnr
+        0
       )
 
       seg.data.original = input.lines
 
-      return {
-        context = context,
-        input = input.lines,
-        segment = seg
-      }
+      return seg
     else
-      local input = get_input.file()
-      local seg = segment.create_segment_at(0, 0, hl_group, bufnr)
+      -- clear buffer
+      local seg = segment.create_segment_at(0, 0, hl_group, 0)
 
       vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
 
       seg.data.original = input.lines
 
-      return {
-        context = context,
-        input = input.lines,
-        segment = seg
-      }
+      return seg
     end
-  end
-
-  if segment_mode == segment.mode.APPEND then
-    if want_visual_selection then
-      local input = get_input.visual_selection()
-
-      local seg = segment.create_segment_at(
+  elseif segment_mode == segment.mode.APPEND then
+    if input.selection ~= nil then
+      return segment.create_segment_at(
         input.selection.stop.row,
         input.selection.stop.col,
         hl_group,
-        bufnr
+        0
       )
-
-      return {
-        context = context,
-        input = input.lines,
-        segment = seg
-      }
     else
-      local input = get_input.file()
-      local seg = segment.create_segment_at(#input.lines, 0, hl_group, bufnr)
-
-      return {
-        context = context,
-        input = input.lines,
-        segment = seg
-      }
+      return segment.create_segment_at(#input.lines, 0, hl_group, 0)
     end
-  end
-
-  if segment_mode == segment.mode.BUFFER then
-    -- Determine input lines based on want_visual_selection
-    local input
-    if want_visual_selection then
-      input = get_input.visual_selection()
-    else
-      input = get_input.file()
-    end
-
+  elseif segment_mode == segment.mode.BUFFER then
     -- Find or create a scratch buffer for this plugin
     local llm_bfnr = vim.fn.bufnr('llm-scratch', true)
 
@@ -135,34 +69,75 @@ local function build_request_handle_params(segment_mode, want_visual_selection, 
     -- Create a segment at the end of the buffer
     local line_count = vim.api.nvim_buf_line_count(llm_bfnr)
 
-    local seg = segment.create_segment_at(line_count, 0, hl_group, llm_bfnr)
-
-    -- Return a table with the segment and input
-    return {
-      input = input.lines,
-      segment = seg
-    }
-  end
-
-  if segment_mode == segment.mode.INSERT then
-    local input
-    if want_visual_selection then
-      input = get_input.visual_selection()
-    else
-      input = get_input.file()
-    end
-
+    return segment.create_segment_at(line_count, 0, hl_group, llm_bfnr)
+  elseif segment_mode == segment.mode.INSERT then
     local pos = util.cursor.position()
 
-    local seg = segment.create_segment_at(pos.row, pos.col, hl_group, bufnr)
+    return segment.create_segment_at(pos.row, pos.col, hl_group, 0)
+  else
+    error('Unknown segment mode: ' .. segment_mode)
+  end
+end
+
+local function get_input(want_visual_selection)
+  if want_visual_selection then
+    local selection = util.cursor.selection()
+    local lines = util.buf.text(selection)
 
     return {
-      input = input.lines,
-      segment = seg
+      selection = selection,
+      position = util.cursor.position(),
+      lines = lines
+    }
+  else
+    return {
+      position = util.cursor.position(),
+      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
     }
   end
+end
 
-  error('Unknown mode')
+local function get_before_after(input)
+  return {
+    before = util.buf.text({
+      start = {
+        row = 0,
+        col = 0
+      },
+      stop = input.selection ~= nil and input.selection.start or input.position
+    }),
+    after = util.buf.text({
+      start = input.selection ~= nil and input.selection.stop or input.position,
+      stop = {
+        row = -1,
+        col = -1
+      },
+    })
+  }
+end
+
+---@param segment_mode SegmentMode
+---@param want_visual_selection boolean
+---@param hl_group string
+---@param args string
+---@return RequestCompletionHandleParams
+local function build_request_handle_params(segment_mode, want_visual_selection, hl_group, args)
+  -- TODO is args actually useful here?
+
+  local input = get_input(want_visual_selection)
+  local seg = get_segment(input, segment_mode, hl_group)
+  local before_after = get_before_after(input)
+
+  return {
+    input = input.lines,
+    segment = seg,
+    context = {
+      filename = util.buf.filename(),
+      before = before_after.before,
+      after = before_after.after,
+      args = args,
+    }
+  }
 end
 
 ---@param input string | string[]
