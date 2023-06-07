@@ -21,16 +21,32 @@ local get_input = {
   end
 }
 
----@param behavior GetInputSegmentBehavior
----@param hl_group string
----@return { input: string[], segment: Segment }
-local function get_input_and_segment(behavior, hl_group)
-  -- TODO dry
+---@class Context
+---@field before string
+---@field after string
+---@field filename string
+---@field args string
 
+---@class RequestCompletionHandleParams
+---@field input string[]
+---@field segment Segment
+---@field context Context
+
+---@param segment_mode SegmentMode
+---@param want_visual_selection boolean
+---@param hl_group string
+---@param args string
+---@return RequestCompletionHandleParams
+local function build_request_handle_params(segment_mode, want_visual_selection, hl_group, args)
   local bufnr = vim.fn.bufnr('%')
 
-  if behavior.segment_mode == segment.mode.REPLACE then
-    if behavior.get_visual_selection then
+  local context = {
+    filename = util.buf.filename(),
+    args = args
+  }
+
+  if segment_mode == segment.mode.REPLACE then
+    if want_visual_selection then
       local input = get_input.visual_selection()
 
       util.buf.set_text(input.selection, {})
@@ -45,6 +61,7 @@ local function get_input_and_segment(behavior, hl_group)
       seg.data.original = input.lines
 
       return {
+        context = context,
         input = input.lines,
         segment = seg
       }
@@ -57,14 +74,15 @@ local function get_input_and_segment(behavior, hl_group)
       seg.data.original = input.lines
 
       return {
+        context = context,
         input = input.lines,
         segment = seg
       }
     end
   end
 
-  if behavior.segment_mode == segment.mode.APPEND then
-    if behavior.get_visual_selection then
+  if segment_mode == segment.mode.APPEND then
+    if want_visual_selection then
       local input = get_input.visual_selection()
 
       local seg = segment.create_segment_at(
@@ -75,6 +93,7 @@ local function get_input_and_segment(behavior, hl_group)
       )
 
       return {
+        context = context,
         input = input.lines,
         segment = seg
       }
@@ -83,16 +102,17 @@ local function get_input_and_segment(behavior, hl_group)
       local seg = segment.create_segment_at(#input.lines, 0, hl_group, bufnr)
 
       return {
+        context = context,
         input = input.lines,
         segment = seg
       }
     end
   end
 
-  if behavior.segment_mode == segment.mode.BUFFER then
-    -- Determine input lines based on behavior.get_visual_selection
+  if segment_mode == segment.mode.BUFFER then
+    -- Determine input lines based on want_visual_selection
     local input
-    if behavior.get_visual_selection then
+    if want_visual_selection then
       input = get_input.visual_selection()
     else
       input = get_input.file()
@@ -124,9 +144,9 @@ local function get_input_and_segment(behavior, hl_group)
     }
   end
 
-  if behavior.segment_mode == segment.mode.INSERT then
+  if segment_mode == segment.mode.INSERT then
     local input
-    if behavior.get_visual_selection then
+    if want_visual_selection then
       input = get_input.visual_selection()
     else
       input = get_input.file()
@@ -189,10 +209,10 @@ local function start_prompt(input, prompt, handlers, context)
   end
 end
 
-local function request_completion_input_segment(input_segment, prompt, context)
-  local seg = input_segment.segment
+local function request_completion_input_segment(handle_params, prompt)
+  local seg = handle_params.segment
 
-  local cancel = start_prompt(input_segment.input, prompt, {
+  local cancel = start_prompt(handle_params.input, prompt, {
     on_partial = function(partial)
       seg.add(partial)
     end,
@@ -212,60 +232,54 @@ local function request_completion_input_segment(input_segment, prompt, context)
     on_error = function(data, label)
       util.eshow(data, 'stream error ' .. label)
     end
-  }, context)
+  }, handle_params.context)
 
   seg.data.cancel = cancel
 end
 
+---@param prompt Prompt
 function M.request_completion_stream(prompt, args, want_visual_selection, default_hl_group)
   local prompt_mode = prompt.mode or segment.mode.APPEND
 
-  local context = {
-    filename = util.buf.filename(),
-    args = args
-  }
+  if type(prompt_mode) == 'table' then
+    -- TODO probably want to just remove streamhandlers prompt mode
+    local stream_handlers = prompt_mode
 
-  if type(prompt.mode) == 'table' then
-    ---@cast prompt_mode StreamHandlers
-
-    local input =
-      want_visual_selection and get_input.visual_selection() or get_input.file()
-
-    local result = start_prompt(
-      input.lines,
-      prompt,
-      prompt_mode,
-      context
+    local handle_params = build_request_handle_params(
+      segment.mode.APPEND, -- we don't use the segment here, append will create an empty segment at end of selection
+      want_visual_selection,
+      prompt.hl_group or default_hl_group,
+      ''
     )
 
-    if not result.started then
-      util.eshow(result.error)
-      -- TODO what can we do with result.cancel?
-    end
+    start_prompt(
+      handle_params.input,
+      prompt,
+      stream_handlers,
+      handle_params.context
+    )
 
     return
   end
 
   ---@cast prompt_mode SegmentMode
-  local input_segment = get_input_and_segment(
-    {
-      get_visual_selection = want_visual_selection,
-      segment_mode = prompt_mode
-    },
-    prompt.hl_group or default_hl_group
+  local handle_params = build_request_handle_params(
+    prompt_mode,
+    want_visual_selection,
+    prompt.hl_group or default_hl_group,
+    args
   )
 
-  request_completion_input_segment(input_segment, prompt, context)
+  request_completion_input_segment(handle_params, prompt)
 end
 
 function M.request_multi_completion_streams(prompts, default_hl_group)
   for i, prompt in ipairs(prompts) do
-    local input_segment = get_input_and_segment(
-      {
-        get_visual_selection = false, -- multi-mode always treated as line-wise
-        segment_mode = segment.mode.APPEND -- multi-mode always append only
-      },
-      prompt.hl_group or default_hl_group
+    local input_segment = build_request_handle_params(
+      segment.mode.APPEND, -- multi-mode always append only
+      false,
+      prompt.hl_group or default_hl_group,
+      ''
     )
 
     -- try to avoid ratelimits

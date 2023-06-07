@@ -19,10 +19,6 @@ local provider = require('llm.provider')
 ---@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
 ---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
 
----@class GetInputSegmentBehavior
----@field get_visual_selection boolean
----@field segment_mode SegmentMode
-
 ---@class Segment
 ---@field add fun(text: string): nil
 ---@field clear_hl fun(): nil
