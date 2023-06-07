@@ -217,22 +217,8 @@ local function request_completion_input_segment(input_segment, prompt, context)
   seg.data.cancel = cancel
 end
 
-function M.request_completion_stream(cmd_params)
-  ---@return Prompt, string
-  local function get_prompt_and_args(args)
-    local prompt_arg = table.remove(args, 1)
-
-    if not prompt_arg then
-      return M.opts.default_prompt, ''
-    end
-
-    local prompt = assert(M.opts.prompts[prompt_arg], "Prompt '" .. prompt_arg .. "' wasn't found")
-    return prompt, table.concat(args, ' ')
-  end
-
-  local prompt, args = get_prompt_and_args(cmd_params.fargs)
+function M.request_completion_stream(prompt, args, want_visual_selection, default_hl_group)
   local prompt_mode = prompt.mode or segment.mode.APPEND
-  local want_visual_selection = cmd_params.range ~= 0
 
   local context = {
     filename = util.buf.filename(),
@@ -266,7 +252,7 @@ function M.request_completion_stream(cmd_params)
       get_visual_selection = want_visual_selection,
       segment_mode = prompt_mode
     },
-    prompt.hl_group or M.opts.hl_group
+    prompt.hl_group or default_hl_group
   )
 
   request_completion_input_segment(input_segment, prompt, context)

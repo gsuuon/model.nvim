@@ -31,6 +31,25 @@ local provider = require('llm.provider')
 
 local M = {}
 
+local function command_request_completion_stream(cmd_params)
+  ---@return Prompt, string
+  local function get_prompt_and_args(args)
+    local prompt_arg = table.remove(args, 1)
+
+    if not prompt_arg then
+      return M.opts.default_prompt, ''
+    end
+
+    local prompt = assert(M.opts.prompts[prompt_arg], "Prompt '" .. prompt_arg .. "' wasn't found")
+    return prompt, table.concat(args, ' ')
+  end
+
+  local prompt, args = get_prompt_and_args(cmd_params.fargs)
+  local want_visual_selection = cmd_params.range ~= 0
+
+  return provider.request_completion_stream(prompt, args, want_visual_selection, M.opts.hl_group)
+end
+
 function M.commands(opts)
   local function flash(count, wait, segments, highlight, after)
     vim.defer_fn(function ()
@@ -118,7 +137,7 @@ function M.commands(opts)
     }
   )
 
-  vim.api.nvim_create_user_command('Llm', provider.request_completion_stream, {
+  vim.api.nvim_create_user_command('Llm', command_request_completion_stream, {
     range = true,
     desc = 'Request completion of selection',
     force = true,
@@ -190,7 +209,6 @@ function M.setup(opts)
   end
 
   M.opts = _opts
-  provider.opts = M.opts
   M.commands(_opts)
 end
 
