@@ -77,12 +77,11 @@ To get query results call `store.prompt.query_store` with your input text, desir
 
 ```lua
 builder = function(input, context)
-
   ---@type {id: string, content: string}[]
   local store_results = require('llm.store').prompt.query_store(input, 2, 0.75)
 
   -- add store_results to your messages
-  end
+end
 ```
 
 </details>
