@@ -140,7 +140,7 @@ function M.commands(opts)
     end
   })
 
-  local store = require('llm.store.store')
+  local store = require('llm.store')
 
   local handle_llm_store = {
     query = function(args)
