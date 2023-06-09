@@ -123,8 +123,21 @@ end
 local function build_request_handle_params(segment_mode, want_visual_selection, hl_group, args)
   -- TODO is args actually useful here?
 
+  local function seg_mode(mode, selection)
+    if mode == segment.mode.INSERT_OR_REPLACE then
+      if selection then
+        return segment.mode.REPLACE
+      else
+        return segment.mode.INSERT
+      end
+    end
+
+    return mode
+  end
+
   local input = get_input(want_visual_selection)
-  local seg = get_segment(input, segment_mode, hl_group)
+  local seg = get_segment(input, seg_mode(segment_mode, want_visual_selection), hl_group)
+
   local before_after = get_before_after(input)
 
   return {
