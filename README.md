@@ -23,24 +23,23 @@ Check out the [examples](#examples)
 ### With [packer.nvim](https://github.com/wbthomason/packer.nvim)
 
 ```lua
-use { 
-  'gsuuon/llm.nvim',
-  config = function()
-    require('llm').setup()
-  end
-}
+require('packer').startup(function(use)
+  use 'gsuuon/llm.nvim'
+end)
 ```
 ### With [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
 require('lazy').setup({
-  { 'gsuuon/llm.nvim', config = true }
+  'gsuuon/llm.nvim'
 })
 ```
 
 ## 💭 Usage
 
-- `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. If you've added alternative [prompts](#prompts) to the config, you can give a prompt name as an argument.
+llm.nvim comes with some [starter prompts](./lua/llm/starter_prompts.lua) and makes it easy to build your own prompt library.
+
+- `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided.
 
 <details>
 <summary>
