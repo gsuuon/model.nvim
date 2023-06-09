@@ -10,15 +10,18 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 - 🪁 __Stream responses__  
 - 🌞 __Super easy__  
 
-
-Check out the [examples](#examples)
-
-
 ---
 
 ## 🦾 Setup
 
-- Requires Nvim 0.8.0 or higher
+### Requirements
+- Nvim 0.8.0 or higher
+- `OPENAI_API_KEY` environment variable set to your [api key](https://platform.openai.com/account/api-keys)
+
+#### Optional
+For local vector store:
+- Python 3.10+
+- `pip install numpy openai tiktoken`
 
 ### With [packer.nvim](https://github.com/wbthomason/packer.nvim)
 
@@ -62,27 +65,24 @@ https://user-images.githubusercontent.com/6422188/233774216-4e100122-3a93-4dfb-a
   - `pip install numpy openai tiktoken`
 
 ### Usage
-Check the module functions exposed in [store](./lua/llm/store/init.lua).
+Check the module functions exposed in [store](./lua/llm/store/init.lua). This uses the OpenAI embeddings api to generate vectors and then queries then with cosine similarity.
 
 To add items call into the `llm.store` lua module functions, e.g.
   - `:lua require('llm.store').add_lua_functions()`
   - `:lua require('llm.store').add_files('.')`
 
-Check `store.add_lua_functions` for an example of how to use treesitter to parse files to nodes.
+Look at `store.add_lua_functions` for an example of how to use treesitter to parse files to nodes and add them to the local store.
 
-To use store query results in a prompt:
+To get query results call `store.prompt.query_store` with your input text, desired count and similarity cutoff threshold (0.75 seems to be decent). It returns a list of {id: string, content: string}:
+
 ```lua
-local store = require('llm.store')
+builder = function(input, context)
 
-return {
-  ...
-  builder = function(input, context)
-    ---@type {id: string, content: string}[]
-    local store_results = store.prompt.query_store(input, 2, 0.75)
+  ---@type {id: string, content: string}[]
+  local store_results = require('llm.store').prompt.query_store(input, 2, 0.75)
 
-    -- do things with store_results
+  -- add store_results to your messages
   end
-}
 ```
 
 </details>
@@ -141,7 +141,7 @@ Prompts go in the `prompts` field of the setup table and can be used via `:Llm [
 
 A prompt entry defines how to handle a completion request - it takes in the editor input (either an entire file or a visual selection) and some context, and produces the api request data merging with any defaults. It also defines how to handle the API response - for example it can replace the selection (or file) with the response or insert it at the cursor positon.
 
-Check the [examples](#examples) section to see how to define prompts. The type definitions are in [provider.lua](./lua/llm/provider.lua)
+Check out the [starter prompts](./lua/llm/starter_prompts.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/llm/provider.lua).
 
 ### Library autoload
 You can use `require('util').module.autoload` instead of a naked `require` to always re-require a module on use. This makes the feedback loop for developing prompts faster:
@@ -180,8 +180,6 @@ require('llm.providers.openai').initialize({
 
 ### Prompts
 
-These examples go in the prompts field. Prompt names can have spaces.
-
 ```lua
 require('llm').setup({
   prompts = {
@@ -191,34 +189,38 @@ require('llm').setup({
 ```
 
 <details>
-<summary>Get additional user instruction</summary>
+<summary>Ask for additional user instruction</summary>
 
 https://github.com/gsuuon/llm.nvim/assets/6422188/0e4b2b68-5873-42af-905c-3bd5a0bdfe46
 
 ```lua
-local util = require('llm.util')
-local segment = require('llm.segment')
-
-...
-  ['with instruction'] = {
+  ask = {
     provider = openai,
+    params = {
+      temperature = 0.3,
+      max_tokens = 1500
+    },
     builder = function(input)
+      local messages = {
+        {
+          role = 'user',
+          content = input
+        }
+      }
+
       return util.builder.user_prompt(function(user_input)
+        if #user_input > 0 then
+          table.insert(messages, {
+            role = 'user',
+            content = user_input
+          })
+        end
+
         return {
-          messages = {
-            {
-              role = 'user',
-              content = input
-            },
-            {
-              role = 'user',
-              content = user_input
-            }
-          }
+          messages = messages
         }
       end, input)
     end,
-    mode = segment.mode.REPLACE
   }
 ```
 
@@ -230,22 +232,20 @@ local segment = require('llm.segment')
 https://user-images.githubusercontent.com/6422188/233807212-d1830514-fe3b-4d38-877e-f3ecbdb222aa.mp4
 
 ```lua
-  commit = {
+  ['commit message'] = {
     provider = openai,
+    mode = llm.mode.INSERT,
     builder = function()
+      local git_diff = vim.fn.system {'git', 'diff', '--staged'}
       return {
         messages = {
           {
             role = 'system',
-            content = 'Write a commit message according to the Conventional Commits specification for the following git diff. Keep it as short as necessary. If only markdown files are changed, use `docs: `'
-          },
-          {
-            role = 'user',
-            content = vim.fn.system {'git', 'diff', '--staged'}
+            content = 'Write a short commit message according to the Conventional Commits specification for the following git diff: ```\n' .. git_diff .. '\n```'
           }
         }
       }
-    end
+    end,
   }
 ```
 
@@ -388,7 +388,6 @@ require('llm').setup({
 ```
 
 </details>
-
 
 
 ### Configuration
