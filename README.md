@@ -63,15 +63,17 @@ https://user-images.githubusercontent.com/6422188/233774216-4e100122-3a93-4dfb-a
   - `pip install numpy openai tiktoken`
 
 ### Usage
-Check the module functions exposed in [store.lua](./lua/llm/store/store.lua).
+Check the module functions exposed in [store](./lua/llm/store/init.lua).
 
-To add items call into the `llm.store.store` lua module functions, e.g.
-  - `:lua require('llm.store.store').add_items(glob_to_items('**/*.lua', to_lua_functions))`
-  - `:lua require('llm.store.store').add_files('.')`
+To add items call into the `llm.store` lua module functions, e.g.
+  - `:lua require('llm.store').add_lua_functions()`
+  - `:lua require('llm.store').add_files('.')`
+
+Check `store.add_lua_functions` for an example of how to use treesitter to parse files to nodes.
 
 To use store query results in a prompt:
 ```lua
-local store = require('llm.store.store')
+local store = require('llm.store')
 
 return {
   ...
