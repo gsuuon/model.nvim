@@ -143,6 +143,24 @@ A prompt entry requires the builder and provider fields. The field is a function
 </details>
 
 <details>
+<summary>
+@enum SegmentMode
+</summary>
+
+```lua
+---@enum SegmentMode
+M.mode = {
+  APPEND = "append",
+  REPLACE = "replace",
+  BUFFER = "buffer",
+  INSERT = "insert",
+  INSERT_OR_REPLACE = "insert_or_replace"
+}
+```
+
+</details>
+
+<details>
 <summary>@class StreamHandlers</summary>
 
 ```lua
@@ -188,6 +206,8 @@ https://github.com/gsuuon/llm.nvim/assets/6422188/0e4b2b68-5873-42af-905c-3bd5a0
 
 ```lua
 local util = require('llm.util')
+local segment = require('llm.segment')
+
 ...
   prompt = {
     provider = openai,
