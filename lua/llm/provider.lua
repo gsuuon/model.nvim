@@ -3,8 +3,34 @@ local util = require('llm.util')
 
 local M = {}
 
+---@class Prompt
+---@field provider Provider The API provider for this prompt
+---@field builder PromptBuilder Converts input and context to request data
+---@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to "append".
+---@field hl_group? string Highlight group of active response
+---@field params? any Additional parameters to add to request body
+
+---@class Provider
+---@field request_completion_stream fun(handler: StreamHandlers, params?: table): function Request a completion stream from provider, returning a cancel callback
+
+---@alias PromptBuilder fun(input: string, context: Context): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
+
+---@enum SegmentMode
+M.mode = {
+  APPEND = "append",
+  REPLACE = "replace",
+  BUFFER = "buffer",
+  INSERT = "insert",
+  INSERT_OR_REPLACE = "insert_or_replace"
+}
+
+---@class StreamHandlers
+---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
+---@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
+---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
+
 local function get_segment(input, segment_mode, hl_group)
-  if segment_mode == segment.mode.REPLACE then
+  if segment_mode == M.mode.REPLACE then
     if input.selection ~= nil then
       -- clear selection
       util.buf.set_text(input.selection, {})
@@ -28,7 +54,7 @@ local function get_segment(input, segment_mode, hl_group)
 
       return seg
     end
-  elseif segment_mode == segment.mode.APPEND then
+  elseif segment_mode == M.mode.APPEND then
     if input.selection ~= nil then
       return segment.create_segment_at(
         input.selection.stop.row,
@@ -39,7 +65,7 @@ local function get_segment(input, segment_mode, hl_group)
     else
       return segment.create_segment_at(#input.lines, 0, hl_group, 0)
     end
-  elseif segment_mode == segment.mode.BUFFER then
+  elseif segment_mode == M.mode.BUFFER then
     -- Find or create a scratch buffer for this plugin
     local llm_bfnr = vim.fn.bufnr('llm-scratch', true)
 
@@ -58,7 +84,7 @@ local function get_segment(input, segment_mode, hl_group)
     local line_count = vim.api.nvim_buf_line_count(llm_bfnr)
 
     return segment.create_segment_at(line_count, 0, hl_group, llm_bfnr)
-  elseif segment_mode == segment.mode.INSERT then
+  elseif segment_mode == M.mode.INSERT then
     local pos = util.cursor.position()
 
     return segment.create_segment_at(pos.row, pos.col, hl_group, 0)
@@ -124,11 +150,11 @@ local function build_request_handle_params(segment_mode, want_visual_selection, 
   -- TODO is args actually useful here?
 
   local function seg_mode(mode, selection)
-    if mode == segment.mode.INSERT_OR_REPLACE then
+    if mode == M.mode.INSERT_OR_REPLACE then
       if selection then
-        return segment.mode.REPLACE
+        return M.mode.REPLACE
       else
-        return segment.mode.INSERT
+        return M.mode.INSERT
       end
     end
 
@@ -226,14 +252,14 @@ end
 
 ---@param prompt Prompt
 function M.request_completion_stream(prompt, args, want_visual_selection, default_hl_group)
-  local prompt_mode = prompt.mode or segment.mode.APPEND
+  local prompt_mode = prompt.mode or M.mode.APPEND
 
   if type(prompt_mode) == 'table' then -- prompt_mode is StreamHandlers
     -- TODO probably want to just remove streamhandlers prompt mode
     local stream_handlers = prompt_mode
 
     local handle_params = build_request_handle_params(
-      segment.mode.APPEND, -- we don't use the segment here, append will create an empty segment at end of selection
+      M.mode.APPEND, -- we don't use the segment here, append will create an empty segment at end of selection
       want_visual_selection,
       prompt.hl_group or default_hl_group,
       ''
@@ -260,10 +286,10 @@ function M.request_completion_stream(prompt, args, want_visual_selection, defaul
   request_completion_input_segment(handle_params, prompt)
 end
 
-function M.request_multi_completion_streams(prompts, default_hl_group)
+function M.request_multi_completion_streams(prompts, want_visual_selection, default_hl_group)
   for i, prompt in ipairs(prompts) do
     local handle_params = build_request_handle_params(
-      segment.mode.APPEND, -- multi-mode always append only
+      M.mode.APPEND, -- multi-mode always append only
       want_visual_selection,
       prompt.hl_group or default_hl_group,
       ''

@@ -1,5 +1,12 @@
 local util = require('llm.util')
 
+---@class Segment
+---@field add fun(text: string): nil
+---@field clear_hl fun(): nil
+---@field data table
+---@field highlight fun(hl_group: string): nil
+
+
 local M = {}
 
 local segments_cache = {}
@@ -251,15 +258,6 @@ function M.query(pos)
 
   return matches
 end
-
----@enum SegmentMode
-M.mode = {
-  APPEND = "append",
-  REPLACE = "replace",
-  BUFFER = "buffer",
-  INSERT = "insert",
-  INSERT_OR_REPLACE = "insert_or_replace"
-}
 
 M._debug = {}
 

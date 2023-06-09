@@ -2,29 +2,6 @@ local segment = require('llm.segment')
 local util = require('llm.util')
 local provider = require('llm.provider')
 
----@alias PromptBuilder fun(input: string, context: table): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
-
----@class Provider
----@field request_completion_stream fun(handler: StreamHandlers, params?: table): function Request a completion stream from provider, returning a cancel callback
-
----@class Prompt
----@field provider Provider The API provider for this prompt
----@field builder PromptBuilder Converts input and context to request data
----@field hl_group? string Highlight group of active response
----@field mode? SegmentMode | StreamHandlers Response handling mode ("replace" | "append" | StreamHandlers). Defaults to "append".
----@field params? any Additional parameters to add to request body
-
----@class StreamHandlers
----@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
----@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
----@field on_error (fun(data: any, label?: string): nil) Error data and optional label
-
----@class Segment
----@field add fun(text: string): nil
----@field clear_hl fun(): nil
----@field data table
----@field highlight fun(hl_group: string): nil
-
 local M = {}
 
 local function command_request_completion_stream(cmd_params)
@@ -218,6 +195,8 @@ function M.setup(opts)
   M.opts = _opts
   M.commands(_opts)
 end
+
+M.mode = provider.mode
 
 return M
 
