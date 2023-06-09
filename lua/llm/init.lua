@@ -198,6 +198,8 @@ function M.setup(opts)
 
   M.opts = _opts
   M.commands(_opts)
+
+  vim.g.did_setup_llm = true
 end
 
 M.mode = provider.mode
