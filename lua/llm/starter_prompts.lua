@@ -32,12 +32,13 @@ return {
       }
     end
   },
-  ask = {
+  instruct = {
     provider = openai,
     params = {
       temperature = 0.3,
       max_tokens = 1500
     },
+    mode = llm.mode.REPLACE,
     builder = function(input)
       local messages = {
         {
@@ -58,6 +59,35 @@ return {
           messages = messages
         }
       end, input)
+    end,
+  },
+  ask = {
+    provider = openai,
+    params = {
+      temperature = 0.3,
+      max_tokens = 1500
+    },
+    mode = llm.mode.BUFFER,
+    builder = function(input, context)
+      local details = context.segment.details()
+      local row = details.row -1
+      vim.api.nvim_buf_set_lines(details.bufnr, row, row, false, {''})
+
+      local args_seg = segment.create_segment_at(row, 0, 'Question', details.bufnr)
+      args_seg.add(context.args)
+
+      return {
+        messages = {
+          {
+            role = 'user',
+            content = input
+          },
+          {
+            role = 'user',
+            content = context.args
+          }
+        }
+      }
     end,
   },
   ['commit message'] = {

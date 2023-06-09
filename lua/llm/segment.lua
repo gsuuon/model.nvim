@@ -62,7 +62,8 @@ local function create_segment_at(row, col, hl_group, bufnr)
     return {
       row = extmark[1],
       col = extmark[2],
-      details = extmark[3]
+      details = extmark[3],
+      bufnr = bufnr
     }
   end
 
@@ -129,6 +130,8 @@ local function create_segment_at(row, col, hl_group, bufnr)
     end),
 
     ext_id = _ext_id,
+
+    details = get_details,
 
     data = _data
 

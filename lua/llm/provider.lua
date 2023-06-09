@@ -67,22 +67,24 @@ local function get_segment(input, segment_mode, hl_group)
     end
   elseif segment_mode == M.mode.BUFFER then
     -- Find or create a scratch buffer for this plugin
-    local llm_bfnr = vim.fn.bufnr('llm-scratch', true)
+    local llm_bfnr = vim.fn.bufnr('llm', true)
 
     if llm_bfnr == -1 then
       llm_bfnr = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_buf_set_name(llm_bfnr, 'llm-scratch')
+      vim.api.nvim_buf_set_name(llm_bfnr, 'llm')
     end
 
+    vim.api.nvim_buf_set_option(llm_bfnr, 'buflisted', true)
     vim.api.nvim_buf_set_option(llm_bfnr, 'buftype', 'nowrite')
+
     vim.api.nvim_buf_set_lines(llm_bfnr, -2, -1, false, input.lines)
+    vim.api.nvim_buf_set_lines(llm_bfnr, -2, -1, false, {'',''})
 
     -- Open the existing buffer or create a new one
     vim.api.nvim_set_current_buf(llm_bfnr)
 
     -- Create a segment at the end of the buffer
     local line_count = vim.api.nvim_buf_line_count(llm_bfnr)
-
     return segment.create_segment_at(line_count, 0, hl_group, llm_bfnr)
   elseif segment_mode == M.mode.INSERT then
     local pos = util.cursor.position()
@@ -162,9 +164,8 @@ local function build_request_handle_params(segment_mode, want_visual_selection, 
   end
 
   local input = get_input(want_visual_selection)
-  local seg = get_segment(input, seg_mode(segment_mode, want_visual_selection), hl_group)
-
   local before_after = get_before_after(input)
+  local seg = get_segment(input, seg_mode(segment_mode, want_visual_selection), hl_group)
 
   return {
     input = input.lines,
@@ -239,6 +240,10 @@ local function request_completion_input_segment(handle_params, prompt)
       else
         seg.highlight('Error')
         util.eshow('Response ended because: ' .. reason)
+      end
+
+      if prompt.mode == M.mode.BUFFER then
+        seg.highlight('Identifier')
       end
     end,
 
