@@ -65,7 +65,7 @@ https://user-images.githubusercontent.com/6422188/233774216-4e100122-3a93-4dfb-a
   - `pip install numpy openai tiktoken`
 
 ### Usage
-Check the module functions exposed in [store](./lua/llm/store/init.lua). This uses the OpenAI embeddings api to generate vectors and then queries then with cosine similarity.
+Check the module functions exposed in [store](./lua/llm/store/init.lua). This uses the OpenAI embeddings api to generate vectors and queries them by cosine similarity.
 
 To add items call into the `llm.store` lua module functions, e.g.
   - `:lua require('llm.store').add_lua_functions()`
