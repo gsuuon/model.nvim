@@ -9,7 +9,7 @@ local function get_git_root()
   return vim.fn.systemlist('git rev-parse --show-toplevel')[1]
 end
 
-function M.init(opts, force)
+function M.load(opts, force)
   if M.store_did_init == true and not force then
     return
   end
@@ -112,7 +112,7 @@ end
 M.prompt = {}
 
 function M.prompt.query_store(input, count, similarity)
-  M.init()
+  M.load()
 
   local context_results = M.query_store(input, count, similarity)
 
