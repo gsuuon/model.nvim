@@ -1,14 +1,8 @@
 # 🧠 llm.nvim
 
-Talk to Large Language Model AI in Neovim.
+Talk to Large Language Model AI in Neovim. Integrate the editor to build prompts and handle responses with a simple interface.
 
 https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a419-eeec04cb7e99.mp4
-
-
-- 📑 __Build a prompt library__  
-- 🐘 __Local vectorstore (wip)__
-- 🪁 __Stream responses__  
-- 🌞 __Super easy__  
 
 ---
 
@@ -16,7 +10,7 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 
 ### Requirements
 - Nvim 0.8.0 or higher
-- `OPENAI_API_KEY` environment variable set to your [api key](https://platform.openai.com/account/api-keys)
+- For the OpenAI provider, set the `OPENAI_API_KEY` environment variable to your [api key](https://platform.openai.com/account/api-keys)
 
 #### Optional
 For local vector store:

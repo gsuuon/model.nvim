@@ -117,7 +117,7 @@ return {
       return {
         messages = {
           {
-            role = 'system',
+            role = 'user',
             content = 'Write a short commit message according to the Conventional Commits specification for the following git diff: ```\n' .. git_diff .. '\n```'
           }
         }
