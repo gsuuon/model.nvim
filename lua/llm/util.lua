@@ -205,10 +205,18 @@ M.COL_ENTIRE_LINE = vim.v.maxcol or 2147483647
 M.buf = {}
 
 function M.buf.text(selection)
+  local start_row = selection.start.row
+  local start_col = selection.start.col
+
+  if start_col == M.COL_ENTIRE_LINE then
+    start_row = start_row + 1
+    start_col = 0
+  end
+
   return vim.api.nvim_buf_get_text(
     0,
-    selection.start.row,
-    selection.start.col,
+    start_row,
+    start_col,
     selection.stop.row,
     selection.stop.col == M.COL_ENTIRE_LINE and -1 or selection.stop.col,
     {}
