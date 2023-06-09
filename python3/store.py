@@ -219,11 +219,11 @@ def update_store_and_save(items, store, sync=False):
     updated, token_counts = update_store(items, store, sync)
 
     if len(updated) > 0:
-        print("saving")
+        print("Saving items:")
         print(list(zip(updated, token_counts)))
         save_store(store)
     else:
-        print("no updates, not saving")
+        print("No new or updated items")
 
     return updated
 
