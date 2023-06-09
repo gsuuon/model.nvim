@@ -78,7 +78,7 @@ local function get_segment(input, segment_mode, hl_group)
     vim.api.nvim_buf_set_option(llm_bfnr, 'buftype', 'nowrite')
 
     vim.api.nvim_buf_set_lines(llm_bfnr, -2, -1, false, input.lines)
-    vim.api.nvim_buf_set_lines(llm_bfnr, -2, -1, false, {'',''})
+    vim.api.nvim_buf_set_lines(llm_bfnr, -1, -1, false, {'',''})
 
     -- Open the existing buffer or create a new one
     vim.api.nvim_set_current_buf(llm_bfnr)
