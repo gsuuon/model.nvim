@@ -30,7 +30,7 @@ function M.init(opts, force)
   M.store_did_init = true
 end
 
-function M.store_get_known_ids()
+function M.get_known_ids()
   return vim.fn.pyeval("[ i['id'] for i in s['items'] ]")
 end
 
