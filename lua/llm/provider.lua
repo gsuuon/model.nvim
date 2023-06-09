@@ -8,7 +8,7 @@ local M = {}
 ---@field builder PromptBuilder Converts input and context to request data
 ---@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to "append".
 ---@field hl_group? string Highlight group of active response
----@field params? any Additional parameters to add to request body
+---@field params? any Additional parameters to add to request body - PromptBuilder data takes priority over these parameters
 
 ---@class Provider
 ---@field request_completion_stream fun(handler: StreamHandlers, params?: table): function Request a completion stream from provider, returning a cancel callback
