@@ -135,10 +135,10 @@ end
 ---@field after string
 ---@field filename string
 ---@field args string
+---@field segment Segment
 
 ---@class RequestCompletionHandleParams
 ---@field input string[]
----@field segment Segment
 ---@field context Context
 
 ---@param segment_mode SegmentMode
@@ -168,8 +168,8 @@ local function build_request_handle_params(segment_mode, want_visual_selection, 
 
   return {
     input = input.lines,
-    segment = seg,
     context = {
+      segment = seg,
       filename = util.buf.filename(),
       before = before_after.before,
       after = before_after.after,
@@ -181,7 +181,7 @@ end
 ---@param input string | string[]
 ---@param prompt Prompt
 ---@param handlers StreamHandlers
----@param context table
+---@param context Context
 ---@return function cancel callback
 local function start_prompt(input, prompt, handlers, context)
   -- TODO args to prompts is probably less useful than the prompt buffer / helper
@@ -223,7 +223,7 @@ local function start_prompt(input, prompt, handlers, context)
 end
 
 local function request_completion_input_segment(handle_params, prompt)
-  local seg = handle_params.segment
+  local seg = handle_params.context.segment
 
   local cancel = start_prompt(handle_params.input, prompt, {
     on_partial = function(partial)
