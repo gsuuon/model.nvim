@@ -115,7 +115,7 @@ def ingest_files(root_dir, glob_pattern) -> list[Item]:
             if os.path.isfile(path)
         ]
 
-    return [ f for f in map(ingest_file, tap(glob_files())) if f ]
+    return [ f for f in map(ingest_file, glob_files()) if f ]
 
 def get_embeddings(inputs: list[str]):
     if not inputs: return []

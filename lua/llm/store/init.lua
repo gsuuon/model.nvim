@@ -34,10 +34,6 @@ function M.get_known_ids()
   return vim.fn.pyeval("[ i['id'] for i in s['items'] ]")
 end
 
-function M.add_files(root_path)
-  vim.cmd([[py store.update_with_files_and_save(s, files_root=']].. root_path .. [[')]])
-end
-
 local function escape_quotes(str)
   return [[r"""]] .. str:gsub([["""]], [[\"\"\"]]) .. [["""]]
 end
@@ -80,33 +76,44 @@ local function normalize_function_item_filepath_to_store(function_item)
   }
 end
 
--- Extracts lua functions as items
-local function to_lua_functions(file)
-  return vim.tbl_map(normalize_function_item_filepath_to_store, ts_source.lang.lua.functions(file))
-end
-
----@param glob string glob pattern to search for files, starting from current directory
----@param to_items function converts each filepath to a list of items
-local function glob_to_items(glob, to_items)
-  local filepaths = vim.fn.glob(glob,nil,true)
-
-  local results = {}
-
-  for _, filepath in ipairs(filepaths) do
-    -- show(filepath)
-    local file = ts_source.ingest_file(filepath)
-    local items = to_items(file)
-
-    for _, item in ipairs(items) do
-      table.insert(results, item)
-    end
-  end
-
-  return results
-end
-
 function M.add_items(items)
   vim.cmd([[py store.update_store_and_save(]] .. to_python(items) .. [[,s)]])
+end
+
+function M.add_files(root_path)
+  vim.cmd([[py store.update_with_files_and_save(s, files_root=']].. root_path .. [[')]])
+end
+
+function M.add_lua_functions(glob)
+  if glob == nil then
+    glob = vim.fn.expand('%')
+  end
+  -- Extracts lua functions as items
+  local function to_lua_functions(file)
+    return vim.tbl_map(normalize_function_item_filepath_to_store, ts_source.lang.lua.functions(file))
+  end
+
+  ---@param glob string glob pattern to search for files, starting from current directory
+  ---@param to_items function converts each filepath to a list of items
+  local function glob_to_items(glob, to_items)
+    local filepaths = vim.fn.glob(glob,nil,true)
+
+    local results = {}
+
+    for _, filepath in ipairs(filepaths) do
+      -- show(filepath)
+      local file = ts_source.ingest_file(filepath)
+      local items = to_items(file)
+
+      for _, item in ipairs(items) do
+        table.insert(results, item)
+      end
+    end
+
+    return results
+  end
+
+  M.add_items(glob_to_items(glob, to_lua_functions))
 end
 
 M.prompt = {}
