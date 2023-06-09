@@ -129,6 +129,10 @@ function M.commands(opts)
     complete = function(arglead)
       local prompt_names = {}
 
+      if opts.prompts == nil then
+        return {}
+      end
+
       for k, _ in util.module.autopairs(opts.prompts) do
         local escaped = k:gsub(" ", "\\ ")
         table.insert(prompt_names, escaped)
