@@ -101,7 +101,6 @@ M.default_request_params = {
   stream = true
 }
 
-
 function M.initialize(opts)
   M.default_request_params = vim.tbl_deep_extend('force',
     M.default_request_params,

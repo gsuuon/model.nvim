@@ -40,17 +40,55 @@ require('lazy').setup({
 
 ## 💭 Usage
 
-- `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. If you've added alternative [prompts](#prompts) to the config, you can give a prompt name as an argument. Streaming text is added on the next line in visual line-wise mode, or from the end of the selection in char-wise visual mode.
+- `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. If you've added alternative [prompts](#prompts) to the config, you can give a prompt name as an argument.
 
-- `:LlmStore [command]` (🚧 under construction)  
-  - __Setup__
-    - Python 3.10+
-    - `pip install numpy openai tiktoken`
+<details>
+<summary>
+Delete response
+</summary>
+
+https://user-images.githubusercontent.com/6422188/233774216-4e100122-3a93-4dfb-a7c7-df50f1221bdd.mp4
+
+</details>
+
+- `:LlmDelete` — Delete the response under the cursor. If `prompt.mode == 'replace'` then replace with the original text.
+
+<details>
+<summary>
+🚧 WIP - Local vector store 
+</summary>
+
+### Requirements
+  - Python 3.10+
+  - `pip install numpy openai tiktoken`
+
+### Usage
+Check the module functions exposed in [store.lua](./lua/llm/store/store.lua).
+
+To add items call into the `llm.store.store` lua module functions, e.g.
+  - `:lua require('llm.store.store').add_items(glob_to_items('**/*.lua', to_lua_functions))`
+  - `:lua require('llm.store.store').add_files('.')`
+
+To use store query results in a prompt:
+```lua
+local store = require('llm.store.store')
+
+return {
+  ...
+  builder = function(input, context)
+    ---@type {id: string, content: string}[]
+    local store_results = store.prompt.query_store(input, 2, 0.75)
+
+    -- do things with store_results
+  end
+}
+```
+
+</details>
+
+- `:LlmStore [command]`
   - `:LlmStore init` — initialize a store.json file at the closest git root directory
   - `:LlmStore query <query text>` — query a store.json
-  - To add items call into the `llm.store.store` lua module functions, e.g.
-    - `M.add_items(glob_to_items('**/*.lua', to_lua_functions))`
-    - `M.add_files('.')`
 
 <details>
 <summary>
@@ -85,25 +123,46 @@ https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a
 
 - `:LlmShow` — Flash the response under the cursor if there is one.
 
-<details>
-<summary>
-Delete response
-</summary>
 
-https://user-images.githubusercontent.com/6422188/233774216-4e100122-3a93-4dfb-a7c7-df50f1221bdd.mp4
+## 🧵Configuration
 
-</details>
+```lua
+require('llm').setup({
+  default_prompt? = .. , -- Prompt — modify the default prompt (`:Llm` with no argument)
+  prompts? = {}, -- table<string, Prompt>` — add prompt alternatives
+  hl_group? = '' -- string — Set the default highlight group of in-progress responses
+})
+```
 
+### Prompts
 
-- `:LlmDelete` — Delete the response under the cursor. If `prompt.mode == 'replace'` then replace with the original text.
+Prompts go in the `prompts` field of the setup table and can be used via `:Llm [prompt name]`.
 
+A prompt entry defines how to handle a completion request - it takes in the editor input (either an entire file or a visual selection) and some context, and produces the api request data merging with any defaults. It also defines how to handle the API response - for example it can replace the selection (or file) with the response or insert it at the cursor positon.
 
-## Providers
-### OpenAI ChatGPT (default)
+Check the [examples](#examples) section to see how to define prompts. The type definitions are in [provider.lua](./lua/llm/provider.lua)
+
+### Library autoload
+You can use `require('util').module.autoload` instead of a naked `require` to always re-require a module on use. This makes the feedback loop for developing prompts faster:
+
+```diff
+require('llm').setup({
+-  prompts = require('prompt_library')
++  prompts = require('llm.util').module.autoload('prompt_library')
+})
+```
+
+### Providers
+#### OpenAI ChatGPT (default)
 Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform.openai.com/account/api-keys) before starting nvim.
 
-#### Configuration
+<details>
+<summary>
+Configuration
+</summary>
+
 Add default request parameters for [/chat/completions](https://platform.openai.com/docs/api-reference/chat/create) with `initialize()`:
+
 ```
 require('llm.providers.openai').initialize({
   max_tokens = 120,
@@ -112,95 +171,26 @@ require('llm.providers.openai').initialize({
 })
 ```
 
-## 🧵Configuration
-### Prompts
-A prompt entry requires the builder and provider fields. The field is a function that converts the input selection into data for the body of a request. You can optionally change the highlighting group of an active response, and if the response should replace or append to the selection (defaults to append)
-
-
-<details>
-<summary>
-@class Prompt
-</summary>
-
-```lua
----@field provider Provider The API provider for this prompt
----@field builder PromptBuilder Converts input and context to request data
----@field hl_group? string Highlight group of active response
----@field mode? SegmentMode | StreamHandlers Response handling mode ("replace" | "append" | StreamHandlers). Defaults to "append".
-```
-
 </details>
-
-<details>
-<summary>
-@class PromptBuilder
-</summary>
-
-```lua
----@alias PromptBuilder fun(input: string, context: table): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results for use with callbacks.
-```
-
-</details>
-
-<details>
-<summary>
-@enum SegmentMode
-</summary>
-
-```lua
----@enum SegmentMode
-M.mode = {
-  APPEND = "append",
-  REPLACE = "replace",
-  BUFFER = "buffer",
-  INSERT = "insert",
-  INSERT_OR_REPLACE = "insert_or_replace"
-}
-```
-
-</details>
-
-<details>
-<summary>@class StreamHandlers</summary>
-
-```lua
----@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
----@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
----@field on_error (fun(data: any, label?: string): nil) Error data and optional label
-```
-
-</details>
-
-#### `require('llm').setup()`
-- `default_prompt: Prompt` — modify the default prompt  
-
-- `prompts: table<string, Prompt>` — add prompt alternatives  
-  Alternatives can be used by calling `:Llm` with their name, e.g. `:Llm advice` (fuzzy command completion)
-
-### Appearance
-- `hl_group: string`  
-  — Set the default highlight group of in-progress responses
-
-### Library autoload
-The `util` module has a helpful function to make developing prompts easier - `M.module.autoload`. Use this instead of `require` on a module that exports your prompt library to always use what's currently on disk.
-
-```diff
-+ local util = require('llm.util')
-
-require('llm').setup({
--  prompts = require('prompt_library')
-+  prompts = util.module.autoload('prompt_library')
-})
-```
 
 --- 
 
-## 🎮Examples
+## Examples
 
 ### Prompts
 
+These examples go in the prompts field. Prompt names can have spaces.
+
+```lua
+require('llm').setup({
+  prompts = {
+    ['prompt name'] = ...
+  }
+})
+```
+
 <details>
-<summary>Prompt for user input</summary>
+<summary>Get additional user instruction</summary>
 
 https://github.com/gsuuon/llm.nvim/assets/6422188/0e4b2b68-5873-42af-905c-3bd5a0bdfe46
 
@@ -209,7 +199,7 @@ local util = require('llm.util')
 local segment = require('llm.segment')
 
 ...
-  prompt = {
+  ['with instruction'] = {
     provider = openai,
     builder = function(input)
       return util.builder.user_prompt(function(user_input)
