@@ -139,5 +139,18 @@ return {
         temperature = 0.2
       }
     end
+  },
+  gpt = {
+    provider = openai,
+    builder = function(input)
+      return {
+        messages = {
+          {
+            role = 'user',
+            content = input
+          }
+        }
+      }
+    end
   }
 }
