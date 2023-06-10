@@ -30,8 +30,9 @@ local function command_request_multi_completion_streams(cmd_params)
     return assert(M.opts.prompts[name], "Prompt '" .. name .. "' wasn't found")
 
   end, prompt_names)
+  local want_visual_selection = cmd_params.range ~= 0
 
-  return provider.request_multi_completion_streams(prompts, M.opts.default_prompt)
+  return provider.request_multi_completion_streams(prompts, want_visual_selection, M.opts.hl_group)
 end
 
 function M.commands(opts)
