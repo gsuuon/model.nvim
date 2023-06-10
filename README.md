@@ -1,8 +1,15 @@
 # 🧠 llm.nvim
 
-Talk to Large Language Model AI in Neovim. Integrate the editor to build prompts and handle responses with a simple interface.
+Use LLM's in Neovim. Build editor integrated prompts and customize your LLM workflow. The plugin comes with some starter prompts, but you can also create your own prompt library to suit your needs. 
 
 https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a419-eeec04cb7e99.mp4
+
+### Features
+
+- 🎨 Highly customizable editor integrated prompts
+- 🎪 OpenAI GPT and Google PaLM support
+- 🔎 Local vector store querying
+- 🌠 Streaming response
 
 ---
 
@@ -10,7 +17,8 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 
 ### Requirements
 - Nvim 0.8.0 or higher
-- For the OpenAI provider, set the `OPENAI_API_KEY` environment variable to your [api key](https://platform.openai.com/account/api-keys)
+- For the OpenAI provider (default), set the `OPENAI_API_KEY` environment variable to your [api key](https://platform.openai.com/account/api-keys)
+- For the PaLM provider, set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey)
 
 #### Optional
 For local vector store:
@@ -166,6 +174,28 @@ require('llm.providers.openai').initialize({
 ```
 
 </details>
+
+#### Google PaLM
+Set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey).
+
+Check the palm prompt in [starter prompts](./lua/llm/starter_prompts.lua) for a reference. Palm provider defaults to the chat model (`chat-bison-001`). The builder's return params can include `model = 'text-bison-001'` to use the text model instead.
+
+Params should be either a [generateMessage](https://developers.generativeai.google/api/rest/generativelanguage/models/generateMessage#request-body) body by default, or a [generateText](https://developers.generativeai.google/api/rest/generativelanguage/models/generateText#request-body) body if using `model = 'text-bison-001'`.
+
+```lua
+['palm text completion'] = {
+  provider = palm,
+  builder = function(input, context)
+    return {
+      model = 'text-bison-001',
+      prompt = {
+        text = input
+      },
+      temperature = 0.2
+    }
+  end
+}
+```
 
 --- 
 
