@@ -249,7 +249,7 @@ local function request_completion_input_segment(handle_params, prompt)
     end,
 
     on_error = function(data, label)
-      util.eshow(data, 'stream error ' .. label)
+      util.eshow(data, 'stream error ' .. (label or ''))
     end
   }, handle_params.context)
 
