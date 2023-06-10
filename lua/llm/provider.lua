@@ -67,11 +67,12 @@ local function get_segment(input, segment_mode, hl_group)
     end
   elseif segment_mode == M.mode.BUFFER then
     -- Find or create a scratch buffer for this plugin
-    local llm_bfnr = vim.fn.bufnr('llm', true)
+    local bufname = '__llm__'
+    local llm_bfnr = vim.fn.bufnr(bufname, true)
 
     if llm_bfnr == -1 then
-      llm_bfnr = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_buf_set_name(llm_bfnr, 'llm')
+      llm_bfnr = vim.api.nvim_create_buf(true, true)
+      vim.api.nvim_buf_set_name(llm_bfnr, bufname)
     end
 
     vim.api.nvim_buf_set_option(llm_bfnr, 'buflisted', true)
