@@ -1,7 +1,8 @@
 local llm = require('llm')
 local util = require('llm.util')
-local openai = require('llm.providers.openai')
 local segment = require('llm.segment')
+local openai = require('llm.providers.openai')
+local palm = require('llm.providers.palm')
 
 return {
   code = {
@@ -123,5 +124,20 @@ return {
         }
       }
     end,
+  },
+  palm = {
+    provider = palm,
+    builder = function(input)
+      return {
+        prompt = {
+          messages = {
+            {
+              content = input
+            }
+          }
+        },
+        temperature = 0.2
+      }
+    end
   }
 }
