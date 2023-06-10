@@ -172,6 +172,7 @@ local function build_request_handle_params(segment_mode, want_visual_selection, 
     input = input.lines,
     context = {
       segment = seg,
+      selection = input.selection,
       filename = util.buf.filename(),
       before = before_after.before,
       after = before_after.after,
