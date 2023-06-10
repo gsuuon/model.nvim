@@ -21,18 +21,20 @@ end
 ---@param on_error fun(text: string): nil
 ---@return fun(): nil cancel_stream Cancels the stream process
 function M.stream(opts, on_stdout, on_error)
-  if M._is_debugging then
-    util.show(opts.body, 'Request body')
-  end
-
   local stdout = assert(uv.new_pipe(false), 'Failed to open stdout pipe')
   local stderr = assert(uv.new_pipe(false), 'Failed to open stderr pipe')
 
   local _error_output = ''
 
+  local args = build_args(opts)
+
+  if M._is_debugging then
+    util.show(args, 'curl args')
+  end
+
   local handle = assert(uv.spawn('curl',
     {
-      args = build_args(opts),
+      args = args,
       stdio = { nil, stdout, stderr }
     },
     function(exit_code, signal)
