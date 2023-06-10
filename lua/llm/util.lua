@@ -46,6 +46,20 @@ function M.env(name)
   end
 end
 
+function M.memo(fn)
+  local cache = {}
+
+  return function(x)
+    if cache[x] == nil then
+      cache[x] = fn(x)
+    end
+
+    return cache[x]
+  end
+end
+
+M.env_memo = M.memo(M.env)
+
 M.table = {}
 
 function M.table.map_to_array(table, fn)

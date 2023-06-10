@@ -3,18 +3,6 @@ local util = require('llm.util')
 
 local M = {}
 
-local api_key = (function()
-  local key
-
-  return function()
-    if key == nil then
-      key = util.env('OPENAI_API_KEY')
-    end
-
-    return key
-  end
-end)()
-
 local function extract_data(event_string)
   local success, data = pcall(util.json.decode, event_string:gsub('^data: ', ''))
 
@@ -87,7 +75,7 @@ function M.request_completion_stream(handlers, params)
 
   return curl.stream({
     headers = {
-      Authorization = 'Bearer ' .. api_key(),
+      Authorization = 'Bearer ' .. util.env_memo('OPENAI_API_KEY'),
       ['Content-Type']= 'application/json',
     },
     method = 'POST',
