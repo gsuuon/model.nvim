@@ -234,7 +234,11 @@ local function request_completion_input_segment(handle_params, prompt)
     end,
 
     on_finish = function(complete_text, reason)
-      seg.set_text(complete_text)
+      if prompt.process == nil then
+        seg.set_text(complete_text)
+      else
+        seg.set_text(prompt.process(complete_text))
+      end
 
       if reason == 'stop' then
         seg.clear_hl()
