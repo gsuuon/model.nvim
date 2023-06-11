@@ -233,7 +233,9 @@ local function request_completion_input_segment(handle_params, prompt)
       seg.add(partial)
     end,
 
-    on_finish = function(_, reason)
+    on_finish = function(complete_text, reason)
+      seg.set_text(complete_text)
+
       if reason == 'stop' then
         seg.clear_hl()
       elseif reason == 'length' then

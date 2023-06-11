@@ -72,6 +72,23 @@ local function create_segment_at(row, col, hl_group, bufnr)
 
   return {
 
+    set_text = vim.schedule_wrap(function(text)
+      local lines = util.string.split_char(text, '\n')
+
+      if lines == nil or #lines == 0 then return end
+
+      local mark = get_details()
+
+      vim.api.nvim_buf_set_text(
+        bufnr,
+        mark.row,
+        mark.col,
+        mark.details.end_row,
+        mark.details.end_col,
+        lines
+      )
+    end),
+
     add = vim.schedule_wrap(function(text)
       local lines = util.string.split_char(text, '\n')
 

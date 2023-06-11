@@ -43,9 +43,6 @@ function M.request_completion_stream(handlers, params)
 
       local result = extract(first_candidate)
 
-      handlers.on_partial(result)
-
-      -- FIXME on_finish complete string arg is currently not used
       -- TODO change reason to error, return nil for successful completion
       handlers.on_finish(result, 'stop')
     end
