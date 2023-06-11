@@ -87,6 +87,15 @@ local function create_segment_at(row, col, hl_group, bufnr)
         mark.details.end_col,
         lines
       )
+
+      local end_pos = end_delta(lines, mark.row, mark.col)
+
+      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, {
+        id = _ext_id,
+        end_col = end_pos.col,
+        end_row = end_pos.row,
+        hl_group = _hl_group
+      })
     end),
 
     add = vim.schedule_wrap(function(text)
@@ -282,7 +291,7 @@ end
 M._debug = {}
 
 function M._debug.extmarks()
-  return vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, {})
+  return vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, {details = true})
 end
 
 return M
