@@ -165,6 +165,36 @@ function M.string.join_lines(lines)
   return table.concat(lines, '\n')
 end
 
+--- Removes any surrounding quotes or markdown code blocks
+function M.string.trim_quotes(text)
+  local open_markers = text:match([=[^['"`]+]=])
+
+  if open_markers == nil then return text end
+
+  local open = "^" .. open_markers
+  local close = open_markers .. "$"
+
+  local result = text:gsub(open, ''):gsub(close, '')
+
+  return result
+end
+
+function M.string.trim_code_block(text)
+  local is_code_block = text:match("^```") and text:match("```$")
+
+  if not is_code_block then return text end
+
+  local has_fence = text:match("^```[^\n]+\n")
+
+  if has_fence then
+    local result = text:gsub("^```[^\n]*\n", ''):gsub("\n?```$", '')
+    return result
+  end
+
+  local result = text:gsub("^```", ''):gsub("```$", '')
+  return result
+end
+
 M.cursor = {}
 
 function M.cursor.selection()
