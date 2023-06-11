@@ -19,6 +19,7 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 - Nvim 0.8.0 or higher
 - For the OpenAI provider (default), set the `OPENAI_API_KEY` environment variable to your [api key](https://platform.openai.com/account/api-keys)
 - For the PaLM provider, set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey)
+- curl
 
 #### Optional
 For local vector store:
