@@ -179,7 +179,11 @@ function M.string.trim_quotes(text)
   return result
 end
 
+--- Trim markdown code block fence and surrounding quotes
 function M.string.trim_code_block(text)
+  -- TODO there's probably a simpler way to preserve the surrounding newline semantics
+  -- or maybe I don't need is_multiline at all, assume single line blocks are always single backtick
+  -- so ```'s always include newlines
   local is_code_block = text:match("^```") and text:match("```$")
 
   if not is_code_block then return text end
@@ -188,6 +192,13 @@ function M.string.trim_code_block(text)
 
   if has_fence then
     local result = text:gsub("^```[^\n]*\n", ''):gsub("\n?```$", '')
+    return result
+  end
+
+  local is_multiline = text:match("^```\n") and text:match("\n```$")
+
+  if is_multiline then
+    local result = text:gsub("^```\n", ''):gsub("\n```$", '')
     return result
   end
 
