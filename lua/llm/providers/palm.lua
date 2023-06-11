@@ -32,7 +32,7 @@ function M.request_completion_stream(handlers, params)
       error('Failed to decode json response:\n' .. raw_data)
     end
 
-    if response.error ~= nil then
+    if response.error ~= nil or not response.candidates then
       handlers.on_error(response)
     else
       local first_candidate = response.candidates[1]
