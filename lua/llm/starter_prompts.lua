@@ -122,7 +122,7 @@ return {
         }
       }
     end,
-    process = function(text)
+    transform = function(text)
       local blocks =  util.string.extract_markdown_code_blocks(text)
       local code = vim.tbl_filter(function(block)
         if block.text ~= nil then
