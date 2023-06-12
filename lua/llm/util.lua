@@ -206,6 +206,41 @@ function M.string.trim_code_block(text)
   return result
 end
 
+-- Extracts markdown code blocks and interspliced explanations into a list of either
+-- {code: string, lang: string} or {text: string}
+function M.string.extract_markdown_code_blocks(md_text)
+  local blocks = {}
+  local current_block = { text = "" }
+  local in_code_block = false
+
+  local function add_text_block()
+    if current_block.text ~= nil and #current_block.text > 0 then
+      table.insert(blocks, current_block)
+    end
+  end
+
+  for line in md_text:gmatch("[^\r\n]+") do
+    local code_fence = line:match("^```([%w-]*)")
+    if code_fence then
+      in_code_block = not in_code_block
+      if in_code_block then
+        add_text_block()
+        current_block = { code = "", lang = code_fence }
+      else
+        table.insert(blocks, current_block)
+        current_block = { text = "" }
+      end
+    elseif in_code_block then
+      current_block.code = current_block.code .. line .. "\n"
+    else
+      current_block.text = current_block.text .. line .. "\n"
+    end
+  end
+
+  add_text_block()
+  return blocks
+end
+
 M.cursor = {}
 
 function M.cursor.selection()
