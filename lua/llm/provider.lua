@@ -6,6 +6,7 @@ local M = {}
 ---@class Prompt
 ---@field provider Provider The API provider for this prompt
 ---@field builder PromptBuilder Converts input and context to request data
+---@field transform fun(string): string Transforms response text after completion finishes
 ---@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to "append".
 ---@field hl_group? string Highlight group of active response
 ---@field params? any Additional parameters to add to request body - PromptBuilder data takes priority over these parameters
