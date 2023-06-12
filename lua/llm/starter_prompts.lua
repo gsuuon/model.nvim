@@ -110,6 +110,35 @@ return {
       }
     end,
   },
+  ['extract code'] = {
+    provider = openai,
+    builder = function (input)
+      return {
+        messages = {
+          {
+            role = 'user',
+            content = input
+          }
+        }
+      }
+    end,
+    process = function(text)
+      local blocks =  util.string.extract_markdown_code_blocks(text)
+      local code = vim.tbl_filter(function(block)
+        if block.text ~= nil then
+          vim.notify(block.text)
+        end
+        return block.code ~= nil
+      end, blocks)
+
+      return table.concat(
+        vim.tbl_map(function (block)
+          return block.code
+        end, code),
+        '\n'
+      )
+    end
+  },
   ['commit message'] = {
     provider = openai,
     mode = llm.mode.INSERT,
