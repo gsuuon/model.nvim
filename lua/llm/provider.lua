@@ -12,7 +12,7 @@ local M = {}
 ---@field params? any Additional parameters to add to request body - PromptBuilder data takes priority over these parameters
 
 ---@class Provider
----@field request_completion_stream fun(handler: StreamHandlers, params?: table): function Request a completion stream from provider, returning a cancel callback
+---@field request_completion fun(handler: StreamHandlers, params?: table): function Request a completion stream from provider, returning a cancel callback
 
 ---@alias PromptBuilder fun(input: string, context: Context): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
 
@@ -207,7 +207,7 @@ local function start_prompt(input, prompt, handlers, context)
       built_params
     )
 
-    return prompt.provider.request_completion_stream(handlers, params)
+    return prompt.provider.request_completion(handlers, params)
   end
 
   if type(prompt_built) == 'function' then
@@ -265,7 +265,7 @@ local function request_completion_input_segment(handle_params, prompt)
 end
 
 ---@param prompt Prompt
-function M.request_completion_stream(prompt, args, want_visual_selection, default_hl_group)
+function M.request_completion(prompt, args, want_visual_selection, default_hl_group)
   local prompt_mode = prompt.mode or M.mode.APPEND
 
   if type(prompt_mode) == 'table' then -- prompt_mode is StreamHandlers

@@ -4,7 +4,7 @@ local provider = require('llm.provider')
 
 local M = {}
 
-local function command_request_completion_stream(cmd_params)
+local function command_request_completion(cmd_params)
   ---@return Prompt, string
   local function get_prompt_and_args(args)
     local prompt_arg = table.remove(args, 1)
@@ -20,7 +20,7 @@ local function command_request_completion_stream(cmd_params)
   local prompt, args = get_prompt_and_args(cmd_params.fargs)
   local want_visual_selection = cmd_params.range ~= 0
 
-  return provider.request_completion_stream(prompt, args, want_visual_selection, M.opts.hl_group)
+  return provider.request_completion(prompt, args, want_visual_selection, M.opts.hl_group)
 end
 
 local function command_request_multi_completion_streams(cmd_params)
@@ -122,7 +122,7 @@ function M.commands(opts)
     }
   )
 
-  vim.api.nvim_create_user_command('Llm', command_request_completion_stream, {
+  vim.api.nvim_create_user_command('Llm', command_request_completion, {
     range = true,
     desc = 'Request completion of selection',
     force = true,

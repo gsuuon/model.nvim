@@ -27,7 +27,7 @@ end
 
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for OpenAI endpoint
-function M.request_completion_stream(handlers, params)
+function M.request_completion(handlers, params)
   local _all_content = ''
 
   -- TODO should handlers being optional be a choice at the provider level or always optional for all providers?

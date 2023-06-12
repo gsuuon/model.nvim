@@ -13,7 +13,7 @@ end
 
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for PaLM endpoint
-function M.request_completion_stream(handlers, params)
+function M.request_completion(handlers, params)
   local model = 'chat-bison-001'
   local method = 'generateMessage'
   local extract = extract_message_response
