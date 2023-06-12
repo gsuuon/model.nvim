@@ -28,8 +28,7 @@ return {
               content = input
             }
           }
-        },
-        temperature = 0.2
+        }
       }
     end
   },

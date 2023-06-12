@@ -6,8 +6,8 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 
 ### Features
 
+- 🎪 OpenAI GPT and Google PaLM provider support (or add your own provider)
 - 🎨 Highly customizable editor integrated prompts
-- 🎪 OpenAI GPT and Google PaLM support
 - 🔎 Local vector store querying
 - 🌠 Streaming response
 
