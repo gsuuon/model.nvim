@@ -5,6 +5,34 @@ local openai = require('llm.providers.openai')
 local palm = require('llm.providers.palm')
 
 return {
+  gpt = {
+    provider = openai,
+    builder = function(input)
+      return {
+        messages = {
+          {
+            role = 'user',
+            content = input
+          }
+        }
+      }
+    end
+  },
+  palm = {
+    provider = palm,
+    builder = function(input)
+      return {
+        prompt = {
+          messages = {
+            {
+              content = input
+            }
+          }
+        },
+        temperature = 0.2
+      }
+    end
+  },
   code = {
     provider = openai,
     mode = llm.mode.INSERT_OR_REPLACE,
@@ -148,38 +176,10 @@ return {
         messages = {
           {
             role = 'user',
-            content = 'Write a short commit message according to the Conventional Commits specification for the following git diff: ```\n' .. git_diff .. '\n```'
+            content = 'Write a terse commit message according to the Conventional Commits specification for this git diff: ```\n' .. git_diff .. '\n```'
           }
         }
       }
     end,
-  },
-  palm = {
-    provider = palm,
-    builder = function(input)
-      return {
-        prompt = {
-          messages = {
-            {
-              content = input
-            }
-          }
-        },
-        temperature = 0.2
-      }
-    end
-  },
-  gpt = {
-    provider = openai,
-    builder = function(input)
-      return {
-        messages = {
-          {
-            role = 'user',
-            content = input
-          }
-        }
-      }
-    end
   }
 }
