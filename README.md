@@ -6,7 +6,7 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 
 ### Features
 
-- 🎪 OpenAI GPT and Google PaLM provider support (or add your own provider)
+- 🎪 OpenAI GPT, Google PaLM, Huggingface API providers
 - 🎨 Highly customizable editor integrated prompts
 - 🔎 Local vector store querying
 - 🌠 Streaming response
@@ -194,6 +194,23 @@ Params should be either a [generateMessage](https://developers.generativeai.goog
       },
       temperature = 0.2
     }
+  end
+}
+```
+
+#### Huggingface API
+Set the `HUGGINGFACE_API_KEY` environment variable to your [api key](https://huggingface.co/settings/tokens).
+
+Set the model field on the params returned by the builder (or the static params in `prompt.params`). Set `params.stream = false` for models which don't support it (e.g. `gpt2`). Check [huggingface api docs](https://huggingface.co/docs/api-inference/detailed_parameters) for per-task request body types.
+
+```lua
+['huggingface bigcode'] = {
+  provider = huggingface,
+  params = {
+    model = 'bigcode/starcoder'
+  },
+  builder = function(input)
+    return { inputs = input }
   end
 }
 ```
