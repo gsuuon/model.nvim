@@ -194,7 +194,7 @@ return {
         messages = {
           {
             role = 'user',
-            content = 'Write a terse commit message according to the Conventional Commits specification for this git diff: ```\n' .. git_diff .. '\n```'
+            content = 'Write a terse commit message according to the Conventional Commits specification. Try to stay below 80 characters total. Staged git diff: ```\n' .. git_diff .. '\n```'
           }
         }
       }
