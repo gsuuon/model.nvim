@@ -3,6 +3,7 @@ local util = require('llm.util')
 local segment = require('llm.segment')
 local openai = require('llm.providers.openai')
 local palm = require('llm.providers.palm')
+local huggingface = require('llm.providers.huggingface')
 
 return {
   gpt = {
@@ -30,6 +31,24 @@ return {
           }
         }
       }
+    end
+  },
+  ['huggingface bigcode'] = {
+    provider = huggingface,
+    params = {
+      model = 'bigcode/starcoder'
+    },
+    builder = function(input)
+      return { inputs = input }
+    end
+  },
+  ['huggingface bloom'] = {
+    provider = huggingface,
+    params = {
+      model = 'bigscience/bloom'
+    },
+    builder = function(input)
+      return { inputs = input }
     end
   },
   code = {
