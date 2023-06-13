@@ -111,7 +111,11 @@ function M.json.decode(string)
     }
   })
 
-  if success then return obj end
+  if success then
+    return obj
+  else
+    return nil, obj
+  end
 end
 
 M.string = {}
