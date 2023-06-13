@@ -264,6 +264,23 @@ local function request_completion_input_segment(handle_params, prompt)
   seg.data.cancel = cancel
 end
 
+-- Run a prompt and resolve the complete result. Does not do anything with the result (ignores prompt mode)
+function M.complete(prompt, input, context, callback)
+  local cancel = start_prompt(input, prompt, {
+    on_partial = function() end,
+
+    on_finish = function(complete_text)
+      callback(complete_text)
+    end,
+
+    on_error = function(data, label)
+      util.eshow(data, 'stream error ' .. (label or ''))
+    end
+  }, context)
+
+  return cancel
+end
+
 ---@param prompt Prompt
 function M.request_completion(prompt, args, want_visual_selection, default_hl_group)
   local prompt_mode = prompt.mode or M.mode.APPEND
