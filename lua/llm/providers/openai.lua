@@ -1,5 +1,6 @@
 local curl = require('llm.curl')
 local util = require('llm.util')
+local provider_util = require('llm.providers.util')
 
 local M = {}
 
@@ -38,10 +39,7 @@ function M.request_completion(handlers, params)
   }, handlers)
 
   local function handle_raw(raw_data)
-    local items = util.string.split_pattern(raw_data, '\n\ndata: ')
-    -- FIXME it seems like sometimes we don't get the two newlines (e.g. before the last [DONE])
-
-    for _, item in ipairs(items) do
+    provider_util.iter_sse_items(raw_data, function(item)
       local data = extract_data(item)
 
       if data ~= nil then
@@ -64,7 +62,7 @@ function M.request_completion(handlers, params)
           end
         end
       end
-    end
+    end)
   end
 
   local function handle_error(error)
