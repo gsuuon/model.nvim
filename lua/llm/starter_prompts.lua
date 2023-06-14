@@ -1,24 +1,119 @@
 local llm = require('llm')
 local util = require('llm.util')
+local curl = require('llm.curl')
 local segment = require('llm.segment')
 local openai = require('llm.providers.openai')
 local palm = require('llm.providers.palm')
 local huggingface = require('llm.providers.huggingface')
 
-return {
-  gpt = {
-    provider = openai,
-    builder = function(input)
-      return {
-        messages = {
-          {
-            role = 'user',
-            content = input
-          }
+local provider = require('llm.provider')
+
+local gpt = {
+  provider = openai,
+  builder = function(input)
+    return {
+      messages = {
+        {
+          role = 'user',
+          content = input
         }
       }
+    }
+  end
+}
+
+local function api_route_for(schema_url, task, callback)
+  local function extract_schema_descripts(url, cb)
+    -- TODO extract component references
+    util.async(function(wait, resolve)
+      local schema = wait(curl.request({ url = url }, resolve, util.eshow))
+
+      local parsed, err = util.json.decode(schema)
+      if parsed == nil then
+        util.eshow(schema, 'Failed to parse schema')
+        error(err)
+      end
+
+      local paths = parsed.paths
+
+      local routes = {}
+
+      for route, route_node in pairs(paths) do
+        for method, method_node in pairs(route_node) do
+          table.insert(routes, {
+            route = route,
+            method = method,
+            description = method_node.description
+          })
+        end
+      end
+
+      return {
+        routes = routes,
+        description = parsed.info.description,
+        schema = parsed
+      }
+    end, cb)
+  end
+
+  util.async(function(wait, resolve)
+    local schema = wait(extract_schema_descripts(schema_url, resolve))
+
+    local gpt_prompt =
+      'This api is:\n' .. schema.description
+      .. '\n\nThese are the routes:\n'
+      .. vim.json.encode(schema.routes)
+      .. '\n\nWhich one would be useful in this task:\n'
+      .. task
+      .. '\n\nRespond with a json object of the path and method. Respond only with valid json, do not include an explanation e.g.:\n'
+      .. [[`{ "path": "/somepath", "method": "post" }`]]
+
+    local ai = vim.tbl_extend('force', gpt, {
+      params = {
+        temperature = 0.0
+      }
+    })
+
+    util.show(gpt_prompt, 'asking gpt')
+
+    local gpt_response = wait(provider.complete(ai, gpt_prompt, {}, resolve))
+
+    local route, err = util.json.decode(gpt_response)
+
+    if route == nil then
+      util.eshow('Failed to parse gpt response as json:\n' .. gpt_response)
+      util.eshow(err)
+      error('Unexpected gpt response')
     end
-  },
+
+    if route.path == nil or route.method == nil then
+      util.eshow('Gpt response unexpected')
+      util.eshow(gpt_prompt)
+      error('Unexpected gpt response')
+    end
+
+    local node =
+      assert(
+        assert(
+          schema.schema.paths[route.path],
+          'schema missing path ' .. route.path
+        )[route.method],
+        'path missing method ' .. route.method
+      )
+
+    return {
+      schema = schema,
+      relevant_route = {
+        [route.path] = {
+          [route.method] = node
+        }
+      }
+    }
+  end, callback)
+end
+
+return {
+  gpt = gpt,
   palm = {
     provider = palm,
     builder = function(input)
@@ -199,5 +294,39 @@ return {
         }
       }
     end,
+  },
+  ['openapi'] = { -- expects schema url as a command arg
+    provider = openai,
+    builder = function(input, context)
+      if context.args == nil or #context.args == 0 then
+        error('Provide the schema url as a command arg (:Llm openapi https://myurl.json)')
+      end
+
+      local schema_url = context.args
+
+      return function(build)
+        util.async(function(wait, resolve)
+          local route = wait(api_route_for(schema_url, input, resolve))
+
+          util.show(route.relevant_route, 'relevant route')
+
+          return {
+            messages = {
+              {
+                role = 'user',
+                content =
+                  "API schema url: " .. schema_url
+                  .. "\n\nAPI description: " .. route.schema.description
+                  .. "\n\nRelevant Open API route schema:\n" .. vim.json.encode(route.relevant_route)
+              },
+              {
+                role = 'user',
+                content = input
+              }
+            }
+          }
+        end, build)
+      end
+    end
   }
 }
