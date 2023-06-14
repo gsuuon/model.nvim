@@ -92,15 +92,16 @@ local function api_route_for(schema_url, task, callback)
       .. '\n\nRespond with a json object of the path and method. Respond only with valid json, do not include an explanation e.g.:\n'
       .. [[`{ "path": "/somepath", "method": "post" }`]]
 
-    local ai = vim.tbl_extend('force', gpt, {
+    local gpt_consistent = vim.tbl_extend('force', gpt, {
       params = {
-        temperature = 0.0
+        temperature = 0.0,
+        model = "gpt-3.5-turbo-0301"
       }
     })
 
     util.show(gpt_prompt, 'asking gpt')
 
-    local gpt_response = wait(provider.complete(ai, gpt_prompt, {}, resolve))
+    local gpt_response = wait(provider.complete(gpt_consistent, gpt_prompt, {}, resolve))
 
     local route, err = util.json.decode(gpt_response)
 
