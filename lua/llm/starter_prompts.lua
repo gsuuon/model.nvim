@@ -40,49 +40,47 @@ local ada = {
   end
 }
 
+local function extract_schema_descripts(url, cb)
+  -- TODO extract component references
+  util.async(function(wait, resolve)
+    local schema = wait(curl.request({ url = url }, resolve, util.eshow))
+
+    local parsed, err = util.json.decode(schema)
+    if parsed == nil then
+      util.eshow(schema, 'Failed to parse schema')
+      error(err)
+    end
+
+    local paths = parsed.paths
+
+    local routes = {}
+
+    for route, route_node in pairs(paths) do
+      for method, method_node in pairs(route_node) do
+        table.insert(routes, {
+          route = route,
+          method = method,
+          description = method_node.description
+        })
+      end
+    end
+
+    return {
+      routes = routes,
+      description = parsed.info.description,
+      schema = parsed
+    }
+  end, cb)
+end
+
 --- Gets the relevant api route from an Open API schema url by asking gpt and parsing the result.
 --- Callback resolves with:
 --- {
 ---   schema: table,
 ---   relevant_route: table
 --- }
-local function api_route_for(schema_url, task, callback)
-  local function extract_schema_descripts(url, cb)
-    -- TODO extract component references
-    util.async(function(wait, resolve)
-      local schema = wait(curl.request({ url = url }, resolve, util.eshow))
-
-      local parsed, err = util.json.decode(schema)
-      if parsed == nil then
-        util.eshow(schema, 'Failed to parse schema')
-        error(err)
-      end
-
-      local paths = parsed.paths
-
-      local routes = {}
-
-      for route, route_node in pairs(paths) do
-        for method, method_node in pairs(route_node) do
-          table.insert(routes, {
-            route = route,
-            method = method,
-            description = method_node.description
-          })
-        end
-      end
-
-      return {
-        routes = routes,
-        description = parsed.info.description,
-        schema = parsed
-      }
-    end, cb)
-  end
-
+local function gpt_ask_relevant_path(schema, task, callback)
   util.async(function(wait, resolve)
-    local schema = wait(extract_schema_descripts(schema_url, resolve))
-
     local gpt_prompt =
       'This api is:\n' .. schema.description
       .. '\n\nThese are the routes:\n'
@@ -334,9 +332,11 @@ return {
 
       return function(build)
         util.async(function(wait, resolve)
-          local route = wait(api_route_for(schema_url, input, resolve))
+          local schema = wait(extract_schema_descripts(schema_url, resolve))
+          util.show(schema.description, 'got openapi schema')
 
-          util.show(route.relevant_route, 'relevant route')
+          local route = wait(gpt_ask_relevant_path(schema, input, resolve))
+          util.show(route.relevant_route, 'api relevant route')
 
           return {
             messages = {
