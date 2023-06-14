@@ -4,12 +4,22 @@ local provider_util = require('llm.providers.util')
 
 local M = {}
 
-local function extract_data(event_string)
-  local success, data = pcall(util.json.decode, event_string:gsub('^data: ', ''))
+local function extract_chat_data(item)
+  local data = util.json.decode(item)
 
-  if success and data ~= nil and data.choices ~= nil then
+  if data ~= nil and data.choices ~= nil then
     return {
       content = (data.choices[1].delta or {}).content,
+      finish_reason = data.choices[1].finish_reason
+    }
+  end
+end
+
+local function extract_completion_data(item)
+  local data = util.json.decode(item)
+  if data ~= nil and data.choices ~= nil then
+    return {
+      content = (data.choices[1] or {}).text,
       finish_reason = data.choices[1].finish_reason
     }
   end
@@ -31,6 +41,9 @@ end
 ---@param options { endpoint: string } Request endpoint, defaults to 'chat/completions'
 function M.request_completion(handlers, params, options)
   local _all_content = ''
+
+  local endpoint = (options or {}).endpoint or 'chat/completions'
+  local extract_data = endpoint == 'chat/completions' and extract_chat_data or extract_completion_data
 
   -- TODO should handlers being optional be a choice at the provider level or always optional for all providers?
   local _handlers = vim.tbl_extend("force", {
@@ -70,7 +83,6 @@ function M.request_completion(handlers, params, options)
     _handlers.on_error(error, 'curl')
   end
 
-  local endpoint = (options or {}).endpoint or 'chat/completions'
   local body = vim.tbl_deep_extend('force', M.default_request_params, params)
 
   return curl.stream({
