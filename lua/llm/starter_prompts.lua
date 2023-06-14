@@ -319,7 +319,7 @@ return {
       }
     end,
   },
-  ['openapi'] = {
+  openapi = {
     -- Extract the relevant path from an OpenAPI spec and include in the gpt request.
     -- Expects schema url as a command arg.
     provider = openai,
