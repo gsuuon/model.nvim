@@ -36,6 +36,11 @@ function M.eshow(item, opt)
   end
 end
 
+function M.tap(x, opt)
+  M.show(x, opt)
+  return x
+end
+
 function M.env(name)
   local value = os.getenv(name)
 
@@ -67,7 +72,7 @@ end
 ---    return b
 ---   end, outer_callback)
 --- @param fn fun(wait: (fun(any): any), resolve: (fun(any): any)): any))
---- @param callback fun(result: any)
+--- @param callback? fun(result: any)
 function M.async(fn, callback)
   local co = coroutine.create(fn)
 
