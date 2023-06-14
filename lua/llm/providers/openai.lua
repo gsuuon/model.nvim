@@ -28,7 +28,8 @@ end
 
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for OpenAI endpoint
-function M.request_completion(handlers, params)
+---@param options { endpoint: string } Request endpoint, defaults to 'chat/completions'
+function M.request_completion(handlers, params, options)
   local _all_content = ''
 
   -- TODO should handlers being optional be a choice at the provider level or always optional for all providers?
@@ -69,6 +70,7 @@ function M.request_completion(handlers, params)
     _handlers.on_error(error, 'curl')
   end
 
+  local endpoint = (options or {}).endpoint or 'chat/completions'
   local body = vim.tbl_deep_extend('force', M.default_request_params, params)
 
   return curl.stream({
@@ -77,7 +79,7 @@ function M.request_completion(handlers, params)
       ['Content-Type']= 'application/json',
     },
     method = 'POST',
-    url = 'https://api.openai.com/v1/chat/completions',
+    url = 'https://api.openai.com/v1/' .. endpoint,
     body = body
   }, handle_raw, handle_error)
 end

@@ -13,16 +13,18 @@ end
 
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for PaLM endpoint
-function M.request_completion(handlers, params)
-  local model = 'chat-bison-001'
-  local method = 'generateMessage'
+---@param options { model: string, method: string }
+function M.request_completion(handlers, params, _options)
+  local options = _options or {}
+
+  local model = options.model or 'chat-bison-001'
+  local method = options.method or 'generateMessage'
   local extract = extract_message_response
 
-  if params.model == 'text-bison-001' then
+  if model == 'text-bison-001' then
     model = params.model
     method = 'generateText'
     extract = extract_text_response
-    params.model = nil
   end
 
   local function handle_raw(raw_data)
