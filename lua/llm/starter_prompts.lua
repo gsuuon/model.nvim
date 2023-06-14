@@ -22,6 +22,24 @@ local gpt = {
   end
 }
 
+local ada = {
+  provider = openai,
+  options = {
+    endpoint = 'completions'
+  },
+  params = {
+    model = 'text-ada-001',
+    max_tokens = 100,
+    top_p = 0.1
+  },
+  builder = function(input)
+    return {
+      prompt = input,
+      stream = true
+    }
+  end
+}
+
 --- Gets the relevant api route from an Open API schema url by asking gpt and parsing the result.
 --- Callback resolves with:
 --- {
@@ -120,6 +138,7 @@ end
 
 return {
   gpt = gpt,
+  ada = ada,
   palm = {
     provider = palm,
     builder = function(input)
