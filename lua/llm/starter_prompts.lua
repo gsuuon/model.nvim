@@ -345,7 +345,7 @@ return {
                 content =
                   "API schema url: " .. schema_url
                   .. "\n\nAPI description: " .. route.schema.description
-                  .. "\n\nRelevant Open API route schema:\n" .. vim.json.encode(route.relevant_route)
+                  .. "\n\nRelevant path:\n" .. vim.json.encode(route.relevant_route)
               },
               {
                 role = 'user',
