@@ -181,7 +181,7 @@ return {
       model = 'gpt-3.5-turbo-0301'
     },
     builder = function(input, context)
-      local surrounding_lines_count = 20
+      local surrounding_lines_count = 10
 
       local text_before = util.string.join_lines(util.table.slice(context.before, -surrounding_lines_count))
       local text_after = util.string.join_lines(util.table.slice(context.after, 0, surrounding_lines_count))
