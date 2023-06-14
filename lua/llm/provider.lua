@@ -9,10 +9,11 @@ local M = {}
 ---@field transform fun(string): string Transforms response text after completion finishes
 ---@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to "append".
 ---@field hl_group? string Highlight group of active response
----@field params? any Additional parameters to add to request body - PromptBuilder data takes priority over these parameters
+---@field params? table Additional parameters to add to request body - PromptBuilder data takes priority over these parameters
+---@field options? table Options for the provider
 
 ---@class Provider
----@field request_completion fun(handler: StreamHandlers, params?: table): function Request a completion stream from provider, returning a cancel callback
+---@field request_completion fun(handler: StreamHandlers, params?: table, options?: table): function Request a completion stream from provider, returning a cancel callback
 
 ---@alias PromptBuilder fun(input: string, context: Context): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
 
@@ -207,7 +208,7 @@ local function start_prompt(input, prompt, handlers, context)
       built_params
     )
 
-    return prompt.provider.request_completion(handlers, params)
+    return prompt.provider.request_completion(handlers, params, prompt.options)
   end
 
   if type(prompt_built) == 'function' then
