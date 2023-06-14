@@ -59,13 +59,16 @@ function M.memo(fn)
 end
 
 --- Coroutine wrapper to avoid deeply nested callbacks. Provide `resolve` as the callback fn,
---- and use `wait` to wait for the callback to be called. Usage example:
+--- and use `wait` to wait for the callback to be called. Optionally provide a callback for the
+--- return value of the corouting. Usage example:
 ---   util.async(function(wait, resolve)
 ---    local a = wait(callback_a(arg_a, resolve))
 ---    local b = wait(callback_b(a, resolve))
----   end)
---- @param fn fun(wait: fun(any): any, resolve: fun(any): any)
-function M.async(fn)
+---    return b
+---   end, outer_callback)
+--- @param fn fun(wait: (fun(any): any), resolve: (fun(any): any)): any))
+--- @param callback fun(result: any)
+function M.async(fn, callback)
   local co = coroutine.create(fn)
 
   local function wait(cb_fn)
@@ -73,7 +76,15 @@ function M.async(fn)
   end
 
   local function resolve(result)
-    coroutine.resume(co, result)
+    local success, yield_result = coroutine.resume(co, result)
+
+    if not success then
+      error(yield_result)
+    end
+
+    if coroutine.status(co) == 'dead' and callback ~= nil then
+      callback(yield_result)
+    end
   end
 
   coroutine.resume(co, wait, resolve)
