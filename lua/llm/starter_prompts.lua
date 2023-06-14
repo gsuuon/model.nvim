@@ -22,6 +22,12 @@ local gpt = {
   end
 }
 
+--- Gets the relevant api route from an Open API schema url by asking gpt and parsing the result.
+--- Callback resolves with:
+--- {
+---   schema: table,
+---   relevant_route: table
+--- }
 local function api_route_for(schema_url, task, callback)
   local function extract_schema_descripts(url, cb)
     -- TODO extract component references
@@ -295,7 +301,9 @@ return {
       }
     end,
   },
-  ['openapi'] = { -- expects schema url as a command arg
+  ['openapi'] = {
+    -- Extract the relevant path from an OpenAPI spec and include in the gpt request.
+    -- Expects schema url as a command arg.
     provider = openai,
     builder = function(input, context)
       if context.args == nil or #context.args == 0 then
