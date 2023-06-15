@@ -5,6 +5,11 @@ local M = {}
 ---@field filepath string
 ---@field name string
 
+---@class Item
+---@field content string
+---@field id string
+---@field meta? table
+
 local function get_git_root()
   return vim.fn.systemlist('git rev-parse --show-toplevel')[1]
 end
@@ -76,6 +81,10 @@ local function normalize_function_item_filepath_to_store(function_item)
   }
 end
 
+--- Add items to the git-local vector store. Expects store to be initialized.
+--- Item content will be embedded with openai ada. Items that match existing id and content
+--- won't be embedded again.
+---@param items Item[] items
 function M.add_items(items)
   vim.cmd([[py store.update_store_and_save(]] .. to_python(items) .. [[,s)]])
 end
