@@ -233,18 +233,68 @@ def path_relative_to_store(filepath, store: Store):
         os.path.dirname(store['abs_path'])
     ))
 
-def update_with_files_and_save(store, files_root=None, files_glob=None, sync=False):
+class File(TypedDict):
+    id: str # filepath relative to project root, eg: project/myfile.py
+    content: str
+
+class FileChunk(TypedDict):
+    id: str # filepath and starting line number of the file chunk, eg: project/myfile.py:12
+    content: str # a chunk of the file's contents
+
+def chunk_by_newlines(file: File) -> List[FileChunk]:
+    "Chunks a file by '\n\n' separator. Does not include empty chunks."
+
+    file_chunks: List[FileChunk] = []
+
+    current_chunk_content = ''
+    current_chunk_start_line = 0
+
+    lines = file["content"].split('\n')
+
+    for line_number, line in enumerate(lines):
+        if current_chunk_content != '':
+            current_chunk_content += '\n'
+
+        current_chunk_content += line
+
+        if not line:
+            if current_chunk_content:
+                file_chunks.append(FileChunk(
+                    id=f"{file['id']}:{current_chunk_start_line}",
+                    content=current_chunk_content
+                ))
+            current_chunk_content = ''
+            current_chunk_start_line = line_number + 1
+
+    if current_chunk_content:
+        file_chunks.append(FileChunk(
+            id=f"{file['id']}:{len(lines)}",
+            content=current_chunk_content
+        ))
+
+    return file_chunks
+
+def update_with_files_and_save(store, files_root=None, files_glob=None, sync=False, chunked=True):
     files = ingest_files(files_root or '.', files_glob or '**/*')
 
     # Convert ids (paths) from relative to cwd to relative to store
     for file in files:
         file['id'] = path_relative_to_store(file['id'], store)
 
-    return update_store_and_save(
-        files,
-        store,
-        sync=sync
-    )
+    if chunked:
+        items = [ chunk for file in files for chunk in chunk_by_newlines(file) ]
+
+        return update_store_and_save(
+            items,
+            store,
+            sync=sync
+        )
+    else:
+        return update_store_and_save(
+            files,
+            store,
+            sync=sync
+        )
 
 def query_store(prompt: str, count: int, store: Store, filter=None):
     assert store['vectors'] is not None
