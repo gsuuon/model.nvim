@@ -237,9 +237,16 @@ class File(TypedDict):
     id: str # filepath relative to project root, eg: project/myfile.py
     content: str
 
+
+class FileChunkMeta(TypedDict):
+    filepath: str
+    start_line: int
+    chunk_idx: int
+
 class FileChunk(TypedDict):
     id: str # filepath and starting line number of the file chunk, eg: project/myfile.py:12
     content: str # a chunk of the file's contents
+    meta: FileChunkMeta
 
 def chunk_by_newlines(file: File, min_chunk: int = 500) -> List[FileChunk]:
     "Chunks a file by '\n\n' separator. Does not include empty chunks."
@@ -260,7 +267,12 @@ def chunk_by_newlines(file: File, min_chunk: int = 500) -> List[FileChunk]:
         if not line and len(current_chunk_content) > min_chunk:
             file_chunks.append(FileChunk(
                 id=f"{file['id']}:{current_chunk_start_line}",
-                content=current_chunk_content
+                content=current_chunk_content,
+                meta=FileChunkMeta(
+                    filepath=file['id'],
+                    start_line=current_chunk_start_line,
+                    chunk_idx=len(file_chunks)
+                )
             ))
             current_chunk_content = ''
             current_chunk_start_line = line_number + 2 # +1: lines begin at 1, +1: start is now next line
@@ -268,7 +280,12 @@ def chunk_by_newlines(file: File, min_chunk: int = 500) -> List[FileChunk]:
     if current_chunk_content:
         file_chunks.append(FileChunk(
             id=f"{file['id']}:{len(lines)}",
-            content=current_chunk_content
+            content=current_chunk_content,
+            meta=FileChunkMeta(
+                filepath=file['id'],
+                start_line=current_chunk_start_line,
+                chunk_idx=len(file_chunks)
+            )
         ))
 
     return file_chunks
