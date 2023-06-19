@@ -89,8 +89,8 @@ function M.add_items(items)
   vim.cmd([[py store.update_store_and_save(]] .. to_python(items) .. [[,s)]])
 end
 
-function M.add_files(root_path)
-  vim.cmd([[py store.update_with_files_and_save(s, files_root=']].. root_path .. [[')]])
+function M.add_files(root_path, glob)
+  vim.cmd([[py store.update_with_files_and_save(s, files_root=']].. root_path .. [[', files_glob=']] .. glob ..[[')]])
 end
 
 function M.add_lua_functions(glob)

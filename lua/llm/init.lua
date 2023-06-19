@@ -56,6 +56,7 @@ function M.commands(opts)
     nargs = '+',
     desc = 'Request multiple prompts at the same time',
     complete = function(arglead)
+      -- TODO dry with :Llm
       local prompt_names = {}
 
       for k, _ in util.module.autopairs(opts.prompts) do
@@ -181,13 +182,38 @@ function M.commands(opts)
   local handle_llm_store = {
     query = function(args)
       local query_prompt = args.args:sub(7)
+
+      store.load()
+
       -- TODO figure out sane defaults for count and similarity threshold
       local results = store.query_store(query_prompt, 5, 0.5)
+
       vim.notify(vim.inspect(results))
     end,
-    init = function()
-      store.init()
-    end
+    load = function()
+      store.load()
+    end,
+    ['add files'] = function(args)
+      local root_path = args.fargs[2]
+      local glob_pattern = args.fargs[3]
+
+      if root_path == nil or #root_path == 0 then
+        root_path = '.'
+      end
+
+      if glob_pattern == nil or #glob_pattern == 0 then
+        glob_pattern = '*'
+      end
+
+      store.load()
+
+      store.add_files(root_path, glob_pattern)
+    end,
+    ['show known ids'] = function()
+      store.load()
+
+      util.show(store.get_known_ids())
+    end,
   }
 
   vim.api.nvim_create_user_command('LlmStore', function(a)
@@ -205,7 +231,14 @@ function M.commands(opts)
       force = true,
       nargs='+',
       complete = function(arglead)
-        return vim.fn.matchfuzzy(vim.tbl_keys(handle_llm_store), arglead)
+        local commands = vim.tbl_map(
+          function(key)
+            return key:gsub(" ", "\\ ")
+          end,
+          vim.tbl_keys(handle_llm_store)
+        )
+        if #arglead == 0 then return commands end
+        return vim.fn.matchfuzzy(commands, arglead)
       end
     })
 end

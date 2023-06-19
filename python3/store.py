@@ -237,7 +237,6 @@ class File(TypedDict):
     id: str # filepath relative to project root, eg: project/myfile.py
     content: str
 
-
 class FileChunkMeta(TypedDict):
     filepath: str
     start_line: int
