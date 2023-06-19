@@ -241,13 +241,13 @@ class FileChunk(TypedDict):
     id: str # filepath and starting line number of the file chunk, eg: project/myfile.py:12
     content: str # a chunk of the file's contents
 
-def chunk_by_newlines(file: File) -> List[FileChunk]:
+def chunk_by_newlines(file: File, min_chunk: int = 500) -> List[FileChunk]:
     "Chunks a file by '\n\n' separator. Does not include empty chunks."
 
     file_chunks: List[FileChunk] = []
 
     current_chunk_content = ''
-    current_chunk_start_line = 0
+    current_chunk_start_line = 1
 
     lines = file["content"].split('\n')
 
@@ -257,14 +257,13 @@ def chunk_by_newlines(file: File) -> List[FileChunk]:
 
         current_chunk_content += line
 
-        if not line:
-            if current_chunk_content:
-                file_chunks.append(FileChunk(
-                    id=f"{file['id']}:{current_chunk_start_line}",
-                    content=current_chunk_content
-                ))
+        if not line and len(current_chunk_content) > min_chunk:
+            file_chunks.append(FileChunk(
+                id=f"{file['id']}:{current_chunk_start_line}",
+                content=current_chunk_content
+            ))
             current_chunk_content = ''
-            current_chunk_start_line = line_number + 1
+            current_chunk_start_line = line_number + 2 # +1: lines begin at 1, +1: start is now next line
 
     if current_chunk_content:
         file_chunks.append(FileChunk(
