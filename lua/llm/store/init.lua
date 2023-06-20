@@ -1,3 +1,4 @@
+local util = require "llm.util"
 local M = {}
 
 ---@class FunctionItem
@@ -43,7 +44,7 @@ local function escape_quotes(str)
   return [[r"""]] .. str:gsub([["""]], [[\"\"\"]]) .. [["""]]
 end
 
-M.log = {}
+M.log = util.queue(50)
 
 ---@return { id: string, content: string, similarity: number }[]
 function M.query_store(prompt, count, similarity)
@@ -61,8 +62,7 @@ function M.query_store(prompt, count, similarity)
     )
   end
 
-  -- TODO limit log size
-  table.insert(M.log, {
+  M.log.add({
     query = prompt,
     results = results
   })

@@ -63,6 +63,24 @@ function M.memo(fn)
   end
 end
 
+function M.queue(size)
+  local items = {}
+
+  return {
+    add = function(item)
+      if #items >= size then
+        table.remove(items, 1)
+      end
+
+      table.insert(items, item)
+    end,
+    get = function(idx)
+      return items[idx]
+    end,
+    items = items
+  }
+end
+
 --- Coroutine wrapper to avoid deeply nested callbacks. Provide `resolve` as the callback fn,
 --- and use `wait` to wait for the callback to be called. Optionally provide a callback for the
 --- return value of the corouting. Usage example:

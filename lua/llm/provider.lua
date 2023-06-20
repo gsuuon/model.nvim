@@ -184,10 +184,10 @@ local function build_request_handle_params(segment_mode, want_visual_selection, 
   }
 end
 
-M.log = {}
+M.log = util.queue(50)
 
 local function add_log(request, response, provider_name)
-  table.insert(M.log, {
+  M.log.add({
     request = request,
     response = response,
     provider = provider_name
