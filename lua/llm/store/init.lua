@@ -90,7 +90,7 @@ function M.add_items(items)
 end
 
 function M.add_files(root_path, glob)
-  vim.cmd([[py store.update_with_files_and_save(s, files_root=']].. root_path .. [[', files_glob=']] .. glob ..[[')]])
+  return vim.fn.py3eval([[store.update_with_files_and_save(s, files_root=']].. root_path .. [[', files_glob=']] .. glob ..[[')]])
 end
 
 function M.add_lua_functions(glob)

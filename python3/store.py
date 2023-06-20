@@ -218,14 +218,9 @@ def update_store(
 def update_store_and_save(items, store, sync=False):
     updated, token_counts = update_store(items, store, sync)
 
-    if len(updated) > 0:
-        print("Saving items:")
-        print(list(zip(updated, token_counts)))
-        save_store(store)
-    else:
-        print("No new or updated items")
+    if len(updated) > 0: save_store(store)
 
-    return updated
+    return list(zip(updated, token_counts))
 
 def path_relative_to_store(filepath, store: Store):
     return normalize_filepath(os.path.relpath(
