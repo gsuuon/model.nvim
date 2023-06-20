@@ -3,6 +3,8 @@ local util = require('llm.util')
 
 local M = {}
 
+M.name = 'palm'
+
 local function extract_message_response(candidate)
   return candidate.content
 end

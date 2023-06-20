@@ -4,6 +4,8 @@ local provider_util = require('llm.providers.util')
 
 local M = {}
 
+M.name = 'openai'
+
 local function extract_chat_data(item)
   local data = util.json.decode(item)
 
@@ -152,5 +154,6 @@ function M.prompt.with_system_message(text)
     return body
   end
 end
+
 
 return M

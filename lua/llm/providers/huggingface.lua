@@ -4,6 +4,8 @@ local provider_util = require('llm.providers.util')
 
 local M = {}
 
+M.name = 'huggingface'
+
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for OpenAI endpoint
 function M.request_completion(handlers, params)

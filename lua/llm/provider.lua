@@ -13,6 +13,7 @@ local M = {}
 ---@field options? table Options for the provider
 
 ---@class Provider
+---@field name? string Name of the provider for logging
 ---@field request_completion fun(handler: StreamHandlers, params?: table, options?: table): function Request a completion stream from provider, returning a cancel callback
 
 ---@alias PromptBuilder fun(input: string, context: Context): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
@@ -183,6 +184,16 @@ local function build_request_handle_params(segment_mode, want_visual_selection, 
   }
 end
 
+M.log = {}
+
+local function add_log(request, response, provider_name)
+  table.insert(M.log, {
+    request = request,
+    response = response,
+    provider = provider_name
+  })
+end
+
 ---@param input string | string[]
 ---@param prompt Prompt
 ---@param handlers StreamHandlers
@@ -208,7 +219,18 @@ local function start_prompt(input, prompt, handlers, context)
       built_params
     )
 
-    return prompt.provider.request_completion(handlers, params, prompt.options)
+    return prompt.provider.request_completion(
+      {
+        on_error = handlers.on_error,
+        on_partial = handlers.on_partial,
+        on_finish = function(response, reason)
+          add_log(params, response, prompt.provider.name)
+          handlers.on_finish(response, reason)
+        end
+      },
+      params,
+      prompt.options
+    )
   end
 
   if type(prompt_built) == 'function' then
