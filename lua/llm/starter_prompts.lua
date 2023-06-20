@@ -101,10 +101,12 @@ local function gpt_ask_relevant_path(schema, task, callback)
 
     local gpt_response = wait(provider.complete(gpt_consistent, gpt_prompt, {}, resolve))
 
-    local route, err = util.json.decode(gpt_response)
+    if not gpt_response.success then error(gpt_response.error) end
+
+    local route, err = util.json.decode(gpt_response.content)
 
     if route == nil then
-      util.eshow('Failed to parse gpt response as json:\n' .. gpt_response)
+      util.eshow('Failed to parse gpt response as json:\n' .. gpt_response.content)
       util.eshow(err)
       error('Unexpected gpt response')
     end

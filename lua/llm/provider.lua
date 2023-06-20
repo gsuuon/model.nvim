@@ -271,11 +271,18 @@ function M.complete(prompt, input, context, callback)
     on_partial = function() end,
 
     on_finish = function(complete_text)
-      callback(complete_text)
+      callback({
+        success = true,
+        content = complete_text
+      })
     end,
 
     on_error = function(data, label)
-      util.eshow(data, 'stream error ' .. (label or ''))
+      callback({
+        success = false,
+        error = data,
+        label = label
+      })
     end
   }, context)
 
