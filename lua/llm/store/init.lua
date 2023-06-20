@@ -43,19 +43,31 @@ local function escape_quotes(str)
   return [[r"""]] .. str:gsub([["""]], [[\"\"\"]]) .. [["""]]
 end
 
+M.log = {}
+
 ---@return { id: string, content: string, similarity: number }[]
 function M.query_store(prompt, count, similarity)
+  local results
+
   if similarity == nil then
-    return vim.fn.py3eval(
+    results = vim.fn.py3eval(
       [[store.query_store(]] .. escape_quotes(prompt) .. [[, ]] .. count .. [[, s)]]
     )
   else
     local filter = [[lambda item, similarity: similarity > ]] .. similarity
 
-    return vim.fn.py3eval(
+    results = vim.fn.py3eval(
       [[store.query_store(]] .. escape_quotes(prompt) .. [[, ]] .. count .. [[, s, filter=]] .. filter ..[[)]]
     )
   end
+
+  -- TODO limit log size
+  table.insert(M.log, {
+    query = prompt,
+    results = results
+  })
+
+  return results
 end
 
 --- Assumes json has been imported in python repl
