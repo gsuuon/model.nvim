@@ -70,6 +70,7 @@ function M.directory_structure(filepaths)
   return draw_diagram(directory, {}, '')
 end
 
+---@param exclude_untracked boolean
 function M.git_files(exclude_untracked)
   if exclude_untracked then
     return vim.fn.systemlist({'git', 'ls-files'})
