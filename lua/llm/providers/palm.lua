@@ -13,6 +13,21 @@ local function extract_text_response(candidate)
   return candidate.output
 end
 
+M.default_prompt = {
+  provider = M,
+  builder = function(input)
+    return {
+      prompt = {
+        messages = {
+          {
+            content = input
+          }
+        }
+      }
+    }
+  end
+}
+
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for PaLM endpoint
 ---@param options { model: string, method: string }

@@ -112,6 +112,12 @@ function M.initialize(opts)
     })
 end
 
+M.default_prompt = {
+  provider = M,
+  builder = M.default_builder,
+  params = M.default_request_params
+}
+
 M.prompt = {}
 
 function M.prompt.input_as_message(input)
