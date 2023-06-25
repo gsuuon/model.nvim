@@ -49,6 +49,17 @@ llm.nvim comes with some [starter prompts](./lua/llm/starter_prompts.lua) and ma
 
 <details>
 <summary>
+Select response
+</summary>
+
+https://github.com/gsuuon/llm.nvim/assets/6422188/fd5aca13-979f-4bcf-8570-f935fdebbf03
+
+</details>
+
+- `:LlmSelect` — Select the response under the cursor.  
+
+<details>
+<summary>
 Delete response
 </summary>
 
