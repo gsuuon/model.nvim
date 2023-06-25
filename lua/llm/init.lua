@@ -122,6 +122,37 @@ function M.commands(opts)
     }
   )
 
+  vim.api.nvim_create_user_command('LlmSelect',
+    function()
+      local matches = segment.query(util.cursor.position())
+
+      if #matches < 0 then return end
+
+      local details = matches[1].details()
+
+      local start = {
+        row = details.row,
+        col = details.col
+      }
+
+      local stop = {
+        row = details.details.end_row,
+        col = details.details.end_col
+      }
+
+      local visual_select_keys =
+        util.cursor.place_with_keys(start)
+        .. 'v'
+        .. util.cursor.place_with_keys(stop)
+
+      vim.api.nvim_feedkeys(visual_select_keys, 'n', true)
+    end,
+    {
+      force = true,
+      desc = 'Select the completion under the cursor'
+    }
+  )
+
   vim.api.nvim_create_user_command('Llm', command_request_completion, {
     range = true,
     desc = 'Request completion of selection',

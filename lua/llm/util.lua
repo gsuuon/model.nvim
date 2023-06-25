@@ -309,6 +309,16 @@ function M.cursor.position()
   }
 end
 
+function M.cursor.place_with_keys(position)
+  local keys = position.row + 1 .. 'G0'
+
+  if position.col > 0 then
+    keys = keys .. position.col .. 'l'
+  end
+
+  return keys
+end
+
 M.position = {}
 
 -- b is less than a
