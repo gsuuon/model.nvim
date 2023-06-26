@@ -40,6 +40,98 @@ local ada = {
   end
 }
 
+local function code_builder(input, context)
+  local surrounding_lines_count = 30
+
+  local text_before = util.string.join_lines(util.table.slice(context.before, -surrounding_lines_count))
+  local text_after = util.string.join_lines(util.table.slice(context.after, 0, surrounding_lines_count))
+
+  local instruction = 'Replace the token <@@> with valid code. Respond only with code, never respond with an explanation, never respond with a markdown code block containing the code. Generate only code that is meant to replace the token, do not regenerate code in the context.'
+
+  local fewshot = {
+    {
+      role = 'user',
+      content = 'The code:\n```\nfunction greet(name) { console.log("Hello " <@@>) }\n```\n\nExisting text at <@@>:\n```+ nme```\n'
+    },
+    {
+      role = 'assistant',
+      content = '+ name'
+    }
+  }
+
+  local content = 'The code:\n```\n' .. text_before .. '<@@>' .. text_after .. '\n```\n'
+
+  if #input > 0 then
+    content = content ..  '\n\nExisting text at <@@>:\n```' .. input .. '```\n'
+  end
+
+  if #context.args > 0 then
+    content = content .. context.args
+  end
+
+  local messages = {
+    {
+      role = 'user',
+      content = content
+    }
+  }
+
+  return {
+    instruction = instruction,
+    fewshot = fewshot,
+    messages = messages,
+  }
+end
+
+local function adapt_palm(standard_prompt)
+  local function palm_message(msg)
+    return {
+      author = msg.role == 'user' and '0' or '1',
+      content = msg.content
+    }
+  end
+
+  local examples = {}
+
+  local current_example = {}
+  for _, example in ipairs(standard_prompt.fewshot) do
+    if example.role == 'user' then
+      current_example.input = palm_message(example)
+    else
+      current_example.output = palm_message(example)
+    end
+
+    if current_example.input and current_example.output then
+      table.insert(examples, current_example)
+      current_example = {}
+    end
+  end
+
+  return {
+    prompt = {
+      context = standard_prompt.instruction,
+      examples = examples,
+      messages = vim.tbl_map(
+        palm_message,
+        standard_prompt.messages
+      )
+    }
+  }
+end
+
+local function adapt_openai(standard_prompt)
+  return {
+    messages = util.table.flatten({
+      {
+        role = 'system',
+        content = standard_prompt.instruction
+      },
+      standard_prompt.fewshot,
+      standard_prompt.messages
+    }),
+  }
+end
+
 local function extract_schema_descripts(url, cb)
   -- TODO extract component references
   util.async(function(wait, resolve)
@@ -74,29 +166,40 @@ local function extract_schema_descripts(url, cb)
 end
 
 local function extract_markdown_code(text)
-  if not text:match('```') then
-    return text
-  end
-
-  local blocks = util.string.extract_markdown_code_blocks(text)
-
-  if #blocks == 1 then
-    return blocks[1].code or blocks[1].text
-  end
-
-  local code_blocks = vim.tbl_filter(function(block)
-    if block.text ~= nil then
-      vim.notify(block.text)
+  local function _extract_markdown_code(text)
+    if not text:match('```') then
+      return text
     end
-    return block.code ~= nil
-  end, blocks)
 
-  return table.concat(
-    vim.tbl_map(function (block)
-      return block.code
-    end, code_blocks),
-    '\n'
-  )
+    local blocks = util.string.extract_markdown_code_blocks(text)
+
+    if #blocks == 0 then -- we may get a code block with no newlines between ```'s
+      return text:match('^```(.+)```$')
+    elseif #blocks == 1 then
+      return blocks[1].code or blocks[1].text
+    end
+
+    local code_blocks = vim.tbl_filter(function(block)
+      if block.text ~= nil then
+        vim.notify(block.text)
+      end
+      return block.code ~= nil
+    end, blocks)
+
+    return table.concat(
+      vim.tbl_map(function (block)
+        return block.code
+      end, code_blocks),
+      '\n'
+    )
+  end
+
+  local extracted = _extract_markdown_code(text)
+  if extracted == '' then
+    return text
+  else
+    return extracted
+  end
 end
 
 --- Gets the relevant api route from an Open API schema url by asking gpt and parsing the result.
@@ -207,42 +310,7 @@ return {
       model = 'gpt-3.5-turbo-0301'
     },
     builder = function(input, context)
-      local surrounding_lines_count = 30
-
-      local text_before = util.string.join_lines(util.table.slice(context.before, -surrounding_lines_count))
-      local text_after = util.string.join_lines(util.table.slice(context.after, 0, surrounding_lines_count))
-
-      local messages = {
-        {
-          role = 'system',
-          content = 'Replace the token <@@> with valid code. Respond only with code, never respond with an explanation, never respond with a markdown code block containing the code. Generate only code that is meant to replace the token, do not regenerate code in the context.'
-        },
-        {
-          role = 'user',
-          content = 'The code:\n```\nfunction greet(name) { console.log("Hello " <@@>) }\n```\n\nExisting text at <@@>:\n```+ nme```\n'
-        },
-        {
-          role = 'assistant',
-          content = '+ name'
-        }
-      }
-
-      local content = 'The code:\n```\n' .. text_before .. '<@@>' .. text_after .. '\n```\n'
-
-      if #input > 0 then
-        content = content ..  '\n\nExisting text at <@@>:\n```' .. input .. '```\n'
-      end
-
-      if #context.args > 0 then
-        content = content .. context.args
-      end
-
-      table.insert(messages, {
-        role = 'user',
-        content = content
-      })
-
-      return { messages = messages }
+      return adapt_openai(code_builder(input, context))
     end,
     transform = extract_markdown_code
   },
@@ -280,6 +348,14 @@ return {
 
       return { messages = messages }
     end
+  },
+  ['palm code'] = {
+    provider = palm,
+    mode = llm.mode.INSERT_OR_REPLACE,
+    builder = function(input, context)
+      return adapt_palm(code_builder(input, context))
+    end,
+    transform = extract_markdown_code
   },
   instruct = {
     provider = openai,

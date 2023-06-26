@@ -111,7 +111,7 @@ function M.table.map_to_array(table, fn)
   return result
 end
 
--- Gets the 0-indexed subslice of a list table
+--- Gets the 0-indexed subslice of a list table
 function M.table.slice(tbl, start, stop)
   local function idx(x)
     if x >= 0 then
@@ -132,6 +132,25 @@ function M.table.slice(tbl, start, stop)
 
   for i = start_idx + 1, stop_idx do
     table.insert(results, tbl[i])
+  end
+
+  return results
+end
+
+--- Flattens a list containing either nested lists or objects.
+--- Unlike vim.tbl_flatten, works when lists contain objects (tables) and
+--- only flattens up to 1 level.
+function M.table.flatten(tbls)
+  local results = {}
+
+  for _, x in ipairs(tbls) do
+    if type(x) == 'table' and vim.tbl_islist(x) then
+      for _, item in ipairs(x) do
+        table.insert(results, item)
+      end
+    else
+      table.insert(results, x)
+    end
   end
 
   return results
