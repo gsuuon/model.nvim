@@ -44,12 +44,15 @@ local function get_prompt_names()
   end
 
   -- FIXME these can shadow
-  return vim.tbl_flatten({
-    vim.tbl_keys(get_buffer_user()),
-    global_user,
-    plugin_prompt_names(get_buffer_plugin()),
-    plugin_prompt_names(get_global_plugin()),
-  })
+  return vim.tbl_map(
+    function(name) return name:gsub(' ', '\\ ') end,
+    vim.tbl_flatten({
+      vim.tbl_keys(get_buffer_user()),
+      global_user,
+      plugin_prompt_names(get_buffer_plugin()),
+      plugin_prompt_names(get_global_plugin()),
+    })
+  )
 end
 
 local function match_plugin_prompt_name(prompt_name)
