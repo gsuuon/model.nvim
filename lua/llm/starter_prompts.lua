@@ -73,6 +73,32 @@ local function extract_schema_descripts(url, cb)
   end, cb)
 end
 
+local function extract_markdown_code(text)
+  if not text:match('```') then
+    return text
+  end
+
+  local blocks = util.string.extract_markdown_code_blocks(text)
+
+  if #blocks == 1 then
+    return blocks[1].code or blocks[1].text
+  end
+
+  local code_blocks = vim.tbl_filter(function(block)
+    if block.text ~= nil then
+      vim.notify(block.text)
+    end
+    return block.code ~= nil
+  end, blocks)
+
+  return table.concat(
+    vim.tbl_map(function (block)
+      return block.code
+    end, code_blocks),
+    '\n'
+  )
+end
+
 --- Gets the relevant api route from an Open API schema url by asking gpt and parsing the result.
 --- Callback resolves with:
 --- {
@@ -101,10 +127,12 @@ local function gpt_ask_relevant_path(schema, task, callback)
 
     local gpt_response = wait(provider.complete(gpt_consistent, gpt_prompt, {}, resolve))
 
-    local route, err = util.json.decode(gpt_response)
+    if not gpt_response.success then error(gpt_response.error) end
+
+    local route, err = util.json.decode(gpt_response.content)
 
     if route == nil then
-      util.eshow('Failed to parse gpt response as json:\n' .. gpt_response)
+      util.eshow('Failed to parse gpt response as json:\n' .. gpt_response.content)
       util.eshow(err)
       error('Unexpected gpt response')
     end
@@ -179,7 +207,7 @@ return {
       model = 'gpt-3.5-turbo-0301'
     },
     builder = function(input, context)
-      local surrounding_lines_count = 10
+      local surrounding_lines_count = 30
 
       local text_before = util.string.join_lines(util.table.slice(context.before, -surrounding_lines_count))
       local text_after = util.string.join_lines(util.table.slice(context.after, 0, surrounding_lines_count))
@@ -187,7 +215,7 @@ return {
       local messages = {
         {
           role = 'system',
-          content = 'Replace the token <@@> with valid code. Respond only with code, never respond with an explanation, never respond with a markdown code block containing the code.'
+          content = 'Replace the token <@@> with valid code. Respond only with code, never respond with an explanation, never respond with a markdown code block containing the code. Generate only code that is meant to replace the token, do not regenerate code in the context.'
         },
         {
           role = 'user',
@@ -213,6 +241,42 @@ return {
         role = 'user',
         content = content
       })
+
+      return { messages = messages }
+    end,
+    transform = extract_markdown_code
+  },
+  ['ask code'] = {
+    provider = openai,
+    mode = llm.mode.BUFFER,
+    params = {
+      temperature = 0.2,
+      max_tokens = 1000,
+      model = 'gpt-3.5-turbo-0301'
+    },
+    builder = function(input, context)
+      local surrounding_lines_count = 10
+
+      local text_before = util.string.join_lines(util.table.slice(context.before, -surrounding_lines_count))
+      local text_after = util.string.join_lines(util.table.slice(context.after, 0, surrounding_lines_count))
+
+      local messages = {
+        {
+          role = 'user',
+          content = vim.inspect({
+            text_after = text_after,
+            text_before = text_before,
+            text_selected = context.selection ~= nil and input or nil
+          })
+        }
+      }
+
+      if #context.args > 0 then
+        table.insert(messages, {
+          role = 'user',
+          content = context.args
+        })
+      end
 
       return { messages = messages }
     end
@@ -275,45 +339,39 @@ return {
       }
     end,
   },
-  ['extract code'] = {
-    provider = openai,
-    builder = function (input)
-      return {
-        messages = {
-          {
-            role = 'user',
-            content = input
-          }
-        }
-      }
-    end,
-    transform = function(text)
-      local blocks =  util.string.extract_markdown_code_blocks(text)
-      local code = vim.tbl_filter(function(block)
-        if block.text ~= nil then
-          vim.notify(block.text)
-        end
-        return block.code ~= nil
-      end, blocks)
-
-      return table.concat(
-        vim.tbl_map(function (block)
-          return block.code
-        end, code),
-        '\n'
-      )
-    end
-  },
   ['commit message'] = {
     provider = openai,
     mode = llm.mode.INSERT,
     builder = function()
       local git_diff = vim.fn.system {'git', 'diff', '--staged'}
+
+      if not git_diff:match('^diff') then
+        vim.notify(vim.fn.system('git status'), vim.log.levels.ERROR)
+        return
+      end
+
       return {
         messages = {
           {
             role = 'user',
             content = 'Write a terse commit message according to the Conventional Commits specification. Try to stay below 80 characters total. Staged git diff: ```\n' .. git_diff .. '\n```'
+          }
+        }
+      }
+    end,
+  },
+  ['commit review'] = {
+    provider = openai,
+    mode = llm.mode.BUFFER,
+    builder = function()
+      local git_diff = vim.fn.system {'git', 'diff', '--staged'}
+      -- TODO extract relevant code from store
+
+      return {
+        messages = {
+          {
+            role = 'user',
+            content = 'Review this code change: ```\n' .. git_diff .. '\n```'
           }
         }
       }
