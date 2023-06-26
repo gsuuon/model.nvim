@@ -50,17 +50,17 @@ local function command_request_multi_completion_streams(cmd_params)
 end
 
 local function setup_commands()
-  local function flash(count, wait, segments, highlight, after)
+  local function flash(count, wait, seg, highlight, after)
     vim.defer_fn(function ()
       if count == 0 then after() return end
 
       if count % 2 == 0 then
-        for _, seg in ipairs(segments) do seg.highlight(highlight) end
+        seg.highlight(highlight)
       else
-        for _, seg in ipairs(segments) do seg.clear_hl() end
+        seg.clear_hl()
       end
 
-      return flash(count - 1, wait, segments, highlight, after)
+      return flash(count - 1, wait, seg, highlight, after)
     end, wait)
   end
 
@@ -74,18 +74,16 @@ local function setup_commands()
 
   vim.api.nvim_create_user_command('LlmCancel',
     function()
-      local matches = segment.query(util.cursor.position())
+      local seg = segment.query(util.cursor.position())
 
-      for _, seg in ipairs(matches) do
-        seg.highlight('Special')
+      seg.highlight('Special')
 
-        local cancel = seg.data.cancel
+      local cancel = seg.data.cancel
 
-        if cancel ~= nil then
-          cancel()
-        else
-          vim.notify('Not cancellable', vim.log.levels.WARN)
-        end
+      if cancel ~= nil then
+        cancel()
+      else
+        vim.notify('Not cancellable', vim.log.levels.WARN)
       end
     end,
     {
@@ -97,13 +95,10 @@ local function setup_commands()
 
   vim.api.nvim_create_user_command('LlmDelete',
     function()
-      local matches = segment.query(util.cursor.position())
-
-      flash(6, 80, matches, 'DiffDelete',
-        function()
-          for _, seg in ipairs(matches) do seg.delete() end
-        end
-      )
+      local seg = segment.query(util.cursor.position())
+      if seg then
+        flash(6, 80, seg, 'DiffDelete', function() seg.delete() end)
+      end
     end,
     {
       range = true,
@@ -114,9 +109,10 @@ local function setup_commands()
 
   vim.api.nvim_create_user_command('LlmShow',
     function()
-      local matches = segment.query(util.cursor.position())
-
-      flash(10, 80, matches, 'DiffChange', util.noop)
+      local seg = segment.query(util.cursor.position())
+      if seg then
+        flash(10, 80, seg, 'DiffChange', util.noop)
+      end
     end,
     {
       range = true,
@@ -127,11 +123,11 @@ local function setup_commands()
 
   vim.api.nvim_create_user_command('LlmSelect',
     function()
-      local matches = segment.query(util.cursor.position())
+      local seg = segment.query(util.cursor.position())
 
-      if #matches < 0 then return end
+      if seg == nil then return end
 
-      local details = matches[1].details()
+      local details = seg.details()
 
       local start = {
         row = details.row,

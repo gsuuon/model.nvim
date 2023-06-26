@@ -260,15 +260,14 @@ function M.create_segment_at(row, col, hl_group, bufnr)
   return segment
 end
 
+--- Returns the most recent segment at the position
 function M.query(pos)
   local extmark_details = vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, {details = true})
 
-  local matches = {}
+  -- iterate backwards so recent markers are higher
+  for idx=#extmark_details, 1, -1 do
+    local mark = extmark_details[idx]
 
-  -- Tried doing this differently but vim.tbl_flatten was acting weird
-  -- also, debugging deep composition is difficult with lua
-
-  for _, mark in ipairs(extmark_details) do
     local start = {
       row = mark[2],
       col = mark[3]
@@ -287,12 +286,10 @@ function M.query(pos)
       local seg = segments_cache[ext_id]
 
       if seg ~= nil then
-        table.insert(matches, seg)
+        return seg
       end
     end
   end
-
-  return matches
 end
 
 M._debug = {}
