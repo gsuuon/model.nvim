@@ -7,7 +7,8 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 ### Features
 
 - 🎪 OpenAI GPT, Google PaLM, Huggingface API providers
-- 🎨 Highly customizable editor integrated prompts
+- 🎨 Highly customizable editor integrated completions
+- 🛸 Other neovim plugins can add llm capabilities
 - 🔎 Local vector store querying
 - 🌠 Streaming response
 
@@ -44,6 +45,8 @@ require('lazy').setup({
 ## 💭 Usage
 
 llm.nvim comes with some [starter prompts](./lua/llm/starter_prompts.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt (e.g. curl, ask gpt for intermediate data, then include data in a final prompt) look at the `openapi` starter prompt.
+
+It can also be used from another plugin to easily add LLM capabilities, for an example look at [note.nvim](https://github.com/gsuuon/note.nvim/blob/main/lua/note/llm/prompts.lua) which adds some [buffer-local](https://github.com/gsuuon/note.nvim/blob/main/ftplugin/note.lua) prompts to note files.
 
 - `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided.
 
