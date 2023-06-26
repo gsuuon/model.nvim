@@ -1,10 +1,13 @@
 local segment = require('llm.segment')
 local util = require('llm.util')
 local provider = require('llm.provider')
+local prompts = require('llm.prompts')
 
 local M = {}
 
 local function command_request_completion(cmd_params)
+  ---Gets the first arg as the prompt name
+  ---the rest of the args are passed to the prompt builder as a string
   ---@return Prompt, string
   local function get_prompt_and_args(args)
     local prompt_arg = table.remove(args, 1)
@@ -13,7 +16,11 @@ local function command_request_completion(cmd_params)
       return M.opts.default_prompt, ''
     end
 
-    local prompt = assert(M.opts.prompts[prompt_arg], "Prompt '" .. prompt_arg .. "' wasn't found")
+    local prompt = assert(
+      prompts.get_prompt(prompt_arg),
+      "Prompt '" .. prompt_arg .. "' wasn't found"
+    )
+
     return prompt, table.concat(args, ' ')
   end
 
@@ -26,16 +33,23 @@ end
 local function command_request_multi_completion_streams(cmd_params)
   local prompt_names = cmd_params.fargs
 
-  local prompts = vim.tbl_map(function(name)
-    return assert(M.opts.prompts[name], "Prompt '" .. name .. "' wasn't found")
+  local found_prompts = vim.tbl_map(function(name)
+    return assert(
+      prompts.get_prompt(name),
+      "Prompt '" .. name .. "' wasn't found"
+    )
 
   end, prompt_names)
   local want_visual_selection = cmd_params.range ~= 0
 
-  return provider.request_multi_completion_streams(prompts, want_visual_selection, M.opts.hl_group)
+  return provider.request_multi_completion_streams(
+    found_prompts,
+    want_visual_selection,
+    M.opts.hl_group
+  )
 end
 
-function M.commands(opts)
+local function setup_commands()
   local function flash(count, wait, segments, highlight, after)
     vim.defer_fn(function ()
       if count == 0 then after() return end
@@ -55,18 +69,7 @@ function M.commands(opts)
     range = true,
     nargs = '+',
     desc = 'Request multiple prompts at the same time',
-    complete = function(arglead)
-      local prompt_names = {}
-
-      for k, _ in util.module.autopairs(opts.prompts) do
-        local escaped = k:gsub(" ", "\\ ")
-        table.insert(prompt_names, escaped)
-      end
-
-      if #arglead == 0 then return prompt_names end
-
-      return vim.fn.matchfuzzy(prompt_names, arglead)
-    end
+    complete = prompts.complete_arglead_prompt_names
   })
 
   vim.api.nvim_create_user_command('LlmCancel',
@@ -158,22 +161,7 @@ function M.commands(opts)
     desc = 'Request completion of selection',
     force = true,
     nargs='*',
-    complete = function(arglead)
-      local prompt_names = {}
-
-      if opts.prompts == nil then
-        return {}
-      end
-
-      for k, _ in util.module.autopairs(opts.prompts) do
-        local escaped = k:gsub(" ", "\\ ")
-        table.insert(prompt_names, escaped)
-      end
-
-      if #arglead == 0 then return prompt_names end
-
-      return vim.fn.matchfuzzy(prompt_names, arglead)
-    end
+    complete = prompts.complete_arglead_prompt_names
   })
 
   local store = require('llm.store')
@@ -228,13 +216,17 @@ function M.setup(opts)
     _opts = vim.tbl_deep_extend('force', _opts, opts)
   end
 
-  M.opts = _opts
-  M.commands(_opts)
+  if _opts.prompts then
+    prompts.set_global_user_prompts(_opts.prompts)
+  end
 
+  setup_commands()
+
+  M.opts = _opts
   vim.g.did_setup_llm = true
 end
 
-M.mode = provider.mode
+M.mode = provider.mode -- convenience export
 
 return M
 
