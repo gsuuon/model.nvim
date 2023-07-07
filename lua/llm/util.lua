@@ -373,7 +373,8 @@ function M.buf.text(selection)
     start_col = 0
   end
 
-  return vim.api.nvim_buf_get_text(
+  local success, text = pcall(
+    vim.api.nvim_buf_get_text,
     0,
     start_row,
     start_col,
@@ -381,6 +382,8 @@ function M.buf.text(selection)
     selection.stop.col == M.COL_ENTIRE_LINE and -1 or selection.stop.col,
     {}
   )
+
+  if success then return text end
 end
 
 function M.buf.set_text(selection, lines)
