@@ -92,7 +92,11 @@ function M.async(fn, callback)
     end
   end
 
-  coroutine.resume(co, wait, resolve)
+  local success, initial_yield = coroutine.resume(co, wait, resolve)
+
+  if not success then
+    error(initial_yield)
+  end
 end
 
 M.env_memo = M.memo(M.env)
