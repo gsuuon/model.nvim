@@ -387,7 +387,11 @@ function M.buf.text(selection)
     {}
   )
 
-  if success then return text end
+  if success then
+    return text
+  else
+    return {}
+  end
 end
 
 function M.buf.set_text(selection, lines)
