@@ -171,7 +171,7 @@ require('llm').setup({
 
 ### Providers
 #### OpenAI ChatGPT (default)
-Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform.openai.com/account/api-keys) before starting nvim.
+Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform.openai.com/account/api-keys) before starting nvim. OpenAI prompts can take an additional option field with a table containing `{ url?, endpoint?, authorization? }` fields to talk to compatible API's. Check the `localhost` starter prompt for an example.
 
 <details>
 <summary>
