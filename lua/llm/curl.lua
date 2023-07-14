@@ -34,6 +34,9 @@ local function build_args(opts, stream)
   return args
 end
 
+
+-- TODO eventually switch to using vim.system(), neovim 0.10 feature
+-- TODO -w "%{stderr}%{response_code}" to get status code from stderr
 ---@param opts { url : string, method : string, body : any, headers : {[string]: string} }
 ---@param on_stdout fun(text: string): nil
 ---@param on_error fun(text: string): nil
@@ -63,7 +66,7 @@ local function run_curl(opts, stream, on_stdout, on_error)
 
       on_error(_error_output)
     end
-  ), 'Failed to open stderr pipe')
+  ), 'curl exited unexpectedly')
 
   uv.read_start(stderr, function(err, text)
     assert(not err, err)
