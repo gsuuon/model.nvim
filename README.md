@@ -6,11 +6,11 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 
 ### Features
 
-- 🎪 Access OpenAI GPT (and compatible API's), Google PaLM, Huggingface
-- 🎨 Highly customizable editor integrated completions
+- 🎪 OpenAI GPT (and compatible API's), Google PaLM, Huggingface
+- 🎨 Build your own highly editor integrated completions
 - 🛸 Add llm capabilities to other Neovim plugins
-- 🔎 Local vector store querying
-- 🌠 Streaming responses
+- 🔎 Basic local (to your git repo) vector store
+- 🌠 Streaming responses where available
 
 ---
 
