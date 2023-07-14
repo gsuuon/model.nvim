@@ -7,8 +7,8 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 ### Features
 
 - 🎪 OpenAI GPT (and compatible API's), Google PaLM, Huggingface
-- 🎨 Build your own highly editor integrated completions
-- 🛸 Add llm capabilities to other Neovim plugins
+- 🛸 Add LLM capabilities from other Neovim plugins
+- 🎨 Build your own editor integrated completions
 - 🔎 Basic local (to your git repo) vector store
 - 🌠 Streaming responses where available
 
