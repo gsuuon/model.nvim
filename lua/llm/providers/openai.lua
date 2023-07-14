@@ -124,6 +124,7 @@ function M.initialize(opts)
     })
 end
 
+-- These are convenience util exports for building the prompt params
 M.prompt = {}
 
 function M.prompt.input_as_message(input)

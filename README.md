@@ -6,11 +6,11 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 
 ### Features
 
-- 🎪 OpenAI GPT, Google PaLM, Huggingface API providers
+- 🎪 Access OpenAI GPT (and compatible API's), Google PaLM, Huggingface
 - 🎨 Highly customizable editor integrated completions
-- 🛸 Other neovim plugins can add llm capabilities
+- 🛸 Add llm capabilities to other Neovim plugins
 - 🔎 Local vector store querying
-- 🌠 Streaming response
+- 🌠 Streaming responses
 
 ---
 
@@ -229,6 +229,18 @@ Set the model field on the params returned by the builder (or the static params 
 }
 ```
 
+#### Adding your own
+Providers implement a simple interface so it's easy to add your own. Just set your provider as the `provider` field in a prompt. Your provider needs to kick off the request and call the handlers as data streams in, finishes, or errors. Check [the hf provider](./lua/llm/providers/huggingface.lua) for a simpler example supporting server-sent events streaming. If you don't need streaming, just make a request and call `handler.on_finish` with the result.
+
+```lua
+---@class Provider
+---@field request_completion fun(handler: StreamHandlers, params?: table, options?: table): function Request a completion stream from provider, returning a cancel callback
+
+---@class StreamHandlers
+---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
+---@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
+---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
+```
 --- 
 
 ## Examples
