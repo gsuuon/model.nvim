@@ -38,11 +38,12 @@ end
 
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for OpenAI endpoint
----@param options { endpoint: string } Request endpoint, defaults to 'chat/completions'
+---@param options? { url?: string, endpoint?: string, authorization?: string } Request endpoint and url. Defaults to 'https://api.openai.com/v1/' and 'chat/completions'. If url is provided then we'll use the authorization given here instead of OPENAI_API_KEY as the auth header.
 function M.request_completion(handlers, params, options)
   local _all_content = ''
+  options = options or {}
 
-  local endpoint = (options or {}).endpoint or 'chat/completions'
+  local endpoint = options.endpoint or 'chat/completions'
   local extract_data = endpoint == 'chat/completions' and extract_chat_data or extract_completion_data
 
   -- TODO should handlers being optional be a choice at the provider level or always optional for all providers?
@@ -85,13 +86,26 @@ function M.request_completion(handlers, params, options)
 
   local body = vim.tbl_deep_extend('force', M.default_request_params, params)
 
+  local headers = { ['Content-Type'] = 'application/json' }
+  local url_ = options.url
+
+  if url_ then
+    if options.authorization then
+      headers.Authorization = options.authorization
+    end
+
+    if not url_:sub(-1) == '/' then
+      url_ = url_ .. '/'
+    end
+  else
+    headers.Authorization = 'Bearer ' .. util.env_memo('OPENAI_API_KEY')
+    url_ = 'https://api.openai.com/v1/'
+  end
+
   return curl.stream({
-    headers = {
-      Authorization = 'Bearer ' .. util.env_memo('OPENAI_API_KEY'),
-      ['Content-Type']= 'application/json',
-    },
+    headers = headers,
     method = 'POST',
-    url = 'https://api.openai.com/v1/' .. endpoint,
+    url = url_ .. endpoint,
     body = body
   }, handle_raw, handle_error)
 end
