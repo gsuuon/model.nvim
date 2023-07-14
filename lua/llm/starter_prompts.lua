@@ -268,6 +268,11 @@ end
 
 return {
   gpt = gpt,
+  localhost = vim.tbl_extend('force', gpt, {
+    options = {
+      url = 'http://127.0.0.1:8000/v1/'
+    }
+  }),
   ada = ada,
   palm = {
     provider = palm,
