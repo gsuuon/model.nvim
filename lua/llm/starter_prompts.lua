@@ -1,5 +1,6 @@
 local llm = require('llm')
 local util = require('llm.util')
+local async = require('llm.util.async')
 local curl = require('llm.curl')
 local segment = require('llm.segment')
 local openai = require('llm.providers.openai')
@@ -134,7 +135,7 @@ end
 
 local function extract_schema_descripts(url, cb)
   -- TODO extract component references
-  util.async(function(wait, resolve)
+  async(function(wait, resolve)
     local schema = wait(curl.request({ url = url }, resolve, util.eshow))
 
     local parsed, err = util.json.decode(schema)
@@ -209,7 +210,7 @@ end
 ---   relevant_route: table
 --- }
 local function gpt_ask_relevant_path(schema, task, callback)
-  util.async(function(wait, resolve)
+  async(function(wait, resolve)
     local gpt_prompt =
       'This api is:\n' .. schema.description
       .. '\n\nThese are the routes:\n'
@@ -470,7 +471,7 @@ return {
       local schema_url = context.args
 
       return function(build)
-        util.async(function(wait, resolve)
+        async(function(wait, resolve)
           local schema = wait(extract_schema_descripts(schema_url, resolve))
           util.show(schema.description, 'got openapi schema')
 
