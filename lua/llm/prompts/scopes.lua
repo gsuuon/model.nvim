@@ -133,7 +133,7 @@ end
 
 -- TODO actual tests
 local function test()
-  -- M.set_global_user_prompts(util.module.autoload('llm.starter_prompts'))
+  -- M.set_global_user_prompts(util.module.autoload('llm.prompts.starter'))
   M.set_buffer_user_prompts({codego = 'code go'})
   M.set_buffer_user_prompts({boop = 'boop prompt'})
   M.add_buffer_plugin_prompts('baps', { bap = 'bap'})

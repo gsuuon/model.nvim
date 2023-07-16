@@ -3,5 +3,5 @@ if vim.g.did_setup_llm then
 end
 
 require('llm').setup({
-  prompts = require('llm.starter_prompts')
+  prompts = require('llm.prompts.starters')
 })
