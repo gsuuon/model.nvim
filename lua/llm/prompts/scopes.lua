@@ -131,6 +131,7 @@ function M.complete_arglead_prompt_names(arglead)
   return vim.fn.matchfuzzy(prompt_names, arglead)
 end
 
+-- TODO actual tests
 local function test()
   -- M.set_global_user_prompts(util.module.autoload('llm.starter_prompts'))
   M.set_buffer_user_prompts({codego = 'code go'})
