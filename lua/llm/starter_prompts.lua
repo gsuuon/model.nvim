@@ -13,7 +13,7 @@ local openai = require('llm.providers.openai')
 local palm = require('llm.providers.palm')
 local huggingface = require('llm.providers.huggingface')
 
-local function code_builder(input, context)
+local function standard_code(input, context)
   local surrounding_text = prompts.limit_before_after(context, 30)
 
   local instruction = 'Replace the token <@@> with valid code. Respond only with code, never respond with an explanation, never respond with a markdown code block containing the code. Generate only code that is meant to replace the token, do not regenerate code in the context.'
@@ -56,12 +56,12 @@ end
 return {
   gpt = openai.default_prompt,
   palm = palm.default_prompt,
-  ['openai compat'] = vim.tbl_extend('force', openai.default_prompt, {
+  compat = vim.tbl_extend('force', openai.default_prompt, {
     options = {
       url = 'http://127.0.0.1:8000/v1/'
     }
   }),
-  ['huggingface bigcode'] = {
+  ['hf bigcode'] = {
     provider = huggingface,
     params = {
       model = 'bigcode/starcoder'
@@ -70,7 +70,7 @@ return {
       return { inputs = input }
     end
   },
-  ['huggingface bloom'] = {
+  ['hf bloom'] = {
     provider = huggingface,
     params = {
       model = 'bigscience/bloom'
@@ -85,12 +85,62 @@ return {
     params = {
       temperature = 0.2,
       max_tokens = 1000,
-      model = 'gpt-3.5-turbo-0301'
+      model = 'gpt-3.5-turbo-0613'
     },
     builder = function(input, context)
-      return openai.adapt(code_builder(input, context))
+      return openai.adapt(standard_code(input, context))
     end,
     transform = extract.markdown_code
+  },
+  ['code palm'] = {
+    provider = palm,
+    mode = llm.mode.INSERT_OR_REPLACE,
+    builder = function(input, context)
+      return palm.adapt(standard_code(input, context))
+    end,
+    transform = extract.markdown_code
+  },
+  ['code gpt4'] = {
+    provider = openai,
+    mode = llm.mode.INSERT_OR_REPLACE,
+    params = {
+      temperature = 0.2,
+      max_tokens = 1000,
+      model = 'gpt-4'
+    },
+    builder = function(input, context)
+      return openai.adapt(standard_code(input, context))
+    end,
+    transform = extract.markdown_code
+  },
+  ask = {
+    provider = openai,
+    params = {
+      temperature = 0.3,
+      max_tokens = 1500
+    },
+    mode = llm.mode.BUFFER,
+    builder = function(input, context)
+      local details = context.segment.details()
+      local row = details.row -1
+      vim.api.nvim_buf_set_lines(details.bufnr, row, row, false, {''})
+
+      local args_seg = segment.create_segment_at(row, 0, 'Question', details.bufnr)
+      args_seg.add(context.args)
+
+      return {
+        messages = {
+          {
+            role = 'user',
+            content = input
+          },
+          {
+            role = 'user',
+            content = context.args
+          }
+        }
+      }
+    end,
   },
   ['ask code'] = {
     provider = openai,
@@ -127,13 +177,22 @@ return {
       return { messages = messages }
     end
   },
-  ['palm code'] = {
-    provider = palm,
-    mode = llm.mode.INSERT_OR_REPLACE,
-    builder = function(input, context)
-      return palm.adapt(code_builder(input, context))
+  ['ask commit review'] = {
+    provider = openai,
+    mode = llm.mode.BUFFER,
+    builder = function()
+      local git_diff = vim.fn.system {'git', 'diff', '--staged'}
+      -- TODO extract relevant code from store
+
+      return {
+        messages = {
+          {
+            role = 'user',
+            content = 'Review this code change: ```\n' .. git_diff .. '\n```'
+          }
+        }
+      }
     end,
-    transform = extract.markdown_code
   },
   instruct = {
     provider = openai,
@@ -150,7 +209,12 @@ return {
         }
       }
 
-      return util.builder.user_prompt(function(user_input)
+      -- There's an easier way to do this I think -- vim.ui.input
+      return vim.ui.input({
+        prompt = 'Additional instruction for prompt: '
+      }, function(user_input)
+        if user_input == nil then return end
+
         if #user_input > 0 then
           table.insert(messages, {
             role = 'user',
@@ -161,39 +225,10 @@ return {
         return {
           messages = messages
         }
-      end, input)
+      end)
     end,
   },
-  ask = {
-    provider = openai,
-    params = {
-      temperature = 0.3,
-      max_tokens = 1500
-    },
-    mode = llm.mode.BUFFER,
-    builder = function(input, context)
-      local details = context.segment.details()
-      local row = details.row -1
-      vim.api.nvim_buf_set_lines(details.bufnr, row, row, false, {''})
-
-      local args_seg = segment.create_segment_at(row, 0, 'Question', details.bufnr)
-      args_seg.add(context.args)
-
-      return {
-        messages = {
-          {
-            role = 'user',
-            content = input
-          },
-          {
-            role = 'user',
-            content = context.args
-          }
-        }
-      }
-    end,
-  },
-  ['commit message'] = {
+  commit = {
     provider = openai,
     mode = llm.mode.INSERT,
     builder = function()
@@ -209,23 +244,6 @@ return {
           {
             role = 'user',
             content = 'Write a terse commit message according to the Conventional Commits specification. Try to stay below 80 characters total. Staged git diff: ```\n' .. git_diff .. '\n```'
-          }
-        }
-      }
-    end,
-  },
-  ['commit review'] = {
-    provider = openai,
-    mode = llm.mode.BUFFER,
-    builder = function()
-      local git_diff = vim.fn.system {'git', 'diff', '--staged'}
-      -- TODO extract relevant code from store
-
-      return {
-        messages = {
-          {
-            role = 'user',
-            content = 'Review this code change: ```\n' .. git_diff .. '\n```'
           }
         }
       }

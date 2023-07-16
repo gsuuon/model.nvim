@@ -459,14 +459,4 @@ function M.module.autopairs(table)
   return pairs(table)
 end
 
-M.builder = {}
-
-function M.builder.user_prompt(callback, input, title)
-  return function(resolve)
-    M.buf.prompt(function(user_input, buffer_content)
-      resolve(callback(user_input, buffer_content))
-    end, input, title)
-  end
-end
-
 return M
