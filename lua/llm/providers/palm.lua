@@ -68,4 +68,19 @@ function M.request_completion(handlers, params, _options)
   }, handle_raw, handle_error)
 end
 
+M.default_prompt = {
+  provider = M,
+  builder = function(input)
+    return {
+      prompt = {
+        messages = {
+          {
+            content = input
+          }
+        }
+      }
+    }
+  end
+}
+
 return M

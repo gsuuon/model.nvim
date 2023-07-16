@@ -9,18 +9,6 @@ local huggingface = require('llm.providers.huggingface')
 
 local provider = require('llm.provider')
 
-local gpt = {
-  provider = openai,
-  builder = function(input)
-    return {
-      messages = {
-        {
-          role = 'user',
-          content = input
-        }
-      }
-    }
-  end
 }
 
 local ada = {
@@ -268,27 +256,14 @@ local function gpt_ask_relevant_path(schema, task, callback)
 end
 
 return {
-  gpt = gpt,
-  localhost = vim.tbl_extend('force', gpt, {
+  gpt = openai.default_prompt,
+  palm = palm.default_prompt,
+  ['openai compat'] = vim.tbl_extend('force', openai.default_prompt, {
     options = {
       url = 'http://127.0.0.1:8000/v1/'
     }
   }),
   ada = ada,
-  palm = {
-    provider = palm,
-    builder = function(input)
-      return {
-        prompt = {
-          messages = {
-            {
-              content = input
-            }
-          }
-        }
-      }
-    end
-  },
   ['huggingface bigcode'] = {
     provider = huggingface,
     params = {

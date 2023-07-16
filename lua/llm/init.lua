@@ -202,10 +202,7 @@ function M.setup(opts)
   if (opts or {}).default_prompt == nil then
     local openai = require('llm.providers.openai')
 
-    _opts.default_prompt = {
-      provider = openai,
-      builder = openai.default_builder
-    }
+    _opts.default_prompt = openai.default_prompt
   end
 
   if opts ~= nil then

@@ -25,16 +25,19 @@ local function extract_completion_data(item)
   end
 end
 
-function M.default_builder(input)
-  return {
-    messages = {
-      {
-        content = input,
-        role = 'user',
+M.default_prompt = {
+  provider = M,
+  builder = function(input)
+    return {
+      messages = {
+        {
+          role = 'user',
+          content = input
+        }
       }
     }
-  }
-end
+  end
+}
 
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for OpenAI endpoint
