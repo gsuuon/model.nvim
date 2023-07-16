@@ -146,8 +146,8 @@ https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a
 ```lua
 require('llm').setup({
   default_prompt? = .. , -- Prompt — modify the default prompt (`:Llm` with no argument)
-  prompts? = {}, -- table<string, Prompt>` — add prompt alternatives
-  hl_group? = '' -- string — Set the default highlight group of in-progress responses
+  hl_group? = '', -- string — Set the default highlight group of in-progress responses
+  prompts? = {} -- table<string, Prompt>` — add prompt alternatives
 })
 ```
 
@@ -157,7 +157,7 @@ Prompts go in the `prompts` field of the setup table and can be used via `:Llm [
 
 A prompt entry defines how to handle a completion request - it takes in the editor input (either an entire file or a visual selection) and some context, and produces the api request data merging with any defaults. It also defines how to handle the API response - for example it can replace the selection (or file) with the response or insert it at the cursor positon.
 
-Check out the [starter prompts](./lua/llm/prompts/starter.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/llm/provider.lua).
+Check out the [starter prompts](./lua/llm/prompts/starter.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/llm/provider.lua). If you want to use the starter prompts alongside your own, you can use `prompts = vim.tbl_extend('force', require('llm.prompts.starters'), { ... })`.
 
 ### Library autoload
 You can use `require('util').module.autoload` instead of a naked `require` to always re-require a module on use. This makes the feedback loop for developing prompts faster:
@@ -168,6 +168,8 @@ require('llm').setup({
 +  prompts = require('llm.util').module.autoload('prompt_library')
 })
 ```
+
+I recommend setting this only during active prompt development, and switching to a normal `require` otherwise.
 
 ### Providers
 #### OpenAI ChatGPT (default)
