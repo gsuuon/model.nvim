@@ -15,6 +15,7 @@ local M = {}
 ---@class Provider
 ---@field request_completion fun(handler: StreamHandlers, params?: table, options?: table): function Request a completion stream from provider, returning a cancel callback
 ---@field default_prompt? Prompt
+---@field adapt? fun(prompt: StandardPrompt): table Adapt a standard prompt to params for this provider
 
 ---@alias PromptBuilder fun(input: string, context: Context): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
 

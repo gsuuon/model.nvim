@@ -53,55 +53,6 @@ local function code_builder(input, context)
   }
 end
 
-local function adapt_palm(standard_prompt)
-  local function palm_message(msg)
-    return {
-      author = msg.role == 'user' and '0' or '1',
-      content = msg.content
-    }
-  end
-
-  local examples = {}
-
-  local current_example = {}
-  for _, example in ipairs(standard_prompt.fewshot) do
-    if example.role == 'user' then
-      current_example.input = palm_message(example)
-    else
-      current_example.output = palm_message(example)
-    end
-
-    if current_example.input and current_example.output then
-      table.insert(examples, current_example)
-      current_example = {}
-    end
-  end
-
-  return {
-    prompt = {
-      context = standard_prompt.instruction,
-      examples = examples,
-      messages = vim.tbl_map(
-        palm_message,
-        standard_prompt.messages
-      )
-    }
-  }
-end
-
-local function adapt_openai(standard_prompt)
-  return {
-    messages = util.table.flatten({
-      {
-        role = 'system',
-        content = standard_prompt.instruction
-      },
-      standard_prompt.fewshot,
-      standard_prompt.messages
-    }),
-  }
-end
-
 return {
   gpt = openai.default_prompt,
   palm = palm.default_prompt,
@@ -137,7 +88,7 @@ return {
       model = 'gpt-3.5-turbo-0301'
     },
     builder = function(input, context)
-      return adapt_openai(code_builder(input, context))
+      return openai.adapt(code_builder(input, context))
     end,
     transform = extract.markdown_code
   },
@@ -180,7 +131,7 @@ return {
     provider = palm,
     mode = llm.mode.INSERT_OR_REPLACE,
     builder = function(input, context)
-      return adapt_palm(code_builder(input, context))
+      return palm.adapt(code_builder(input, context))
     end,
     transform = extract.markdown_code
   },

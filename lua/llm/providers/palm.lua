@@ -68,6 +68,42 @@ function M.request_completion(handlers, params, _options)
   }, handle_raw, handle_error)
 end
 
+function M.adapt(standard_prompt)
+  local function palm_message(msg)
+    return {
+      author = msg.role == 'user' and '0' or '1',
+      content = msg.content
+    }
+  end
+
+  local examples = {}
+
+  local current_example = {}
+  for _, example in ipairs(standard_prompt.fewshot) do
+    if example.role == 'user' then
+      current_example.input = palm_message(example)
+    else
+      current_example.output = palm_message(example)
+    end
+
+    if current_example.input and current_example.output then
+      table.insert(examples, current_example)
+      current_example = {}
+    end
+  end
+
+  return {
+    prompt = {
+      context = standard_prompt.instruction,
+      examples = examples,
+      messages = vim.tbl_map(
+        palm_message,
+        standard_prompt.messages
+      )
+    }
+  }
+end
+
 M.default_prompt = {
   provider = M,
   builder = function(input)

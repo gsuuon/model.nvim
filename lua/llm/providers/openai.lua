@@ -25,20 +25,6 @@ local function extract_completion_data(item)
   end
 end
 
-M.default_prompt = {
-  provider = M,
-  builder = function(input)
-    return {
-      messages = {
-        {
-          role = 'user',
-          content = input
-        }
-      }
-    }
-  end
-}
-
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for OpenAI endpoint
 ---@param options? { url?: string, endpoint?: string, authorization?: string } Request endpoint and url. Defaults to 'https://api.openai.com/v1/' and 'chat/completions'. If url is provided then we'll use the authorization given here instead of OPENAI_API_KEY as the auth header.
@@ -117,6 +103,34 @@ M.default_request_params = {
   model = 'gpt-3.5-turbo',
   stream = true
 }
+
+M.default_prompt = {
+  provider = M,
+  builder = function(input)
+    return {
+      messages = {
+        {
+          role = 'user',
+          content = input
+        }
+      }
+    }
+  end
+}
+
+---@param standard_prompt StandardPrompt
+function M.adapt(standard_prompt)
+  return {
+    messages = util.table.flatten({
+      {
+        role = 'system',
+        content = standard_prompt.instruction
+      },
+      standard_prompt.fewshot,
+      standard_prompt.messages
+    }),
+  }
+end
 
 function M.initialize(opts)
   M.default_request_params = vim.tbl_deep_extend('force',
