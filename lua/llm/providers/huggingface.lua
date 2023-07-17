@@ -46,9 +46,9 @@ function M.request_completion(handlers, params, options)
         handlers.on_partial(partial)
 
         -- We get the completed text including input unless parameters.return_full_text is set to false
-        -- if data.generated_text ~= nil and #data.generated_text > 0 then
-        --   handlers.on_finish(data.generated_text, 'stop')
-        -- end
+        if data.generated_text ~= nil and #data.generated_text > 0 then
+          handlers.on_finish(data.generated_text, 'stop')
+        end
       end)
     end,
     function(error)
@@ -61,6 +61,9 @@ M.default_prompt = {
   provider = M,
   options = {
     model = 'bigscience/bloom'
+  },
+  params = {
+    return_full_text = false
   },
   builder = function(input)
     return { inputs = input }
