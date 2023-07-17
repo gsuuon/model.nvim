@@ -19,12 +19,17 @@ local function async(fn, callback)
   end
 
   local function resolve(result)
+    if coroutine.status(co) == 'dead' then
+      error('resolve in dead coroutine')
+    end
+
     local success, yield_result = coroutine.resume(co, result)
 
     if not success then
       error(debug.traceback(co, yield_result), 0)
     end
 
+    -- The last resume finished the coroutine
     if coroutine.status(co) == 'dead' and callback ~= nil then
       callback(yield_result)
     end
