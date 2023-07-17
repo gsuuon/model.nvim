@@ -44,7 +44,7 @@ require('lazy').setup({
 
 ## 💭 Usage
 
-llm.nvim comes with some [starter prompts](./lua/llm/prompts/starter.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt (e.g. curl, ask gpt for intermediate data, then include data in a final prompt) look at the `openapi` starter prompt.
+llm.nvim comes with some [starter prompts](./lua/llm/prompts/starters.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt (e.g. curl, ask gpt for intermediate data, then include data in a final prompt) look at the `openapi` starter prompt.
 
 It can also be used from another plugin to easily add LLM capabilities, for an example look at [note.nvim](https://github.com/gsuuon/note.nvim/blob/main/lua/note/llm/prompts.lua) which adds some [buffer-local](https://github.com/gsuuon/note.nvim/blob/main/ftplugin/note.lua) prompts to note files.
 
@@ -157,7 +157,7 @@ Prompts go in the `prompts` field of the setup table and can be used via `:Llm [
 
 A prompt entry defines how to handle a completion request - it takes in the editor input (either an entire file or a visual selection) and some context, and produces the api request data merging with any defaults. It also defines how to handle the API response - for example it can replace the selection (or file) with the response or insert it at the cursor positon.
 
-Check out the [starter prompts](./lua/llm/prompts/starter.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/llm/provider.lua). If you want to use the starter prompts alongside your own, you can use `prompts = vim.tbl_extend('force', require('llm.prompts.starters'), { ... })`.
+Check out the [starter prompts](./lua/llm/prompts/starters.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/llm/provider.lua). If you want to use the starter prompts alongside your own, you can use `prompts = vim.tbl_extend('force', require('llm.prompts.starters'), { ... })`.
 
 ### Library autoload
 You can use `require('util').module.autoload` instead of a naked `require` to always re-require a module on use. This makes the feedback loop for developing prompts faster:
@@ -173,7 +173,7 @@ I recommend setting this only during active prompt development, and switching to
 
 ### Providers
 #### OpenAI ChatGPT (default)
-Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform.openai.com/account/api-keys) before starting nvim. OpenAI prompts can take an additional option field with a table containing `{ url?, endpoint?, authorization? }` fields to talk to compatible API's. Check the `localhost` starter prompt for an example.
+Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform.openai.com/account/api-keys) before starting nvim. OpenAI prompts can take an additional option field with a table containing `{ url?, endpoint?, authorization? }` fields to talk to compatible API's. Check the `compat` starter prompt for an example.
 
 <details>
 <summary>
@@ -195,7 +195,7 @@ require('llm.providers.openai').initialize({
 #### Google PaLM
 Set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey).
 
-Check the palm prompt in [starter prompts](./lua/llm/prompts/starter.lua) for a reference. Palm provider defaults to the chat model (`chat-bison-001`). The builder's return params can include `model = 'text-bison-001'` to use the text model instead.
+Check the palm prompt in [starter prompts](./lua/llm/prompts/starters.lua) for a reference. Palm provider defaults to the chat model (`chat-bison-001`). The builder's return params can include `model = 'text-bison-001'` to use the text model instead.
 
 Params should be either a [generateMessage](https://developers.generativeai.google/api/rest/generativelanguage/models/generateMessage#request-body) body by default, or a [generateText](https://developers.generativeai.google/api/rest/generativelanguage/models/generateText#request-body) body if using `model = 'text-bison-001'`.
 
