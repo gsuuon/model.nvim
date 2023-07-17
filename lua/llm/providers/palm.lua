@@ -27,6 +27,8 @@ function M.request_completion(handlers, params, _options)
     extract = extract_text_response
   end
 
+  handlers.on_partial('<- palm ->') -- on_finish should ovewrite all partials
+
   local function handle_raw(raw_data)
     local response = util.json.decode(raw_data)
 
