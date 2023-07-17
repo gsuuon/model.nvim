@@ -135,6 +135,7 @@ function M.adapt(standard_prompt)
   }
 end
 
+--- Sets default openai provider params. Currently enforces `stream = true`.
 function M.initialize(opts)
   default_params = vim.tbl_deep_extend('force',
     default_params,

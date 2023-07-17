@@ -9,7 +9,7 @@ local M = {}
 ---@field transform fun(string): string Transforms response text after completion finishes
 ---@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to "append".
 ---@field hl_group? string Highlight group of active response
----@field params? table Additional parameters to add to request body - ParamsBuilder data takes priority over these parameters
+---@field params? table Additional static parameters to add to request body - ParamsBuilder data is merged into and overrides this.
 ---@field options? table Options for the provider
 
 ---@class Provider
