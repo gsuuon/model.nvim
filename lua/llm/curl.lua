@@ -46,7 +46,7 @@ local function run_curl(opts, stream, on_stdout, on_error)
 
   local _error_output = ''
 
-  local args = build_args(opts, true, stream)
+  local args = build_args(opts, stream)
 
   if M._is_debugging then
     util.show(args, 'curl args')
