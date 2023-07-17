@@ -5,11 +5,11 @@ local M = {}
 
 ---@class Prompt
 ---@field provider Provider The API provider for this prompt
----@field builder PromptBuilder Converts input and context to request data
+---@field builder ParamsBuilder Converts input and context to request params
 ---@field transform fun(string): string Transforms response text after completion finishes
 ---@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to "append".
 ---@field hl_group? string Highlight group of active response
----@field params? table Additional parameters to add to request body - PromptBuilder data takes priority over these parameters
+---@field params? table Additional parameters to add to request body - ParamsBuilder data takes priority over these parameters
 ---@field options? table Options for the provider
 
 ---@class Provider
@@ -17,7 +17,7 @@ local M = {}
 ---@field default_prompt? Prompt
 ---@field adapt? fun(prompt: StandardPrompt): table Adapt a standard prompt to params for this provider
 
----@alias PromptBuilder fun(input: string, context: Context): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
+---@alias ParamsBuilder fun(input: string, context: Context): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
 
 ---@enum SegmentMode
 M.mode = {
