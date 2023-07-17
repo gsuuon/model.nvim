@@ -5,18 +5,17 @@ local provider_util = require('llm.providers.util')
 local M = {}
 
 ---@param handlers StreamHandlers
----@param params? any Additional options for OpenAI endpoint
-function M.request_completion(handlers, params)
-  local model = params.model or 'bigscience/bloom'
-  params.model = nil
-  params.stream = params.stream == nil and true or params.stream
+---@param params? any Additional params for request
+---@param options? { model?: string }
+function M.request_completion(handlers, params, options)
+  local model = (options or {}).model or 'bigscience/bloom'
 
   -- TODO handle non-streaming calls
   return curl.stream(
     {
       url = 'https://api-inference.huggingface.co/models/' .. model,
       method = 'POST',
-      body = params,
+      body = vim.tbl_extend('force', { stream = true }, params),
       headers = {
         Authorization = 'Bearer ' .. util.env_memo('HUGGINGFACE_API_KEY'),
         ['Content-Type'] = 'application/json'
@@ -57,5 +56,15 @@ function M.request_completion(handlers, params)
     end
   )
 end
+
+M.default_prompt = {
+  provider = M,
+  options = {
+    model = 'bigscience/bloom'
+  },
+  builder = function(input)
+    return { inputs = input }
+  end
+}
 
 return M

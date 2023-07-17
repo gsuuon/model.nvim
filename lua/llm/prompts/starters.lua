@@ -56,24 +56,16 @@ end
 return {
   gpt = openai.default_prompt,
   palm = palm.default_prompt,
+  hf = huggingface.default_prompt,
   compat = vim.tbl_extend('force', openai.default_prompt, {
     options = {
       url = 'http://127.0.0.1:8000/v1/'
     }
   }),
-  ['hf bigcode'] = {
+  ['hf starcoder'] = {
     provider = huggingface,
-    params = {
+    options = {
       model = 'bigcode/starcoder'
-    },
-    builder = function(input)
-      return { inputs = input }
-    end
-  },
-  ['hf bloom'] = {
-    provider = huggingface,
-    params = {
-      model = 'bigscience/bloom'
     },
     builder = function(input)
       return { inputs = input }

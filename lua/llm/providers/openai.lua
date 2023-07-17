@@ -4,6 +4,25 @@ local provider_util = require('llm.providers.util')
 
 local M = {}
 
+local default_params = {
+  model = 'gpt-3.5-turbo',
+  stream = true
+}
+
+M.default_prompt = {
+  provider = M,
+  builder = function(input)
+    return {
+      messages = {
+        {
+          role = 'user',
+          content = input
+        }
+      }
+    }
+  end
+}
+
 local function extract_chat_data(item)
   local data = util.json.decode(item)
 
@@ -73,7 +92,7 @@ function M.request_completion(handlers, params, options)
     _handlers.on_error(error, 'curl')
   end
 
-  local body = vim.tbl_deep_extend('force', M.default_request_params, params)
+  local body = vim.tbl_deep_extend('force', default_params, params)
 
   local headers = { ['Content-Type'] = 'application/json' }
   if options.authorization then
@@ -102,25 +121,6 @@ function M.request_completion(handlers, params, options)
   }, handle_raw, handle_error)
 end
 
-M.default_request_params = {
-  model = 'gpt-3.5-turbo',
-  stream = true
-}
-
-M.default_prompt = {
-  provider = M,
-  builder = function(input)
-    return {
-      messages = {
-        {
-          role = 'user',
-          content = input
-        }
-      }
-    }
-  end
-}
-
 ---@param standard_prompt StandardPrompt
 function M.adapt(standard_prompt)
   return {
@@ -136,15 +136,15 @@ function M.adapt(standard_prompt)
 end
 
 function M.initialize(opts)
-  M.default_request_params = vim.tbl_deep_extend('force',
-    M.default_request_params,
+  default_params = vim.tbl_deep_extend('force',
+    default_params,
     opts or {},
     {
       stream = true -- force streaming since data parsing will break otherwise
     })
 end
 
--- These are convenience util exports for building the prompt params
+-- These are convenience exports for building prompt params specific to this provider
 M.prompt = {}
 
 function M.prompt.input_as_message(input)
