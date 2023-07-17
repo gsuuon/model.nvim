@@ -22,7 +22,7 @@ local function async(fn, callback)
     local success, yield_result = coroutine.resume(co, result)
 
     if not success then
-      error(yield_result)
+      error(debug.traceback(co, yield_result), 0)
     end
 
     if coroutine.status(co) == 'dead' and callback ~= nil then
@@ -33,7 +33,7 @@ local function async(fn, callback)
   local success, initial_yield = coroutine.resume(co, wait, resolve)
 
   if not success then
-    error(initial_yield)
+    error(debug.traceback(co, initial_yield), 0)
   end
 end
 
