@@ -1,4 +1,8 @@
+local util = require('llm.util')
 local async = require('llm.util.async')
+
+local provider = require('llm.provider')
+local openai = require('llm.providers.openai')
 
 local M = {}
 
@@ -13,10 +17,10 @@ function M.gpt_relevant_openapi_schema_path(schema, task, callback)
       .. '\n\nRespond with a json object of the path and method. Respond only with valid json, do not include an explanation e.g.:\n'
       .. [[`{ "path": "/somepath", "method": "post" }`]]
 
-    local gpt_consistent = vim.tbl_extend('force', gpt, {
+    local gpt_consistent = vim.tbl_extend('force', openai.default_prompt, {
       params = {
         temperature = 0.0,
-        model = "gpt-3.5-turbo-0301"
+        model = "gpt-3.5-turbo-0613"
       }
     })
 
