@@ -143,17 +143,14 @@ return {
       model = 'gpt-3.5-turbo-0301'
     },
     builder = function(input, context)
-      local surrounding_lines_count = 10
-
-      local text_before = util.string.join_lines(util.table.slice(context.before, -surrounding_lines_count))
-      local text_after = util.string.join_lines(util.table.slice(context.after, 0, surrounding_lines_count))
+      local surrounding_text = prompts.limit_before_after(context, 30)
 
       local messages = {
         {
           role = 'user',
           content = vim.inspect({
-            text_after = text_after,
-            text_before = text_before,
+            text_after = surrounding_text.after,
+            text_before = surrounding_text.before,
             text_selected = context.selection ~= nil and input or nil
           })
         }
