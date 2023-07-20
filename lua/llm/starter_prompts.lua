@@ -6,6 +6,7 @@ local openai = require('llm.providers.openai')
 local palm = require('llm.providers.palm')
 local huggingface = require('llm.providers.huggingface')
 local kobold = require('llm.providers.kobold')
+local llamacpp = require('llm.providers.llamacpp')
 
 local provider = require('llm.provider')
 
@@ -285,6 +286,31 @@ return {
         top_p = 0.92
       }
     end
+  },
+  llamacpp = {
+    provider = llamacpp,
+    params = {
+      model = 'models/llama-2-13b-chat.ggmlv3.q4_K_M.bin',
+      ['n-gpu-layers'] = 32,
+      threads = 6,
+      ['repeat-penalty'] = 1.2,
+      temp = 0.2,
+      ['ctx-size'] = 4096,
+      ['n-predict'] = -1
+    },
+    builder = function(input)
+      return {
+        prompt = llamacpp.llama_2_format({
+          messages = {
+            input
+          }
+        })
+      }
+    end,
+    options = {
+      path = os.getenv('LLAMACPP_DIR'),
+      main_dir = os.getenv('LLAMACPP_MAIN_DIR')
+    }
   },
   palm = {
     provider = palm,
