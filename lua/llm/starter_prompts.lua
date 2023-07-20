@@ -5,6 +5,7 @@ local segment = require('llm.segment')
 local openai = require('llm.providers.openai')
 local palm = require('llm.providers.palm')
 local huggingface = require('llm.providers.huggingface')
+local kobold = require('llm.providers.kobold')
 
 local provider = require('llm.provider')
 
@@ -274,6 +275,17 @@ return {
     }
   }),
   ada = ada,
+  kobold = {
+    provider = kobold,
+    builder = function(input)
+      return {
+        prompt = input,
+        max_content_length = 2048,
+        max_length = 200,
+        top_p = 0.92
+      }
+    end
+  },
   palm = {
     provider = palm,
     builder = function(input)
