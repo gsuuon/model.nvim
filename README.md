@@ -6,7 +6,7 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 
 ### Features
 
-- 🎪 OpenAI GPT (and compatible API's), Google PaLM, Huggingface
+- 🎪 OpenAI GPT (and compatible API's), Google PaLM, Huggingface, LlamaCpp, Kobold
 - 🛸 Add LLM capabilities from other Neovim plugins
 - 🎨 Build your own editor integrated completions
 - 🔎 Basic local (to your git repo) vector store
@@ -228,6 +228,14 @@ Set the model field on the params returned by the builder (or the static params 
   end
 }
 ```
+
+#### LlamaCpp
+[llama.cpp](https://github.com/ggerganov/llama.cpp)
+
+This provider runs the built LlamaCpp executable. See starters for an example using the LLaMa 2 chat model (`llama-2-13b-chat.ggmlv3.q4_K_M`). CLI options can be set per-prompt, making it easy to experiment with various options.
+
+#### Kobold
+For older models that don't work with llama.cpp, koboldcpp might still support them. Check their [repo](https://github.com/LostRuins/koboldcpp/) for setup info.
 
 #### Adding your own
 Providers implement a simple interface so it's easy to add your own. Just set your provider as the `provider` field in a prompt. Your provider needs to kick off the request and call the handlers as data streams in, finishes, or errors. Check [the hf provider](./lua/llm/providers/huggingface.lua) for a simpler example supporting server-sent events streaming. If you don't need streaming, just make a request and call `handler.on_finish` with the result.
