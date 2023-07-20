@@ -28,7 +28,7 @@ M.mode = {
 
 ---@class StreamHandlers
 ---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
----@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
+---@field on_finish (fun(complete_text: string, finish_reason?: string): nil) Complete response with finish reason
 ---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
 
 local function get_segment(input, segment_mode, hl_group)
@@ -242,7 +242,7 @@ local function request_completion_input_segment(handle_params, prompt)
         seg.set_text(prompt.transform(complete_text))
       end
 
-      if reason == 'stop' then
+      if reason == nil or reason == 'stop' then
         seg.clear_hl()
       elseif reason == 'length' then
         seg.highlight('Error')
