@@ -1,20 +1,23 @@
 local uv = vim.loop
 
 -- TODO eventually switch to using vim.system(), neovim 0.10 feature
+---@param cmd string
 ---@param args string[]
 ---@param on_stdout fun(text: string): nil
 ---@param on_error fun(text: string): nil
-local function system(args, on_stdout, on_error)
+---@param opts? any additional options for uv.spawn
+local function system(cmd, args, on_stdout, on_error, opts)
   local stdout = assert(uv.new_pipe(false), 'Failed to open stdout pipe')
   local stderr = assert(uv.new_pipe(false), 'Failed to open stderr pipe')
 
   local _error_output = ''
 
-  local handle = assert(uv.spawn('curl',
-    {
+  local handle = assert(uv.spawn(
+    cmd,
+    vim.tbl_extend('force', {
       args = args,
       stdio = { nil, stdout, stderr }
-    },
+    }, opts or {}),
     function(exit_code, signal)
       -- success
       if exit_code == 0 then return end

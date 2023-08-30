@@ -46,7 +46,7 @@ local function run_curl(opts, stream, on_stdout, on_error)
     util.show(args, 'curl args')
   end
 
-  return system(args, on_stdout, on_error)
+  return system('curl', args, {}, on_stdout, on_error)
 end
 
 ---@param opts { url : string, method : string, body : any, headers : {[string]: string} }
