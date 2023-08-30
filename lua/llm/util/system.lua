@@ -5,8 +5,9 @@ local uv = vim.loop
 ---@param args string[]
 ---@param on_stdout fun(text: string): nil
 ---@param on_error fun(text: string): nil
----@param opts? any additional options for uv.spawn
-local function system(cmd, args, on_stdout, on_error, opts)
+---@param on_exit? fun(): nil
+---@param opts object additional options for uv.spawn
+local function system(cmd, args, opts, on_stdout, on_error, on_exit)
   local stdout = assert(uv.new_pipe(false), 'Failed to open stdout pipe')
   local stderr = assert(uv.new_pipe(false), 'Failed to open stderr pipe')
 
@@ -17,10 +18,16 @@ local function system(cmd, args, on_stdout, on_error, opts)
     vim.tbl_extend('force', {
       args = args,
       stdio = { nil, stdout, stderr }
-    }, opts or {}),
+    }, opts),
     function(exit_code, signal)
       -- success
-      if exit_code == 0 then return end
+      if exit_code == 0 then
+        if on_exit ~= nil then
+          on_exit()
+        end
+
+        return
+      end
 
       -- sigint / cancelled
       if signal == 2 then return end
