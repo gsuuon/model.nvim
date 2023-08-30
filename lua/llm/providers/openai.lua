@@ -4,6 +4,25 @@ local provider_util = require('llm.providers.util')
 
 local M = {}
 
+local default_params = {
+  model = 'gpt-3.5-turbo',
+  stream = true
+}
+
+M.default_prompt = {
+  provider = M,
+  builder = function(input)
+    return {
+      messages = {
+        {
+          role = 'user',
+          content = input
+        }
+      }
+    }
+  end
+}
+
 local function extract_chat_data(item)
   local data = util.json.decode(item)
 
@@ -25,20 +44,9 @@ local function extract_completion_data(item)
   end
 end
 
-function M.default_builder(input)
-  return {
-    messages = {
-      {
-        content = input,
-        role = 'user',
-      }
-    }
-  }
-end
-
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for OpenAI endpoint
----@param options? { url?: string, endpoint?: string, authorization?: string } Request endpoint and url. Defaults to 'https://api.openai.com/v1/' and 'chat/completions'. If url is provided then we'll use the authorization given here instead of OPENAI_API_KEY as the auth header.
+---@param options? { url?: string, endpoint?: string, authorization?: string } Request endpoint and url. Defaults to 'https://api.openai.com/v1/' and 'chat/completions'. `authorization` overrides the request auth header. If url is provided, then only the authorization given here will be used (the environment key will be ignored).
 function M.request_completion(handlers, params, options)
   local _all_content = ''
   options = options or {}
@@ -84,22 +92,25 @@ function M.request_completion(handlers, params, options)
     _handlers.on_error(error, 'curl')
   end
 
-  local body = vim.tbl_deep_extend('force', M.default_request_params, params)
+  local body = vim.tbl_deep_extend('force', default_params, params)
 
   local headers = { ['Content-Type'] = 'application/json' }
+  if options.authorization then
+    headers.Authorization = options.authorization
+  end
+
   local url_ = options.url
-
   if url_ then
-    if options.authorization then
-      headers.Authorization = options.authorization
-    end
-
+    -- ensure we have a trailing slash if url was provided by options
     if not url_:sub(-1) == '/' then
       url_ = url_ .. '/'
     end
   else
-    headers.Authorization = 'Bearer ' .. util.env_memo('OPENAI_API_KEY')
+    -- default to OpenAI api
     url_ = 'https://api.openai.com/v1/'
+
+    -- only check the OpenAI env key if options.url wasn't set
+    headers.Authorization = 'Bearer ' .. util.env_memo('OPENAI_API_KEY')
   end
 
   return curl.stream({
@@ -110,21 +121,31 @@ function M.request_completion(handlers, params, options)
   }, handle_raw, handle_error)
 end
 
-M.default_request_params = {
-  model = 'gpt-3.5-turbo',
-  stream = true
-}
+---@param standard_prompt StandardPrompt
+function M.adapt(standard_prompt)
+  return {
+    messages = util.table.flatten({
+      {
+        role = 'system',
+        content = standard_prompt.instruction
+      },
+      standard_prompt.fewshot,
+      standard_prompt.messages
+    }),
+  }
+end
 
+--- Sets default openai provider params. Currently enforces `stream = true`.
 function M.initialize(opts)
-  M.default_request_params = vim.tbl_deep_extend('force',
-    M.default_request_params,
+  default_params = vim.tbl_deep_extend('force',
+    default_params,
     opts or {},
     {
       stream = true -- force streaming since data parsing will break otherwise
     })
 end
 
--- These are convenience util exports for building the prompt params
+-- These are convenience exports for building prompt params specific to this provider
 M.prompt = {}
 
 function M.prompt.input_as_message(input)

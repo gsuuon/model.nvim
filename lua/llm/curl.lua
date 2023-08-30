@@ -46,7 +46,7 @@ local function run_curl(opts, stream, on_stdout, on_error)
 
   local _error_output = ''
 
-  local args = build_args(opts, true, stream)
+  local args = build_args(opts, stream)
 
   if M._is_debugging then
     util.show(args, 'curl args')
@@ -75,7 +75,19 @@ local function run_curl(opts, stream, on_stdout, on_error)
 
   uv.read_start(stdout, function(err, text)
     assert(not err, err)
-    on_stdout(text)
+
+    -- naked call to on_stdout that errors crashes nvim
+    local success, handler_err_trace = xpcall(
+      on_stdout,
+      function()
+        return debug.traceback('Error in curl on_stdout handler', 2)
+      end,
+      text
+    )
+
+    if not success then
+      error(handler_err_trace, 2)
+    end
   end)
 
   return function() handle:kill("sigint") end

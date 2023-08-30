@@ -1,7 +1,7 @@
 local segment = require('llm.segment')
 local util = require('llm.util')
 local provider = require('llm.provider')
-local prompts = require('llm.prompts')
+local scopes = require('llm.prompts.scopes')
 
 local M = {}
 
@@ -17,7 +17,7 @@ local function command_request_completion(cmd_params)
     end
 
     local prompt = assert(
-      prompts.get_prompt(prompt_arg),
+      scopes.get_prompt(prompt_arg),
       "Prompt '" .. prompt_arg .. "' wasn't found"
     )
 
@@ -35,7 +35,7 @@ local function command_request_multi_completion_streams(cmd_params)
 
   local found_prompts = vim.tbl_map(function(name)
     return assert(
-      prompts.get_prompt(name),
+      scopes.get_prompt(name),
       "Prompt '" .. name .. "' wasn't found"
     )
 
@@ -69,7 +69,7 @@ local function setup_commands()
     range = true,
     nargs = '+',
     desc = 'Request multiple prompts at the same time',
-    complete = prompts.complete_arglead_prompt_names
+    complete = scopes.complete_arglead_prompt_names
   })
 
   vim.api.nvim_create_user_command('LlmCancel',
@@ -157,7 +157,7 @@ local function setup_commands()
     desc = 'Request completion of selection',
     force = true,
     nargs='*',
-    complete = prompts.complete_arglead_prompt_names
+    complete = scopes.complete_arglead_prompt_names
   })
 
   local store = require('llm.store')
@@ -202,10 +202,7 @@ function M.setup(opts)
   if (opts or {}).default_prompt == nil then
     local openai = require('llm.providers.openai')
 
-    _opts.default_prompt = {
-      provider = openai,
-      builder = openai.default_builder
-    }
+    _opts.default_prompt = openai.default_prompt
   end
 
   if opts ~= nil then
@@ -213,7 +210,7 @@ function M.setup(opts)
   end
 
   if _opts.prompts then
-    prompts.set_global_user_prompts(_opts.prompts)
+    scopes.set_global_user_prompts(_opts.prompts)
   end
 
   setup_commands()
