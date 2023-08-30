@@ -1,3 +1,5 @@
+local system = require('llm.util.system')
+
 local M = {}
 
 local function tbl_as_args(tbl)
@@ -14,8 +16,6 @@ end
 ---@param params any Parameters for call
 ---@param options { path: string, main_dir: string, stop?: string } Path to llamacpp root (contains ./build and ./models)
 function M.request_completion(handlers, params, options)
-  assert(vim.system, 'Missing vim.system - upgrade to neovim 0.10+')
-
   local exec = vim.fs.normalize(vim.fs.joinpath(
     assert(options.path, 'Missing path in llamacpp prompt options. If using the starter, make sure to set LLAMACPP_DIR.'),
     options.main_dir or 'build/bin/Release/',
@@ -24,61 +24,46 @@ function M.request_completion(handlers, params, options)
 
   local args = tbl_as_args(params)
 
-  local stderr = {}
-  local stdout = {}
-
+  local completion = {}
   local did_ignore_initial_prompt = false
 
-  local proc
+  local cancel; -- need to reference cancel func in stdout handler
 
-  proc = vim.system(
-    vim.tbl_flatten({exec, args}),
+  cancel = system(
+    exec,
+    args,
     {
       cwd = vim.fs.normalize(options.path),
-      env = {}, -- getting dll linking errors on windows if we dont passthrough env (exit 3221225781)
-      stdout = function(err, data)
-        assert(not err, err)
+      env = {} -- getting dll linking errors on windows if we dont passthrough env (exit 3221225781)
+    },
+    function(data)
+      if data then
+        local data_ = data:gsub('\r\n', '\n')
 
-        if data then
-          local data_ = data:gsub('\r\n', '\n')
-
-          -- I imagine there's a cli option to not output the initial prompt, but I haven't been able to find it
-          if not did_ignore_initial_prompt
-            -- llama.cpp prepends an empty space before the prompt
-            -- https://github.com/ggerganov/llama.cpp/blob/294f424554c1599784ac9962462fc39ace92d8a5/examples/main/main.cpp#L200
-            and data_ == ' ' .. params.prompt:gsub('\r\n', '\n')
-          then
-            did_ignore_initial_prompt = true
+        -- I imagine there's a cli option to not output the initial prompt, but I haven't been able to find it
+        if not did_ignore_initial_prompt
+          -- llama.cpp prepends an empty space before the prompt
+          -- https://github.com/ggerganov/llama.cpp/blob/294f424554c1599784ac9962462fc39ace92d8a5/examples/main/main.cpp#L200
+          and data_ == ' ' .. params.prompt:gsub('\r\n', '\n')
+        then
+          did_ignore_initial_prompt = true
+        else
+          if data_ == options.stop then
+            cancel()
           else
-            if data_ == options.stop then
-              proc:kill(2)
-            else
-              handlers.on_partial(data_)
-              table.insert(stdout, data_)
-            end
+            handlers.on_partial(data_)
+            table.insert(completion, data_)
           end
         end
-      end,
-      stderr = function(err, data)
-        assert(not err, err)
-
-        if data then
-          table.insert(stderr, data)
-        end
-      end,
-    },
-    function(completed)
-      if completed.code ~= 0 then
-        handlers.on_error(table.concat(stderr, '\n'))
-      else
-        handlers.on_finish(table.concat(stdout, ''))
       end
+    end,
+    handlers.on_error,
+    function()
+      handlers.on_finish(table.concat(completion, ''))
     end
   )
 
-  return function()
-    proc:kill(2)
-  end
+  return cancel
 end
 
 -- LLaMa 2
