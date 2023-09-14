@@ -32,7 +32,9 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit)
       -- sigint / cancelled
       if signal == 2 then return end
 
-      on_error(_error_output)
+      vim.schedule(function()
+        on_error(_error_output)
+      end)
     end
   ), 'curl exited unexpectedly')
 
@@ -46,7 +48,7 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit)
 
     -- naked call to on_stdout that errors crashes nvim
     local success, handler_err_trace = xpcall(
-      on_stdout,
+      vim.schedule_wrap(on_stdout),
       function()
         return debug.traceback('Error in system on_stdout handler', 2)
       end,
