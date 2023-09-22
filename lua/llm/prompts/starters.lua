@@ -33,12 +33,12 @@ local function standard_code(input, context)
 
   local content = 'The code:\n```\n' .. surrounding_text.before .. '<@@>' .. surrounding_text.after .. '\n```\n'
 
-  if #input > 0 then
+  if context.selection then -- we only use input if we have a visual selection
     content = content ..  '\n\nExisting text at <@@>:\n```' .. input .. '```\n'
   end
 
   if #context.args > 0 then
-    content = content .. context.args
+    content = content .. '\nInstruction: ' .. context.args
   end
 
   local messages = {
