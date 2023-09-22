@@ -18,7 +18,7 @@ local llamacpp = require('llm.providers.llamacpp')
 local function standard_code(input, context)
   local surrounding_text = prompts.limit_before_after(context, 30)
 
-  local instruction = 'Replace the token <@@> with valid code. Respond only with code, never respond with an explanation, never respond with a markdown code block containing the code. Generate only code that is meant to replace the token, do not regenerate code in the context.'
+  local instruction = 'Start generating the code which should replace the special token <@@> in the following code, keeping sure to have consistent whitespace.'
 
   local fewshot = {
     {
@@ -113,8 +113,8 @@ return {
     provider = openai,
     mode = llm.mode.INSERT_OR_REPLACE,
     params = {
-      temperature = 0.2,
-      max_tokens = 1000,
+      temperature = 0.1,
+      max_tokens = 500,
       model = 'gpt-3.5-turbo-0613'
     },
     builder = function(input, context)
