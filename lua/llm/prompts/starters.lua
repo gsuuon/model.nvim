@@ -236,23 +236,25 @@ return {
         }
       }
 
-      -- There's an easier way to do this I think -- vim.ui.input
-      return vim.ui.input({
-        prompt = 'Additional instruction for prompt: '
-      }, function(user_input)
-        if user_input == nil then return end
+      return function(build)
+        vim.ui.input(
+          {
+          prompt = 'Additional instruction for prompt: '
+        }, function(user_input)
+          if user_input == nil then return end
 
-        if #user_input > 0 then
-          table.insert(messages, {
-            role = 'user',
-            content = user_input
+          if #user_input > 0 then
+            table.insert(messages, {
+              role = 'user',
+              content = user_input
+            })
+          end
+
+          build({
+            messages = messages
           })
-        end
-
-        return {
-          messages = messages
-        }
-      end)
+        end)
+      end
     end,
   },
   commit = {
