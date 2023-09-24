@@ -238,22 +238,21 @@ return {
 
       return function(build)
         vim.ui.input(
-          {
-          prompt = 'Additional instruction for prompt: '
-        }, function(user_input)
-          if user_input == nil then return end
+          { prompt = 'Additional instruction for prompt: ' },
+          function(user_input)
+            if user_input == nil then return end
 
-          if #user_input > 0 then
-            table.insert(messages, {
-              role = 'user',
-              content = user_input
+            if #user_input > 0 then
+              table.insert(messages, {
+                role = 'user',
+                content = user_input
+              })
+            end
+
+            build({
+              messages = messages
             })
-          end
-
-          build({
-            messages = messages
-          })
-        end)
+          end)
       end
     end,
   },
