@@ -19,7 +19,7 @@ local BOS = 1
 local EOS = 2
 
 ---@param handlers StreamHandlers
----@param params { before: string, after: string } -- text before and after cursor position
+---@param params { context: { before: string, after: string } }  -- before and after context along with generation options: https://github.com/ggerganov/llama.cpp/tree/master/examples/server#api-endpoints
 ---@param options { url?: string } Url to running llamacpp server root (defaults to http://localhost:8080/)
 function M.request_completion(handlers, params, options)
   local cancel = nil
@@ -53,8 +53,8 @@ function M.request_completion(handlers, params, options)
     function(wait, resolve)
       -- These rely on the fact that BOS is not added in tokenizer
       -- https://github.com/ggerganov/llama.cpp/blob/c091cdfb24621710c617ea85c92fcd347d0bf340/examples/server/README.md?plain=1#L165
-      local pre_tokens = wait(request_tokens(params.before, resolve))
-      local suf_tokens = wait(request_tokens(params.after, resolve))
+      local pre_tokens = wait(request_tokens(params.context.before, resolve))
+      local suf_tokens = wait(request_tokens(params.context.after, resolve))
 
       return {
         pre = pre_tokens,
@@ -70,8 +70,8 @@ function M.request_completion(handlers, params, options)
         tokens.pre,
         SUF,
         tokens.suf,
-          -- there might be additional magic here I'm not handling
-          -- https://github.com/facebookresearch/codellama/blob/cb51c14ec761370ba2e2bc351374a79265d0465e/llama/generation.py#L407
+        -- there might be additional magic here I'm not handling
+        -- https://github.com/facebookresearch/codellama/blob/cb51c14ec761370ba2e2bc351374a79265d0465e/llama/generation.py#L407
         MID
       })
 
@@ -80,10 +80,14 @@ function M.request_completion(handlers, params, options)
       cancel = curl.stream(
         {
           url = options_.url .. 'completion',
-          body = {
-            stream = true,
-            prompt = prompt_tokens
-          }
+          body = vim.tbl_extend(
+            'force',
+            {
+              stream = true,
+              prompt = prompt_tokens
+            },
+            util.table.without(params, 'context')
+          )
         },
         function(raw)
           provider_util.iter_sse_items(raw, function(item)
@@ -112,12 +116,17 @@ M.default_prompt = {
   provider = M,
   mode = llm.mode.INSERT, -- weird things happen if we have a visual selection
   params = {
-    temperature = 0.1 -- Seems to rarely decode EOT if temp is high
+    temperature = 0.1,    -- Seems to rarely decode EOT if temp is high
+    top_p = 0.9,
+    n_predict = 256,      -- Server seems to be ignoring this?
+    repeat_penalty = 1.2  -- infill really struggles with overgenerating
   },
   builder = function(_, context)
     -- we ignore input since this is just for FIM
     -- TODO figure out how to add instructions to FIM in Instruct models
-    return prompts.limit_before_after(context, 30)
+    return {
+      context = prompts.limit_before_after(context, 30)
+    }
   end
 }
 
