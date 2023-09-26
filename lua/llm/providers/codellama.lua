@@ -91,15 +91,12 @@ function M.request_completion(handlers, params, options)
 
             if data == nil then
               handlers.on_error('Failed to decode: ' .. item)
-              return
-            end
-
-            if data.stop then
+            elseif data.stop then
               local strip_eot = completion:gsub(' <EOT>$', '') -- We can probably drop this eventually when llama.cpp adds the codellama special tokens (32010+)
               handlers.on_finish(strip_eot)
             else
-              handlers.on_partial(data.content)
               completion = completion .. data.content
+              handlers.on_partial(data.content)
             end
           end)
         end,
