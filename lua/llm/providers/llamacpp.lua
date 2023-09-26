@@ -107,17 +107,8 @@ M.default_prompt = {
       vim.ui.input(
         { prompt = 'Instruction: ' },
         function(user_input)
-          if user_input == nil then return end
-
-          local final_prompt = ''
-          if #user_input > 0 then
-            final_prompt = M.llama_2_user_prompt({user = user_input, message = input})
-          else
-            return
-          end
-
           build({
-            prompt = final_prompt
+            prompt = M.llama_2_user_prompt({user = user_input or '', message = input})
           })
         end)
     end
