@@ -24,15 +24,12 @@ function M.request_completion(handlers, params, options)
 
       if data == nil then
         handlers.on_error(item, "json parse error")
-        return
-      end
-
-      if data.stop ~= nil then -- last message
+      elseif data.stop then
         handlers.on_finish()
-        return
+      else
+        handlers.on_partial(data.content)
       end
 
-      handlers.on_partial(data.content)
     end)
   end, function(error)
     handlers.on_error(error)
