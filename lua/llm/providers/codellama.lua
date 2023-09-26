@@ -1,0 +1,112 @@
+local curl = require('llm.curl')
+local util = require('llm.util')
+local async = require('llm.util.async')
+local provider_util = require('llm.providers.util')
+
+--- This is a llamacpp based provider that only supports codellama 7b and 13b, specifically for FitM / infill
+--- It's a separate provider because infill only works with 7b and 13b models and requires special token handling.
+--- Note that the base models seem to perform better than Instruct models. I'm also not sure how to actually add
+--- instructions to a FIM request.
+local M = {}
+
+
+--- Special tokens taken from https://huggingface.co/mlc-ai/mlc-chat-CodeLlama-13b-hf-q4f16_1/raw/main/tokenizer.json
+--- and https://github.com/facebookresearch/codellama/blob/cb51c14ec761370ba2e2bc351374a79265d0465e/llama/tokenizer.py#L28
+local PRE = 32007
+local MID = 32009
+local SUF = 32008
+local BOS = 1
+local EOS = 2
+
+---@param handlers StreamHandlers
+---@param params { before: string, after: string, existing?: string }
+---@param options { url?: string } Url to running llamacpp server root (e.g. http://localhost:8080/)
+function M.request_completion(handlers, params, options)
+  local cancel = nil
+
+  local options_ = vim.tbl_extend('force', {
+    url = 'http://localhost:8080/'
+  }, options or {})
+
+  local function request_tokens(text, on_complete)
+    curl.request(
+      {
+        url = options_.url .. 'tokenize',
+        body = {
+          content = text
+        }
+      }, function(response)
+        local data = util.json.decode(response)
+        if data == nil then
+          handlers.on_error('Failed to decode tokenizer response: ' .. response)
+          error('Failed to decode tokenizer response: ' .. response)
+          -- TODO probably want to add async error handling
+        end
+
+        on_complete(data.tokens)
+      end,
+      handlers.on_error
+    )
+  end
+
+  async(
+    function(wait, resolve)
+      -- These rely on the fact that BOS is not added in tokenizer
+      -- https://github.com/ggerganov/llama.cpp/blob/c091cdfb24621710c617ea85c92fcd347d0bf340/examples/server/README.md?plain=1#L165
+      local pre_tokens = wait(request_tokens(params.before, resolve))
+      local suf_tokens = wait(request_tokens(params.after, resolve))
+
+      return {
+        pre = pre_tokens,
+        suf = suf_tokens
+      }
+    end,
+    function(tokens)
+      local prompt_tokens = vim.tbl_flatten({
+        -- Reference: https://github.com/facebookresearch/codellama/blob/cb51c14ec761370ba2e2bc351374a79265d0465e/llama/generation.py#L404
+        BOS,
+        PRE,
+        tokens.pre,
+        SUF,
+        tokens.suf, -- it looks like there's additional magic here I'm not handling
+        -- https://github.com/facebookresearch/codellama/blob/cb51c14ec761370ba2e2bc351374a79265d0465e/llama/generation.py#L407
+        MID
+      })
+
+      local completion = ''
+
+      cancel = curl.stream(
+        {
+          url = options_.url .. 'completion',
+          body = {
+            stream = true,
+            prompt = prompt_tokens
+          }
+        },
+        function(raw)
+          provider_util.iter_sse_items(raw, function(item)
+            local data = util.json.decode(item)
+
+            if data == nil then
+              handlers.on_error('Failed to decode: ' .. item)
+              return
+            end
+
+            if data.stop then
+              local strip_eot = completion:gsub(' <EOT>$', '')
+              handlers.on_finish(strip_eot)
+            else
+              handlers.on_partial(data.content)
+              completion = completion .. data.content
+            end
+          end)
+        end,
+        util.eshow
+      )
+    end
+  )
+
+  return function() cancel() end
+end
+
+return M

@@ -79,6 +79,19 @@ function M.table.map_to_array(table, fn)
   return result
 end
 
+--- Appends two list-like tables into one table. xs then ys
+function M.table.append(xs, ys)
+  local res = {}
+  for _,v in ipairs(xs) do
+    table.insert(res, v)
+  end
+  for _,v in ipairs(ys) do
+    table.insert(res, v)
+  end
+
+  return res
+end
+
 --- Gets the 0-indexed subslice of a list table
 function M.table.slice(tbl, start, stop)
   local function idx(x)

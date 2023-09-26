@@ -14,6 +14,7 @@ local palm = require('llm.providers.palm')
 local huggingface = require('llm.providers.huggingface')
 local kobold = require('llm.providers.kobold')
 local llamacpp = require('llm.providers.llamacpp')
+local codellama = require('llm.providers.codellama')
 
 local function standard_code(input, context)
   local surrounding_text = prompts.limit_before_after(context, 30)
@@ -76,6 +77,18 @@ return {
     end
   },
   llamacpp = llamacpp.default_prompt,
+  codellama = {
+    provider = codellama,
+    mode = llm.mode.INSERT,
+    -- weird things happen if we have a visual selection
+    params = {
+      temperature = 0.2
+    },
+    builder = function(_, context)
+      -- just for FIM
+      return prompts.limit_before_after(context, 30)
+    end
+  },
   ['hf starcoder'] = {
     provider = huggingface,
     options = {
