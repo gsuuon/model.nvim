@@ -1,20 +1,21 @@
-local system = require "llm.util.system"
-
 local curl = require "llm.curl"
 local util = require "llm.util"
 local provider_util = require "llm.providers.util"
--- local extract = require('llm.prompts.extract')
 
 local M = {}
 
 ---@param handlers StreamHandlers
----@param params? any Additional params for request
+---@param params? any other params see : https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md
 ---@param options? { model?: string }
 function M.request_completion(handlers, params, options)
 
+  local options_ = vim.tbl_extend('force', {
+    url = "http://127.0.0.1:8080/completion",
+  }, options or {})
+
   -- TODO handle non-streaming calls
   return curl.stream({
-    url = "http://127.0.0.1:8080/completion",
+    url = options_.url,
     method = "POST",
     body = vim.tbl_extend("force", { stream = true }, params),
   }, function(raw)
@@ -26,7 +27,7 @@ function M.request_completion(handlers, params, options)
         return
       end
 
-      if data.generation_settings ~= nil then -- last message
+      if data.stop ~= nil then -- last message
         handlers.on_finish()
         return
       end
@@ -39,27 +40,6 @@ function M.request_completion(handlers, params, options)
 end
 
 -- LLaMa 2
-
-
--- example code prompt llama2:
--- [===[
--- <s>[INST] Write code to solve the following coding problem that obeys the constraints and passes the example test cases. Please wrap your code answer using ```.
--- ]===]
--- .. user_input ..
--- [===[
--- [/INST]
--- ]===]
-
--- example noncoder prompt llama2:
--- <s>[INST] <<SYS>>
--- You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
---
--- If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
--- <</SYS>>
---
--- There's a llama in my garden 😱 What should I do? [/INST]
-
-
 
 -- This stuff is adapted from https://github.com/facebookresearch/llama/blob/main/llama/generation.py
 local SYSTEM_BEGIN = "<<SYS>>\n"
@@ -81,9 +61,6 @@ end
 
 local default_system_prompt =
   [[You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.]]
-
-local coding_system_prompt =
-  [[ Write code to solve the following coding problem that obeys the constraints and passes the example test cases. Please wrap your code answer using ```. ]]
 
 ---@param prompt { system?: string, messages: string[] } -- messages are alternating user/assistant strings
 M.llama_2_chat = function(prompt)
@@ -127,13 +104,7 @@ M.default_prompt = {
     temperature = 0.8,    -- Adjust the randomness of the generated text (default: 0.8).
     repeat_penalty = 1.1, -- Control the repetition of token sequences in the generated text (default: 1.1)
     seed = -1,            -- Set the random number generator (RNG) seed (default: -1, -1 = random seed)
-    -- other params see : https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md
   },
-  -- builder = function(input)
-  --   return {
-  --     prompt = M.llama_2_chat { messages = { input, }, },
-  --   }
-  -- end,
   builder = function(input)
     return function(build)
       vim.ui.input(
@@ -148,15 +119,12 @@ M.default_prompt = {
             return
           end
 
-          -- vim.print(final_prompt)
           build({
             prompt = final_prompt
           })
         end)
     end
-  end,
-  -- transform = extract.markdown_code, -- only use code block from server response
-
+  end
 }
 
 return M
