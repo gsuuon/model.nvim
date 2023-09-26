@@ -124,6 +124,18 @@ function M.table.flatten(tbls)
   return results
 end
 
+--- Copies table without the given key
+function M.table.without(tbl, key)
+  local result = {}
+  for k, v in pairs(tbl) do
+    if k ~= key then
+      result[k] = v
+    end
+  end
+
+  return result
+end
+
 M.json = {}
 
 function M.json.decode(string)

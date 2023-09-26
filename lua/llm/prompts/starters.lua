@@ -14,6 +14,7 @@ local palm = require('llm.providers.palm')
 local huggingface = require('llm.providers.huggingface')
 local kobold = require('llm.providers.kobold')
 local llamacpp = require('llm.providers.llamacpp')
+local codellama = require('llm.providers.codellama')
 
 local function standard_code(input, context)
   local surrounding_text = prompts.limit_before_after(context, 30)
@@ -76,6 +77,7 @@ return {
     end
   },
   llamacpp = llamacpp.default_prompt,
+  codellama = codellama.default_prompt,
   ['hf starcoder'] = {
     provider = huggingface,
     options = {

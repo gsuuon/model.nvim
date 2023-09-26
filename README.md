@@ -236,6 +236,9 @@ Set the model field on the params returned by the builder (or the static params 
 
 This provider uses the llama.cpp server example - start the [server](https://github.com/ggerganov/llama.cpp/tree/master/examples/server) before running prompts with this provider.
 
+#### Codellama
+This is a llama.cpp based provider specialized for codellama infill / Fill in the Middle. Only 7B and 13B models support FIM, and the base models (not Instruct) seem to work better. Start the llama.cpp server example with one of the two supported models before using this provider.
+
 #### Kobold
 For older models that don't work with llama.cpp, koboldcpp might still support them. Check their [repo](https://github.com/LostRuins/koboldcpp/) for setup info.
 
