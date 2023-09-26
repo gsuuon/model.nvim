@@ -234,7 +234,7 @@ Set the model field on the params returned by the builder (or the static params 
 #### LlamaCpp
 [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
-This provider runs the built LlamaCpp executable. See starters for an example using the LLaMa 2 chat model (`llama-2-13b-chat.ggmlv3.q4_K_M`). CLI options can be set per-prompt, making it easy to experiment with various options.
+This provider uses llama.cpp server example - start the [server](https://github.com/ggerganov/llama.cpp/tree/master/examples/server) before using prompts with this provider.
 
 #### Kobold
 For older models that don't work with llama.cpp, koboldcpp might still support them. Check their [repo](https://github.com/LostRuins/koboldcpp/) for setup info.
