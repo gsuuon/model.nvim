@@ -115,7 +115,7 @@ M.default_prompt = {
   provider = M,
   mode = llm.mode.INSERT, -- weird things happen if we have a visual selection
   params = {
-    temperature = 0.1
+    temperature = 0.1 -- Seems to rarely decode EOT if temp is high
   },
   builder = function(_, context)
     -- we ignore input since this is just for FIM
