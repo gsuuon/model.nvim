@@ -30,7 +30,7 @@ M.mode = {
 
 ---@class StreamHandlers
 ---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
----@field on_finish (fun(complete_text: string, finish_reason?: string): nil) Complete response with finish reason
+---@field on_finish (fun(complete_text?: string, finish_reason?: string): nil) Complete response with finish reason. Leave complete_text nil to just use concatenated partials.
 ---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
 
 local function get_segment(input, segment_mode, hl_group)
@@ -232,12 +232,19 @@ end
 local function request_completion_input_segment(handle_params, prompt)
   local seg = handle_params.context.segment
 
+  local completion = ""
+
   local cancel = start_prompt(handle_params.input, prompt, {
     on_partial = function(partial)
+      completion = completion .. partial
       seg.add(partial)
     end,
 
     on_finish = function(complete_text, reason)
+      if complete_text == nil or string.len(complete_text) == 0 then
+        complete_text = completion
+      end
+
       if prompt.transform == nil then
         seg.set_text(complete_text)
       else
