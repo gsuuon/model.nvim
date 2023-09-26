@@ -27,7 +27,7 @@ function M.request_completion(handlers, params, options)
       end
 
       if data.generation_settings ~= nil then -- last message
-        handlers.on_finish("", "stop")
+        handlers.on_finish()
         return
       end
 
