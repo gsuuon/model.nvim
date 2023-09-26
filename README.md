@@ -234,7 +234,7 @@ Set the model field on the params returned by the builder (or the static params 
 #### LlamaCpp
 [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
-This provider uses llama.cpp server example - start the [server](https://github.com/ggerganov/llama.cpp/tree/master/examples/server) before using prompts with this provider.
+This provider uses the llama.cpp server example - start the [server](https://github.com/ggerganov/llama.cpp/tree/master/examples/server) before running prompts with this provider.
 
 #### Kobold
 For older models that don't work with llama.cpp, koboldcpp might still support them. Check their [repo](https://github.com/LostRuins/koboldcpp/) for setup info.
