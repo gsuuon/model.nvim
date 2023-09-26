@@ -1,3 +1,5 @@
+local llm = require('llm')
+local prompts = require('llm.prompts')
 local curl = require('llm.curl')
 local util = require('llm.util')
 local async = require('llm.util.async')
@@ -17,8 +19,8 @@ local BOS = 1
 local EOS = 2
 
 ---@param handlers StreamHandlers
----@param params { before: string, after: string, existing?: string }
----@param options { url?: string } Url to running llamacpp server root (e.g. http://localhost:8080/)
+---@param params { before: string, after: string } -- text before and after cursor position
+---@param options { url?: string } Url to running llamacpp server root (defaults to http://localhost:8080/)
 function M.request_completion(handlers, params, options)
   local cancel = nil
 
@@ -108,5 +110,18 @@ function M.request_completion(handlers, params, options)
 
   return function() cancel() end
 end
+
+M.default_prompt = {
+  provider = M,
+  mode = llm.mode.INSERT, -- weird things happen if we have a visual selection
+  params = {
+    temperature = 0.1
+  },
+  builder = function(_, context)
+    -- we ignore input since this is just for FIM
+    -- TODO figure out how to add instructions to FIM in Instruct models
+    return prompts.limit_before_after(context, 30)
+  end
+}
 
 return M

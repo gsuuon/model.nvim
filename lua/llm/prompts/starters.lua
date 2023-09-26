@@ -77,18 +77,7 @@ return {
     end
   },
   llamacpp = llamacpp.default_prompt,
-  codellama = {
-    provider = codellama,
-    mode = llm.mode.INSERT,
-    -- weird things happen if we have a visual selection
-    params = {
-      temperature = 0.2
-    },
-    builder = function(_, context)
-      -- just for FIM
-      return prompts.limit_before_after(context, 30)
-    end
-  },
+  codellama = codellama.default_prompt,
   ['hf starcoder'] = {
     provider = huggingface,
     options = {
