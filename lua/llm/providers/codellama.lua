@@ -3,10 +3,8 @@ local util = require('llm.util')
 local async = require('llm.util.async')
 local provider_util = require('llm.providers.util')
 
---- This is a llamacpp based provider that only supports codellama 7b and 13b, specifically for FitM / infill
---- It's a separate provider because infill only works with 7b and 13b models and requires special token handling.
---- Note that the base models seem to perform better than Instruct models. I'm also not sure how to actually add
---- instructions to a FIM request.
+--- This is a llamacpp based provider that only supports infill with codellama 7b and 13b, which require special token handling.
+--- Note that the base models seem to perform better than Instruct models. I'm also not sure how to actually add instructions to a FIM prompt.
 local M = {}
 
 
@@ -64,12 +62,14 @@ function M.request_completion(handlers, params, options)
     function(tokens)
       local prompt_tokens = vim.tbl_flatten({
         -- Reference: https://github.com/facebookresearch/codellama/blob/cb51c14ec761370ba2e2bc351374a79265d0465e/llama/generation.py#L404
+        -- PSM format
         BOS,
         PRE,
         tokens.pre,
         SUF,
-        tokens.suf, -- it looks like there's additional magic here I'm not handling
-        -- https://github.com/facebookresearch/codellama/blob/cb51c14ec761370ba2e2bc351374a79265d0465e/llama/generation.py#L407
+        tokens.suf,
+          -- there might be additional magic here I'm not handling
+          -- https://github.com/facebookresearch/codellama/blob/cb51c14ec761370ba2e2bc351374a79265d0465e/llama/generation.py#L407
         MID
       })
 
@@ -93,7 +93,7 @@ function M.request_completion(handlers, params, options)
             end
 
             if data.stop then
-              local strip_eot = completion:gsub(' <EOT>$', '')
+              local strip_eot = completion:gsub(' <EOT>$', '') -- We can probably drop this eventually when llama.cpp adds the codellama special tokens (32010+)
               handlers.on_finish(strip_eot)
             else
               handlers.on_partial(data.content)
