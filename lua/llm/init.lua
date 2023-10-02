@@ -204,6 +204,10 @@ function M.setup(opts)
     scopes.set_global_user_prompts(_opts.prompts)
   end
 
+  if _opts.join_undo then
+    segment.join_undo = true
+  end
+
   setup_commands()
 
   M.opts = _opts
