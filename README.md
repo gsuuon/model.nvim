@@ -608,3 +608,15 @@ return {
 
 ## Contributing
 New starter prompts, providers and bug fixes are welcome! If you've figured out some useful prompts and want to share, check out the [discussions](https://github.com/gsuuon/llm.nvim/discussions/24).
+
+### Roadmap
+I'm hoping to eventually add the following features - I'd appreciate help with any of these.
+
+#### Local retrieval augmented generation
+The basics are here - a simple json vectorstore based on the git repo, querying, cosine similarity comparison. It just needs a couple more features to improve the DX of using from prompts.
+
+#### Enhanced context
+Make treesitter and LSP info available in prompt context.
+
+#### Chat mode
+A split buffer for chat usage. I still just use web UI's for chat, but having RAG enhanced chats would be nice.
