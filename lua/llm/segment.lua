@@ -9,6 +9,9 @@ local util = require('llm.util')
 
 local M = {}
 
+--- Join undos when adding and setting segment text
+M.join_undo = false
+
 local segments_cache = {}
 
 function M.ns_id()
@@ -32,7 +35,14 @@ local function end_delta(lines, origin_row, origin_col)
   }
 end
 
-local function create_segment_at(row, col, hl_group, bufnr)
+---Create a new segment
+---@param row number 0-indexed start row
+---@param col number 0-indexed end row
+---@param hl_group string
+---@param bufnr number
+---@param join_undo? boolean Join set_text call undos. Will join any undos made between add and set_text.
+---@return Segment
+local function create_segment_at(row, col, hl_group, bufnr, join_undo)
   local _ext_id = vim.api.nvim_buf_set_extmark(
     bufnr,
     M.ns_id(),
@@ -74,6 +84,7 @@ local function create_segment_at(row, col, hl_group, bufnr)
 
   local _hl_group = hl_group
   local _data = {}
+  local _did_add_text_to_undo = false
 
   return {
 
@@ -83,6 +94,10 @@ local function create_segment_at(row, col, hl_group, bufnr)
       if lines == nil or #lines == 0 then return end
 
       local mark = get_details()
+
+      if _did_add_text_to_undo and join_undo then
+        vim.cmd.undojoin()
+      end
 
       vim.api.nvim_buf_set_text(
         bufnr,
@@ -113,6 +128,10 @@ local function create_segment_at(row, col, hl_group, bufnr)
       local r = mark.details.end_row
       local c = mark.details.end_col
 
+      if _did_add_text_to_undo and join_undo then
+        vim.cmd.undojoin()
+      end
+
       vim.api.nvim_buf_set_text(bufnr, r, c, r, c, lines)
 
       local end_pos = end_delta(lines, r, c)
@@ -123,6 +142,8 @@ local function create_segment_at(row, col, hl_group, bufnr)
         end_row = end_pos.row,
         hl_group = _hl_group -- need to set hl_group every time we want to update the extmark
       })
+
+      _did_add_text_to_undo = true
     end),
 
     highlight = vim.schedule_wrap(function(hl) -- this seems to be additive only
@@ -253,7 +274,7 @@ function M.create_segment_at(row, col, hl_group, bufnr)
       )
     )
 
-  local segment = create_segment_at(target_pos.row, target_pos.col, hl_group, bufnr)
+  local segment = create_segment_at(target_pos.row, target_pos.col, hl_group, bufnr, M.join_undo)
 
   segments_cache[segment.ext_id] = segment
 

@@ -195,22 +195,17 @@ local function setup_commands()
 end
 
 function M.setup(opts)
-  local _opts = {
+  local _opts = vim.tbl_deep_extend('force', {
     hl_group = 'Comment',
-  }
-
-  if (opts or {}).default_prompt == nil then
-    local openai = require('llm.providers.openai')
-
-    _opts.default_prompt = openai.default_prompt
-  end
-
-  if opts ~= nil then
-    _opts = vim.tbl_deep_extend('force', _opts, opts)
-  end
+    default_prompt = require('llm.providers.openai').default_prompt
+  }, opts or {})
 
   if _opts.prompts then
     scopes.set_global_user_prompts(_opts.prompts)
+  end
+
+  if _opts.join_undo then
+    segment.join_undo = true
   end
 
   setup_commands()
