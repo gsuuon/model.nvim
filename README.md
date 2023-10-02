@@ -1,6 +1,6 @@
 # 🧠 llm.nvim
 
-Use LLM's in Neovim. Build editor integrated prompts and customize your LLM workflow. The plugin comes with some starter prompts, but you can also create your own prompt library to suit your needs. 
+Use LLM's in Neovim. Build editor integrated prompts and customize your LLM workflow. This plugin comes with some starter prompts out of the box but it's designed for those who want to customize their prompts, experiment with multiple providers or use local LLM's. All prompts are in lua and can be instantly-reloaded.
 
 https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a419-eeec04cb7e99.mp4
 
@@ -18,9 +18,9 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 
 ### Requirements
 - Nvim 0.8.0 or higher
+- curl
 - For the OpenAI provider (default), set the `OPENAI_API_KEY` environment variable to your [api key](https://platform.openai.com/account/api-keys)
 - For the PaLM provider, set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey)
-- curl
 
 #### Optional
 For local vector store:
@@ -47,6 +47,8 @@ require('lazy').setup({
 llm.nvim comes with some [starter prompts](./lua/llm/prompts/starters.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt (e.g. curl, ask gpt for intermediate data, then include data in a final prompt) look at the `openapi` starter prompt.
 
 It can also be used from another plugin to easily add LLM capabilities, for an example look at [note.nvim](https://github.com/gsuuon/note.nvim/blob/main/lua/note/llm/prompts.lua) which adds some [buffer-local](https://github.com/gsuuon/note.nvim/blob/main/ftplugin/note.lua) prompts to note files.
+
+If you have more questions about usage, check out the [discussions](https://github.com/gsuuon/llm.nvim/discussions).
 
 - `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided.
 
@@ -604,3 +606,5 @@ return {
 
 </details>
 
+## Contributing
+New starter prompts, providers and bug fixes are welcome! If you've figured out some useful prompts and want to share, check out the [discussions](https://github.com/gsuuon/llm.nvim/discussions/24).
