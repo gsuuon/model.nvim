@@ -15,10 +15,13 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit)
 
   local handle = assert(uv.spawn(
     cmd,
-    vim.tbl_extend('force', {
-      args = args,
-      stdio = { nil, stdout, stderr }
-    }, opts),
+    vim.tbl_extend(
+      'force',
+      {
+        args = args,
+        stdio = { nil, stdout, stderr }
+      }, opts
+    ),
     function(exit_code, signal)
       -- success
       if exit_code == 0 then
@@ -36,7 +39,7 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit)
         on_error(_error_output)
       end)
     end
-  ), 'curl exited unexpectedly')
+  ), 'failed to spawn ' .. cmd)
 
   uv.read_start(stderr, function(err, text)
     assert(not err, err)
