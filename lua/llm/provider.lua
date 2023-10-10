@@ -292,6 +292,8 @@ function M.complete(prompt, input, context, callback)
 end
 
 ---@param prompt Prompt
+---@param args string
+---@param want_visual_selection boolean
 function M.request_completion(prompt, args, want_visual_selection, default_hl_group)
   local prompt_mode = prompt.mode or M.mode.APPEND
 

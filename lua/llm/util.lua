@@ -284,6 +284,11 @@ end
 M.cursor = {}
 
 function M.cursor.selection()
+  -- NOTE These give the byte pos of column and not char pos
+  -- also < and > only get updated after leaving visual mode
+  -- https://www.reddit.com/r/neovim/comments/13mfta8/reliably_get_the_visual_selection_range/
+  -- may want to switch to 'v' and '.' as key mappings from visual mode may not work if we don't
+  -- leave visual mode first (most will though)
   local start = vim.fn.getpos("'<")
   local stop = vim.fn.getpos("'>")
 
