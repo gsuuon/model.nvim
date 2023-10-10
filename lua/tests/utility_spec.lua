@@ -1,7 +1,9 @@
 local u = require('tests.util')
 
 describe('cursor.selection', function()
+
   it('gets 0-indexed cursor position', function()
+
     local util = require('llm.util')
 
     local buf = vim.api.nvim_create_buf(false, true)
