@@ -4,6 +4,8 @@ local match = require('luassert.match')
 local u = require('tests.util')
 require('tests.matchers')
 
+local delay = 10
+
 local type_stream_handlers = {
   on_finish = 'function',
   on_partial = 'function',
@@ -84,7 +86,6 @@ describe('provider', function()
 
     local test_provider = {
       request_completion = function(handlers)
-        local delay = 10
         local lines = { 'foo', 'bar', 'baz' }
 
         for i,line in ipairs(lines) do
@@ -127,5 +128,56 @@ describe('provider', function()
 
     coroutine.yield()
     assert.are.same({'', 'foo', 'par', 'paz'}, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+  end)
+
+  it('calls custom mode stream handlers', function()
+    local co = coroutine.running()
+
+    local test_provider = {
+      request_completion = function(handlers)
+
+        vim.defer_fn(function ()
+          handlers.on_partial('partial')
+          coroutine.resume(co)
+        end, delay)
+
+        vim.defer_fn(function ()
+          handlers.on_finish('finish')
+          coroutine.resume(co)
+        end, delay * 2)
+
+        vim.defer_fn(function ()
+          handlers.on_error('error')
+          coroutine.resume(co)
+        end, delay * 3)
+      end
+    }
+
+    local noop = function() end
+
+    local custom_mode = mock({
+      on_finish = noop,
+      on_partial = noop,
+      on_error = noop,
+    })
+
+    provider.request_completion({
+      provider = test_provider,
+      builder = function() return {} end,
+      mode = custom_mode
+    }, '', false)
+
+    assert.spy(custom_mode.on_partial).was_not_called()
+    assert.spy(custom_mode.on_finish).was_not_called()
+    coroutine.yield()
+
+    assert.spy(custom_mode.on_partial).was_called_with('partial')
+    assert.spy(custom_mode.on_finish).was_not_called()
+
+    coroutine.yield()
+    assert.spy(custom_mode.on_finish).was_called_with('finish')
+
+    coroutine.yield()
+    assert.spy(custom_mode.on_error).was_called_with('error')
   end)
 end)
