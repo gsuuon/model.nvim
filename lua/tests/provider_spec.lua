@@ -137,13 +137,16 @@ describe('provider', function()
 
     assert.spy(custom_mode.on_partial).was_not_called()
     assert.spy(custom_mode.on_finish).was_not_called()
-    coroutine.yield()
+    assert.spy(custom_mode.on_error).was_not_called()
 
+    coroutine.yield()
     assert.spy(custom_mode.on_partial).was_called_with('partial')
     assert.spy(custom_mode.on_finish).was_not_called()
+    assert.spy(custom_mode.on_error).was_not_called()
 
     coroutine.yield()
     assert.spy(custom_mode.on_finish).was_called_with('finish')
+    assert.spy(custom_mode.on_error).was_not_called()
 
     coroutine.yield()
     assert.spy(custom_mode.on_error).was_called_with('error')
