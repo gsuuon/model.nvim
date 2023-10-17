@@ -195,7 +195,7 @@ local function setup_commands()
 end
 
 function M.setup(opts)
-  local _opts = vim.tbl_deep_extend('force', {
+  local _opts = vim.tbl_extend('force', {
     hl_group = 'Comment',
     default_prompt = require('llm.providers.openai').default_prompt
   }, opts or {})
