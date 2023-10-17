@@ -65,4 +65,10 @@ describe('setup', function()
     end)
 
   end)
+
+  it('can merge opts which contain prompts', function()
+    require('llm').setup({
+      default_prompt = require('llm.providers.palm').default_prompt
+    })
+  end)
 end)
