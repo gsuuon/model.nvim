@@ -305,7 +305,7 @@ function M.request_completion(prompt, args, want_visual_selection, default_hl_gr
       M.mode.APPEND, -- we don't use the segment here, append will create an empty segment at end of selection
       want_visual_selection,
       prompt.hl_group or default_hl_group,
-      ''
+      args
     )
 
     start_prompt(
