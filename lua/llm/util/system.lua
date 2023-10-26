@@ -63,7 +63,7 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit)
     end
   end)
 
-  return function() handle:kill("sigint") end
+  return function() handle:kill('sigint') end
 end
 
 return system
