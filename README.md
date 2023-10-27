@@ -237,7 +237,35 @@ Set the model field on the params returned by the builder (or the static params 
 #### LlamaCpp
 [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
-This provider uses the llama.cpp server example - start the [server](https://github.com/ggerganov/llama.cpp/tree/master/examples/server) before running prompts with this provider.
+This provider uses the llama.cpp server example. You can start the server manually or autostart it when you run a prompt.
+
+To autostart the server, provide a start command and args (with absolute paths for the binary and model) in the `options.server_start` field, eg:
+```lua
+  llamacpp = {
+    provider = llamacpp,
+    options = {
+      server_start = {
+        command = '/path/to/server/bin',
+        args = {
+          '-m', '/path/to/model',
+          '-c', 4096,
+          '-ngl', 22
+        }
+      }
+    },
+    builder = function(input, context)
+      return {
+        prompt = llamacpp.llama_2_user_prompt({
+          user = context.args or '',
+          message = input
+        })
+      }
+    end
+  },
+```
+
+See [llama.cpp server docs](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md#llamacppexampleserver) for more server arguments.
+
 
 #### Codellama
 This is a llama.cpp based provider specialized for codellama infill / Fill in the Middle. Only 7B and 13B models support FIM, and the base models (not Instruct) seem to work better. Start the llama.cpp server example with one of the two supported models before using this provider.
