@@ -56,7 +56,8 @@ local function standard_code(input, context)
   }
 end
 
-return {
+---@type table<string, Prompt>
+local starters = {
   gpt = openai.default_prompt,
   palm = palm.default_prompt,
   hf = huggingface.default_prompt,
@@ -76,7 +77,25 @@ return {
       }
     end
   },
-  llamacpp = llamacpp.default_prompt,
+  llamacpp = {
+    provider = llamacpp,
+    -- To autostart llamacpp:
+    --
+    -- options = {
+    --   server_start = {
+    --     command = '/path/to/server/bin',
+    --     args = {
+    --       '-m', '/path/to/model',
+    --       -- https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md#llamacppexampleserver
+    --     }
+    --   }
+    -- },
+    builder = function(input, context)
+      return {
+        prompt = llamacpp.llama_2_user_prompt({user = context.args or '', message = input})
+      }
+    end
+  },
   codellama = codellama.default_prompt,
   ['hf starcoder'] = {
     provider = huggingface,
@@ -294,3 +313,5 @@ return {
     end
   }
 }
+
+return starters
