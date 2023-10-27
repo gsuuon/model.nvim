@@ -8,6 +8,20 @@ local M = {}
 
 local stop_server_augroup = vim.api.nvim_create_augroup('LlmNvimLlamaCppServerStop', {})
 
+local function start_opts_changed(a, b)
+  if a == b then
+    return false
+  end
+
+  if a.command ~= b.command then
+    return true
+  end
+
+  if table.concat(a.args, ' ') ~= table.concat(b.args, ' ') then
+    return true
+  end
+end
+
 ---@param handlers StreamHandlers
 ---@param params? any other params see : https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md
 ---@param options? { server_start?: { command: string, args: string[] }, server_port?: number } set server_start to auto-start llama.cpp server with a command and args. Paths should be absolute paths, example: { command = '/path/to/server', args = '-m /path/to/model -ngl 20'
@@ -26,7 +40,7 @@ function M.request_completion(handlers, params, options)
       options_.server_start.args,
       {},
       function(out)
-        if out:find('HTTP server listening') then
+        if out and out:find('HTTP server listening') then
           util.show('llama.cpp server started')
           started_cb()
         end
@@ -54,14 +68,11 @@ function M.request_completion(handlers, params, options)
 
     -- if we have a server start command, start the server and send request when it's up
     if options_.server_start then
-
       if M.last_server_start == nil then
         wait(start_server(resolve))
       else -- previously started server
-        if options_.server_start.command ~= M.last_server_start.command or
-           options_.server_start.args ~= M.last_server_start.args
-        then -- options changed
-          M.last_server_start.cancel()
+        if start_opts_changed(M.last_server_start, options_.server_start) then
+          M.last_server_start.stop()
           wait(start_server(resolve))
         end
       end
@@ -87,6 +98,7 @@ function M.request_completion(handlers, params, options)
       end, function(error)
         handlers.on_error(error)
       end)
+
   end)
 
   return function() cancel() end
