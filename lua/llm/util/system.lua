@@ -7,6 +7,7 @@ local uv = vim.loop
 ---@param on_error fun(text: string): nil
 ---@param on_exit? fun(): nil
 ---@param opts object additional options for uv.spawn
+---@return function interrupt sends SIGINT to process
 local function system(cmd, args, opts, on_stdout, on_error, on_exit)
   local stdout = assert(uv.new_pipe(false), 'Failed to open stdout pipe')
   local stderr = assert(uv.new_pipe(false), 'Failed to open stderr pipe')
@@ -63,7 +64,7 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit)
     end
   end)
 
-  return function() handle:kill("sigint") end
+  return function() handle:kill('sigint') end
 end
 
 return system
