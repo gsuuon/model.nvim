@@ -235,17 +235,14 @@ Set the model field on the params returned by the builder (or the static params 
 ```
 
 #### LlamaCpp
-[llama.cpp](https://github.com/ggerganov/llama.cpp)
 
-This provider uses the llama.cpp server example. You can start the server manually or autostart it when you run a prompt.
-
-To autostart the server, provide a start command and args (with absolute paths for the binary and model) in the `options.server_start` field, eg:
+This provider uses the [llama.cpp server example](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md). You can start the server manually or autostart it when you run a prompt. To autostart the server, provide a start command binary path and args in the `options.server_start` field, eg:
 ```lua
   llamacpp = {
     provider = llamacpp,
     options = {
       server_start = {
-        command = '/path/to/server/bin',
+        command = '/path/to/server',
         args = {
           '-m', '/path/to/model',
           '-c', 4096,
@@ -264,7 +261,7 @@ To autostart the server, provide a start command and args (with absolute paths f
   },
 ```
 
-See [llama.cpp server docs](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md#llamacppexampleserver) for more server arguments.
+The server will be restarted if a prompt with different args is run. See [llama.cpp server docs](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md#llamacppexampleserver).
 
 
 #### Codellama
