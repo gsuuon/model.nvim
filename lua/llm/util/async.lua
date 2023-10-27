@@ -12,9 +12,11 @@
 --- @param fn fun(wait: (fun(any): any), resolve: (fun(any): any)): any))
 --- @param callback? fun(result: any)
 local function async(fn, callback)
+  -- TODO handle cancelling
   local co = coroutine.create(fn)
 
   local function wait(cb_fn)
+    -- I think the wait value is effectively tossed
     return coroutine.yield(cb_fn)
   end
 
