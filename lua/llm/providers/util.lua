@@ -1,7 +1,9 @@
 local M = {}
 
----@deprecated this doesn't account for partial raw_data (where a single JSON object is split between multiple outputs/data values)
+---@deprecated Use iter_sse_messages or iter_sse_dataa. This doesn't account for partial raw_data (where a single JSON object is split between multiple outputs/data values)
 function M.iter_sse_items(raw_data, fn)
+  local util = require('llm.util')
+
   local items = util.string.split_pattern(raw_data, 'data:')
   -- FIXME it seems like sometimes we don't get the two newlines?
 
