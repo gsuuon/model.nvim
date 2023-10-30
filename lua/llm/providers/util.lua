@@ -38,7 +38,7 @@ end
 function M.iter_sse_data(fn)
   return M.iter_sse_messages(function(message)
     if message.data ~= nil then
-      fn(message)
+      fn(message.data)
     end
   end)
 end

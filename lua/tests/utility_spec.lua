@@ -27,7 +27,7 @@ describe('cursor.selection', function()
   end)
 end)
 
-describe('server-sent events output util', function()
+describe('server-sent events iterator', function()
   local p_util = require('llm.providers.util')
 
   local function parse_expect_sse(outputs, expected)
@@ -92,4 +92,36 @@ describe('server-sent events output util', function()
     )
   end)
 
+  describe('data helper', function()
+    local function parse_expect_data(outputs, expected)
+      local got = {}
+
+      local parse = p_util.iter_sse_data(function(event)
+        table.insert(got, event)
+      end)
+
+      for _,output in ipairs(outputs) do
+        parse(output)
+      end
+
+      assert.are.same(expected, got)
+    end
+
+    it('parses out data values', function()
+
+      parse_expect_data(
+        {
+          'data: {"a": true}\n\ndata: {"b": false}\n\n',
+          'data: {"c": true}\n\ndata: {"d": false}\n\n',
+        },
+        {
+          '{"a": true}',
+          '{"b": false}',
+          '{"c": true}',
+          '{"d": false}'
+        }
+      )
+
+    end)
+  end)
 end)
