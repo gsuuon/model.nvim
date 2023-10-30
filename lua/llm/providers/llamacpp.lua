@@ -78,27 +78,26 @@ function M.request_completion(handlers, params, options)
       end
     end
 
-    cancel = curl.stream({
-      url = 'http://127.0.0.1:' .. options_.server_port .. '/completion',
-      method = 'POST',
-      body = vim.tbl_extend('force', { stream = true }, params),
-    }, function(raw)
-        provider_util.iter_sse_items(raw, function(item)
-          local data = util.json.decode(item)
+    cancel = curl.stream(
+      {
+        url = 'http://127.0.0.1:' .. options_.server_port .. '/completion',
+        method = 'POST',
+        body = vim.tbl_extend('force', { stream = true }, params),
+      },
+      provider_util.iter_sse_data(function(item)
+        local data = util.json.decode(item)
 
-          if data == nil then
-            handlers.on_error(item, 'json parse error')
-          elseif data.stop then
-            handlers.on_finish()
-          else
-            handlers.on_partial(data.content)
-          end
-
-        end)
-      end, function(error)
+        if data == nil then
+          handlers.on_error(item, 'json parse error')
+        elseif data.stop then
+          handlers.on_finish()
+        else
+          handlers.on_partial(data.content)
+        end
+      end),
+      function(error)
         handlers.on_error(error)
       end)
-
   end)
 
   return function() cancel() end

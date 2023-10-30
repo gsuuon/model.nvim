@@ -21,36 +21,34 @@ function M.request_completion(handlers, params, options)
         ['Content-Type'] = 'application/json'
       }
     },
-    function(raw)
-      provider_util.iter_sse_items(raw, function(item)
-        local data = util.json.decode(item)
+    provider_util.iter_sse_data(function(data)
+      local item = util.json.decode(data)
 
-        if data == nil then
-          handlers.on_error(item, 'json parse error')
+      if item == nil then
+        handlers.on_error(data, 'json parse error')
+        return
+      end
+
+      if item.token == nil then
+        if item[1] ~= nil and item[1].generated_text ~= nil then
+          -- non-streaming
+          handlers.on_finish(item[1].generated_text, 'stop')
           return
         end
 
-        if data.token == nil then
-          if data[1] ~= nil and data[1].generated_text ~= nil then
-            -- non-streaming
-            handlers.on_finish(data[1].generated_text, 'stop')
-            return
-          end
+        handlers.on_error(item, 'missing token')
+        return
+      end
 
-          handlers.on_error(data, 'missing token')
-          return
-        end
+      local partial = item.token.text
 
-        local partial = data.token.text
+      handlers.on_partial(partial)
 
-        handlers.on_partial(partial)
-
-        -- We get the completed text including input unless parameters.return_full_text is set to false
-        if data.generated_text ~= nil and #data.generated_text > 0 then
-          handlers.on_finish(data.generated_text, 'stop')
-        end
-      end)
-    end,
+      -- We get the completed text including input unless parameters.return_full_text is set to false
+      if item.generated_text ~= nil and #item.generated_text > 0 then
+        handlers.on_finish(item.generated_text, 'stop')
+      end
+    end),
     function(error)
       handlers.on_error(error)
     end

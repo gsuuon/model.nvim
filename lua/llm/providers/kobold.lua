@@ -21,23 +21,18 @@ function M.request_completion(handlers, params, options)
         ['Content-Type'] = 'application/json'
       }
     },
-    function(raw)
-      provider_util.iter_sse_items(
-        raw,
-        function(item)
-          local data, err = util.json.decode(item)
+    provider_util.iter_sse_data(
+      function(data)
+        local item, err = util.json.decode(data)
 
-          if data == nil then
-            if not (item:match('^event: message') or item:match('^HTTP/1.0 200 OK')) then
-              util.eshow(item, 'failed to parse server-sent event')
-              error(err)
-            end
-          else
-            handlers.on_partial(data.token)
-          end
+        if item == nil then
+          util.eshow(data, 'failed to parse server-sent event')
+          error(err)
+        else
+          handlers.on_partial(item.token)
         end
-      )
-    end,
+      end
+    ),
     util.eshow
   )
 end

@@ -61,32 +61,30 @@ function M.request_completion(handlers, params, options)
     on_error = util.noop,
   }, handlers)
 
-  local function handle_raw(raw_data)
-    provider_util.iter_sse_items(raw_data, function(item)
-      local data = extract_data(item)
+  local handle_raw = provider_util.iter_sse_data(function(item)
+    local data = extract_data(item)
 
-      if data ~= nil then
-        if data.content ~= nil then
-          _all_content = _all_content .. data.content
-          _handlers.on_partial(data.content)
-        end
+    if data ~= nil then
+      if data.content ~= nil then
+        _all_content = _all_content .. data.content
+        _handlers.on_partial(data.content)
+      end
 
-        if data.finish_reason ~= nil then
-          _handlers.on_finish(_all_content, data.finish_reason)
-        end
+      if data.finish_reason ~= nil then
+        _handlers.on_finish(_all_content, data.finish_reason)
+      end
+    else
+      local response = util.json.decode(item)
+
+      if response ~= nil then
+        _handlers.on_error(response, 'response')
       else
-        local response = util.json.decode(item)
-
-        if response ~= nil then
-          _handlers.on_error(response, 'response')
-        else
-          if not item:match('%[DONE%]') then
-            _handlers.on_error(item, 'item')
-          end
+        if not item:match('%[DONE%]') then
+          _handlers.on_error(item, 'item')
         end
       end
-    end)
-  end
+    end
+  end)
 
   local function handle_error(error)
     _handlers.on_error(error, 'curl')
