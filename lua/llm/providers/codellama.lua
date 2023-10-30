@@ -89,20 +89,17 @@ function M.request_completion(handlers, params, options)
             util.table.without(params, 'context')
           )
         },
-        provider_util.iter_sse_messages(function(message)
-          if message.data == nil then return end
-          local item = message.data
+        provider_util.iter_sse_data(function(data)
+          local item = util.json.decode(data)
 
-          local data = util.json.decode(item)
-
-          if data == nil then
-            handlers.on_error('Failed to decode: ' .. item)
-          elseif data.stop then
+          if item == nil then
+            handlers.on_error('Failed to decode: ' .. data)
+          elseif item.stop then
             local strip_eot = completion:gsub(' <EOT>$', '') -- We can probably drop this eventually when llama.cpp adds the codellama special tokens (32010+)
             handlers.on_finish(strip_eot)
           else
-            completion = completion .. data.content
-            handlers.on_partial(data.content)
+            completion = completion .. item.content
+            handlers.on_partial(item.content)
           end
           end),
         util.eshow

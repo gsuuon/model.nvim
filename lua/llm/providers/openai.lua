@@ -61,11 +61,7 @@ function M.request_completion(handlers, params, options)
     on_error = util.noop,
   }, handlers)
 
-  local handle_raw = provider_util.iter_sse_messages(function(message)
-    if message.data == nil then return end
-
-    local item = message.data
-
+  local handle_raw = provider_util.iter_sse_data(function(item)
     local data = extract_data(item)
 
     if data ~= nil then

@@ -84,11 +84,7 @@ function M.request_completion(handlers, params, options)
         method = 'POST',
         body = vim.tbl_extend('force', { stream = true }, params),
       },
-      provider_util.iter_sse_messages(function(message)
-        if message.data == nil then return end
-
-        local item = message.data
-
+      provider_util.iter_sse_data(function(item)
         local data = util.json.decode(item)
 
         if data == nil then

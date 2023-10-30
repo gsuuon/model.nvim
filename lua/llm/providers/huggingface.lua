@@ -21,35 +21,32 @@ function M.request_completion(handlers, params, options)
         ['Content-Type'] = 'application/json'
       }
     },
-    provider_util.iter_sse_messages(function(message)
-      if message.data == nil then return end
-      local item = message.data
+    provider_util.iter_sse_data(function(data)
+      local item = util.json.decode(data)
 
-      local data = util.json.decode(item)
-
-      if data == nil then
-        handlers.on_error(item, 'json parse error')
+      if item == nil then
+        handlers.on_error(data, 'json parse error')
         return
       end
 
-      if data.token == nil then
-        if data[1] ~= nil and data[1].generated_text ~= nil then
+      if item.token == nil then
+        if item[1] ~= nil and item[1].generated_text ~= nil then
           -- non-streaming
-          handlers.on_finish(data[1].generated_text, 'stop')
+          handlers.on_finish(item[1].generated_text, 'stop')
           return
         end
 
-        handlers.on_error(data, 'missing token')
+        handlers.on_error(item, 'missing token')
         return
       end
 
-      local partial = data.token.text
+      local partial = item.token.text
 
       handlers.on_partial(partial)
 
       -- We get the completed text including input unless parameters.return_full_text is set to false
-      if data.generated_text ~= nil and #data.generated_text > 0 then
-        handlers.on_finish(data.generated_text, 'stop')
+      if item.generated_text ~= nil and #item.generated_text > 0 then
+        handlers.on_finish(item.generated_text, 'stop')
       end
     end),
     function(error)

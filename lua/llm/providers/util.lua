@@ -1,5 +1,3 @@
-local util = require('llm.util')
-
 local M = {}
 
 local function parse_sse_message(message_text)
@@ -35,6 +33,14 @@ function M.iter_sse_messages(fn)
       return '' -- replace the matched part with empty
     end)
   end
+end
+
+function M.iter_sse_data(fn)
+  return M.iter_sse_messages(function(message)
+    if message.data ~= nil then
+      fn(message)
+    end
+  end)
 end
 
 return M
