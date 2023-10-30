@@ -1,6 +1,6 @@
 local M = {}
 
----@deprecated Use iter_sse_messages or iter_sse_dataa. This doesn't account for partial raw_data (where a single JSON object is split between multiple outputs/data values)
+---@deprecated Use iter_sse_messages or iter_sse_data. This doesn't account for partial raw_data (where a single JSON object is split between multiple outputs/data values)
 function M.iter_sse_items(raw_data, fn)
   local util = require('llm.util')
 
