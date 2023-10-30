@@ -26,3 +26,70 @@ describe('cursor.selection', function()
 
   end)
 end)
+
+describe('server-sent events output util', function()
+  local p_util = require('llm.providers.util')
+
+  local function parse_expect_sse(outputs, expected)
+    local got = {}
+
+    local parse = p_util.iter_sse_messages(function(event)
+      table.insert(got, event)
+    end)
+
+    for _,output in ipairs(outputs) do
+      parse(output)
+    end
+
+    assert.are.same(expected, got)
+  end
+
+  it('parses single message output', function()
+
+    parse_expect_sse(
+      {
+        'data: {"a": true}\n\n',
+        'data: {"b": false}\n\n',
+      },
+      {
+        { data = '{"a": true}' },
+        { data = '{"b": false}' }
+      }
+    )
+
+  end)
+
+  it('parses multiple message outputs', function()
+
+    parse_expect_sse(
+      {
+        'data: {"a": true}\n\ndata: {"b": false}\n\n',
+        'data: {"c": true}\n\ndata: {"d": false}\n\n',
+      },
+      {
+        { data = '{"a": true}' },
+        { data = '{"b": false}' },
+        { data = '{"c": true}' },
+        { data = '{"d": false}' }
+      }
+    )
+
+  end)
+
+  it('parses partial message outputs', function()
+
+    parse_expect_sse(
+      {
+        'data: {"a": true,',
+        'data: "b": false}\n\n',
+        'data: {"c": true,',
+        'data: "d": false}\n\n',
+      },
+      {
+        { data = '{"a": true,\n"b": false}' },
+        { data = '{"c": true,\n"d": false}' }
+      }
+    )
+  end)
+
+end)
