@@ -3,8 +3,8 @@ local M = {}
 --- Splits lines into array of { role: 'user' | 'assistant', content: string }
 --- If first line starts with '> ', then the rest of that line is system message
 ---@param input string Text of input buffer. '\n======\n' denote alternations between user and assistant roles
----@return { messages: { role: 'user'|'assistant', content: string}[], system?: string}
-function M.split_user_assistant(input)
+---@return { role: 'user'|'assistant'|'system', content: string}[] messages
+local function split_messages(input)
   local lines = vim.fn.split(input, '\n')
   local messages = {}
 
@@ -50,7 +50,65 @@ function M.split_user_assistant(input)
     })
   end
 
-  return { messages = messages }
+  return messages
+end
+
+
+---@param input string Input text of buffer
+---@return { params: table, rest: string }
+local function parse_yaml_params(input)
+  local params_text, rest = input:match('^%-%-%-\n(.-)\n%-%-%-\n(.+)$')
+
+  if params_text == nil then
+    return { params = {}, rest = input }
+  end
+
+  local params_lines = vim.fn.split(params_text, '\n')
+  ---@cast params_lines string[]
+
+  local params = {}
+
+  for _,line in ipairs(params_lines) do
+    local label, value = line:match('(.-): (.+)')
+    if label ~= '' then
+      params[label] = value
+    end
+  end
+
+  return {
+    params = params,
+    rest = rest
+  }
+end
+
+---Parse input text. Frontmatter yaml style (1 deep), system message with > in next line, and alternating 'user', 'assistant' messages. Example:
+--- ```
+--- ---
+--- model: gpt-3.5-turbo
+--- ---
+--- > You are a helpful assistant
+---
+--- Count to three
+---
+--- ===
+--- 1, 2, 3.
+--- ===
+--- ```
+--- Returns the table:
+--- {
+---   model = 'gpt-3.5-turbo'
+---   messages = {
+---     { role = 'system', content = 'You are a helpful assistant' },
+---     { role = 'user', content = 'Count to three' },
+---     { role = 'assistant', content = '1, 2, 3.' }
+---   }
+--- }
+---@return { messages: { role: 'user'|'assistant'|'system', content: string}[] } | table
+function M.parse(input)
+  local parsed = parse_yaml_params(input)
+  local messages = split_messages(parsed.rest)
+
+  return vim.tbl_extend('force', parsed.params, { messages = messages })
 end
 
 return M
