@@ -1,3 +1,5 @@
+local u = require('llm.store.util')
+
 local M = {}
 
 ---@class FunctionItem
@@ -39,35 +41,21 @@ function M.get_known_ids()
   return vim.fn.pyeval("[ i['id'] for i in s['items'] ]")
 end
 
-local function escape_quotes(str)
-  return [[r"""]] .. str:gsub([["""]], [[\"\"\"]]) .. [["""]]
-end
-
 ---@return { id: string, content: string, similarity: number }[]
 function M.query_store(prompt, count, similarity)
   if similarity == nil then
     return vim.fn.py3eval(
-      [[store.query_store(]] .. escape_quotes(prompt) .. [[, ]] .. count .. [[, s)]]
+      [[store.query_store(]] .. u.escape_quotes(prompt) .. [[, ]] .. count .. [[, s)]]
     )
   else
     local filter = [[lambda item, similarity: similarity > ]] .. similarity
 
     return vim.fn.py3eval(
-      [[store.query_store(]] .. escape_quotes(prompt) .. [[, ]] .. count .. [[, s, filter=]] .. filter ..[[)]]
+      [[store.query_store(]] .. u.escape_quotes(prompt) .. [[, ]] .. count .. [[, s, filter=]] .. filter ..[[)]]
     )
   end
 end
 
---- Assumes json has been imported in python repl
-local function to_python(o)
-  local as_json = vim.json.encode(o)
-  if as_json == nil then
-    error("failed to encode json")
-  end
-  local escaped = escape_quotes(as_json)
-
-  return [[json.loads(]] .. escaped .. [[, strict=False)]]
-end
 
 local ts_source = require('llm.store.sources.treesitter')
 
@@ -86,7 +74,7 @@ end
 --- won't be embedded again.
 ---@param items Item[] items
 function M.add_items(items)
-  vim.cmd([[py store.update_store_and_save(]] .. to_python(items) .. [[,s)]])
+  vim.cmd([[py store.update_store_and_save(]] .. u.to_python(items) .. [[,s)]])
 end
 
 function M.add_files(root_path)
