@@ -198,6 +198,7 @@ local function setup_commands()
     function()
       vim.cmd.vnew()
       vim.o.ft = 'llmchat'
+      vim.cmd.syntax({'sync', 'fromstart'})
     end,
     {
       desc = 'LlmChat',
