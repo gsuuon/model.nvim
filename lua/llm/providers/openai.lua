@@ -46,7 +46,7 @@ end
 
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for OpenAI endpoint
----@param options? { url?: string, endpoint?: string, authorization?: string } Request endpoint and url. Defaults to 'https://api.openai.com/v1/' and 'chat/completions'. `authorization` overrides the request auth header. If url is provided, then only the authorization given here will be used (the environment key will be ignored).
+---@param options? { url?: string, endpoint?: string, authorization?: string, curl_args?: string[] } Request endpoint and url. Defaults to 'https://api.openai.com/v1/' and 'chat/completions'. `authorization` overrides the request auth header. If url is provided, then only the authorization given here will be used (the environment key will be ignored).
 function M.request_completion(handlers, params, options)
   local _all_content = ''
   options = options or {}
@@ -115,7 +115,8 @@ function M.request_completion(handlers, params, options)
     headers = headers,
     method = 'POST',
     url = url_ .. endpoint,
-    body = body
+    body = body,
+    args = options.curl_args
   }, handle_raw, handle_error)
 end
 
