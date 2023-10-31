@@ -4,6 +4,7 @@ local segment = require('llm.segment')
 
 local util = require('llm.util')
 local async = require('llm.util.async')
+local chat = require('llm.util.chat')
 
 local prompts = require('llm.prompts')
 local extract = require('llm.prompts.extract')
@@ -59,6 +60,22 @@ end
 ---@type table<string, Prompt>
 local starters = {
   gpt = openai.default_prompt,
+  chat = {
+    provider = openai,
+    params = {
+      model = 'gpt-3.5-turbo-0613'
+    },
+    transform = function(response)
+      return '\n======\n' .. response .. '\n======\n\n'
+    end,
+    builder = function(input)
+      if vim.o.ft ~= 'llmchat' then
+        error('Not in a chat buffer')
+      end
+
+      return chat.split_user_assistant(input)
+    end
+  },
   palm = palm.default_prompt,
   hf = huggingface.default_prompt,
   compat = vim.tbl_extend('force', openai.default_prompt, {

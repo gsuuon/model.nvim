@@ -192,6 +192,17 @@ local function setup_commands()
         return vim.fn.matchfuzzy(vim.tbl_keys(handle_llm_store), arglead)
       end
     })
+
+  vim.api.nvim_create_user_command(
+    'LlmChat',
+    function()
+      vim.cmd.vnew()
+      vim.o.ft = 'llmchat'
+    end,
+    {
+      desc = 'LlmChat',
+      force = true
+    })
 end
 
 function M.setup(opts)
