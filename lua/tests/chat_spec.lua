@@ -17,7 +17,9 @@ describe('chat', function()
         },
         chat.parse([[
 ---
-{ "model": "gpt-3.5-turbo" }
+{
+  model = "gpt-3.5-turbo"
+}
 ---
 > You are a helpful assistant
 
@@ -83,7 +85,9 @@ Count to three
         },
         chat.parse([[
 ---
-{ "model": "gpt-3.5-turbo" }
+{
+  model = "gpt-3.5-turbo"
+}
 ---
 ]])
       )
@@ -107,7 +111,9 @@ Count to three
     it('contents with params, system and messages', function()
       assert.are.same(
         [[---
-{"model": "gpt-3.5-turbo"}
+{
+  model = "gpt-3.5-turbo"
+}
 ---
 > You are a helpful assistant
 
@@ -130,7 +136,53 @@ Thanks
             { role = 'user', content = 'Thanks' },
           }
         })
+      )
+    end)
 
+    it('contents with system and messages', function()
+      assert.are.same(
+        [[> You are a helpful assistant
+
+Count to three
+
+======
+1, 2, 3.
+======
+
+Thanks
+]],
+        chat.to_string({
+          system = 'You are a helpful assistant',
+          params = {},
+          messages = {
+            { role = 'user', content = 'Count to three' },
+            { role = 'assistant', content = '1, 2, 3.' },
+            { role = 'user', content = 'Thanks' },
+          }
+        })
+      )
+    end)
+
+    it('contents with messages', function()
+      assert.are.same(
+        [[
+
+Count to three
+
+======
+1, 2, 3.
+======
+
+Thanks
+]],
+        chat.to_string({
+          messages = {
+            { role = 'user', content = 'Count to three' },
+            { role = 'assistant', content = '1, 2, 3.' },
+            { role = 'user', content = 'Thanks' },
+          },
+          params = {}
+        })
       )
     end)
   end)
