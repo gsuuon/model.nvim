@@ -70,21 +70,19 @@ local function parse_params(input)
     return { params = {}, rest = input }
   end
 
+  local params = vim.fn.luaeval(params_text)
+
+  if type(params) ~= 'table' then
+    error('Evaluated params text is not a lua table')
+  end
+
   return {
-    params = vim.json.decode(
-      params_text,
-      {
-        luanil = {
-          object = true,
-          array = true,
-        }
-      }
-    ),
+    params = params,
     rest = rest
   }
 end
 
---- Parse a chat file. Can begin with JSON params between `---` like frontmatter.
+--- Parse a chat file. Can begin with a lua table of params between `---`.
 --- If the next line starts with `> `, it is parsed as the system instruction.
 --- The rest of the text is parsed as alternating user/assistant messages, with
 --- `\n======\n` delimiters.
@@ -92,7 +90,9 @@ end
 --- Example file:
 --- ```
 --- ---
---- { "model": "gpt-3.5-turbo" }
+--- {
+---   model = "gpt-3.5-turbo"
+--- }
 --- ---
 --- > You are a helpful assistant
 ---
@@ -128,7 +128,7 @@ function M.to_string(contents)
   local result = ''
 
   if not vim.tbl_isempty(contents.params) then
-    result = result .. '---\n' .. vim.json.encode(contents.params) .. '\n---\n'
+    result = result .. '---\n' .. vim.inspect(contents.params) .. '\n---\n'
   end
 
   if contents.system then
