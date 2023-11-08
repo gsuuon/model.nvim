@@ -163,7 +163,23 @@ require('llm').setup({
 
 ### Prompts
 
-Prompts go in the `prompts` field of the setup table and can be used via `:Llm [prompt name]`.
+Prompts go in the `prompts` field of the setup table and are ran by the command `:Llm [prompt name]` which will tab complete the available prompts.
+
+With lazy.nvim:
+```lua
+{
+  'gsuuon/llm.nvim',
+  opts = function()
+    return {
+      prompts = {
+        instruct = { ... },
+        code = { ... },
+        ask = { ... }
+      }
+    }
+  end
+}
+```
 
 A prompt entry defines how to handle a completion request - it takes in the editor input (either an entire file or a visual selection) and some context, and produces the api request data merging with any defaults. It also defines how to handle the API response - for example it can replace the selection (or file) with the response or insert it at the cursor positon.
 
