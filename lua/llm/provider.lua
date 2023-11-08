@@ -185,6 +185,7 @@ local function build_request_handle_params(segment_mode, want_visual_selection, 
   }
 end
 
+---Build prompt parameters and run
 ---@param input string | string[]
 ---@param prompt Prompt
 ---@param handlers StreamHandlers
@@ -192,6 +193,7 @@ end
 ---@return function cancel callback
 local function start_prompt(input, prompt, handlers, context)
   -- TODO args to prompts is probably less useful than the prompt buffer / helper
+  -- TODO refactor
 
   local function as_string(str_or_strs)
     if type(input) == 'string' then

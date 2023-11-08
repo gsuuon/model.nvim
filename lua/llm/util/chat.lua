@@ -1,5 +1,12 @@
 local M = {}
 
+---@alias ContentsBuilder fun(input: string, context: Context): LlmChatContents | fun(resolve: fun(results: LlmChatContents)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
+
+---@class ChatPrompt
+---@field provider Provider The API provider for this prompt
+---@field create ContentsBuilder Creates a new chat buffer with given LlmChatContents
+---@field run fun(contents: LlmChatContents): table Converts chat contents into request parameters
+
 ---@class LlmChatMessage
 ---@field role 'user' | 'assistant'
 ---@field content string

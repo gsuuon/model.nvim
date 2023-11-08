@@ -1,5 +1,7 @@
 local util = require('llm.util')
 
+-- TODO revisit this. Refactor so I can also use with chats, or remove.
+
 local M = {}
 
 M.user = {}
