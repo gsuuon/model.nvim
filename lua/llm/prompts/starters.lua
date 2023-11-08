@@ -25,7 +25,7 @@ local function standard_code(input, context)
   local fewshot = {
     {
       role = 'user',
-      content = 'The code:\n```\nfunction greet(name) { console.log("Hello " <@@>) }\n```\n\nExisting text at <@@>:\n```+ nme```\n'
+      content = 'The code:\n```\nfunction greet(name) { console.log("Hello " <@@>) }\n```\n\nExisting text at <@@>: `+ nme`'
     },
     {
       role = 'assistant',
@@ -73,7 +73,7 @@ local starters = {
         error('Not in a chat buffer')
       end
 
-      return chat.split_user_assistant(input)
+      return tap(chat.parse(input))
     end
   },
   palm = palm.default_prompt,
@@ -132,7 +132,7 @@ local starters = {
       model = 'gpt-3.5-turbo-0613'
     },
     builder = function(input, context)
-      return openai.adapt(standard_code(input, context))
+      return tap(openai.adapt(standard_code(input, context)))
     end,
     transform = extract.markdown_code
   },
@@ -270,25 +270,25 @@ local starters = {
       end
     end,
   },
+
   commit = {
     provider = openai,
     mode = llm.mode.INSERT,
     builder = function()
       local git_diff = vim.fn.system {'git', 'diff', '--staged'}
 
-      if not git_diff:match('^diff') then
-        vim.notify(vim.fn.system('git status'), vim.log.levels.ERROR)
-        return
-      end
-
-      return {
-        messages = {
-          {
-            role = 'user',
-            content = 'Write a terse commit message according to the Conventional Commits specification. Try to stay below 80 characters total. Staged git diff: ```\n' .. git_diff .. '\n```'
+      if git_diff:match('^diff') then
+        return {
+          messages = {
+            {
+              role = 'user',
+              content = 'Write a terse commit message according to the Conventional Commits specification. Try to stay below 80 characters total. Staged git diff: ```\n' .. git_diff .. '\n```'
+            }
           }
         }
-      }
+      end
+
+      vim.notify(vim.fn.system('git status'), vim.log.levels.ERROR)
     end,
   },
   openapi = {
