@@ -12,6 +12,13 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 - 🔎 Basic local (to your git repo) vector store
 - 🌠 Streaming responses where available
 
+### Contents
+- [Setup](#-setup)
+- [Usage](#-usage)
+- [Config](#configuration)
+- [Examples](#examples)
+- [Contributing](#contributing)
+
 ---
 
 ## 🦾 Setup
