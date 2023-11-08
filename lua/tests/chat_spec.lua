@@ -1,20 +1,21 @@
 local chat = require('llm.util.chat')
 
 describe('chat', function()
-  it('parses a chat file with params, system, and messages', function()
-    assert.are.same(
-      {
-        params = {
-          model = 'gpt-3.5-turbo'
+  describe('parse', function()
+    it('file with params, system, and messages', function()
+      assert.are.same(
+        {
+          params = {
+            model = 'gpt-3.5-turbo'
+          },
+          system = 'You are a helpful assistant',
+          messages = {
+            { role = 'user', content = 'Count to three' },
+            { role = 'assistant', content = '1, 2, 3.' },
+            { role = 'user', content = 'Thanks' },
+          }
         },
-        system = 'You are a helpful assistant',
-        messages = {
-          { role = 'user', content = 'Count to three' },
-          { role = 'assistant', content = '1, 2, 3.' },
-          { role = 'user', content = 'Thanks' },
-        }
-      },
-      chat.parse([[
+        chat.parse([[
 ---
 { "model": "gpt-3.5-turbo" }
 ---
@@ -28,20 +29,20 @@ Count to three
 
 Thanks
 ]])
-    )
-  end)
+      )
+    end)
 
-  it('parses a chat file with system, and messages', function()
-    assert.are.same(
-      {
-        system = 'You are a helpful assistant',
-        params = {},
-        messages = {
-          { role = 'user', content = 'Count to three' },
-          { role = 'assistant', content = '1, 2, 3.' }
-        }
-      },
-      chat.parse([[
+    it('file with system, and messages', function()
+      assert.are.same(
+        {
+          system = 'You are a helpful assistant',
+          params = {},
+          messages = {
+            { role = 'user', content = 'Count to three' },
+            { role = 'assistant', content = '1, 2, 3.' }
+          }
+        },
+        chat.parse([[
 > You are a helpful assistant
 
 Count to three
@@ -50,57 +51,88 @@ Count to three
 1, 2, 3.
 ======
 ]])
-    )
-  end)
+      )
+    end)
 
-  it('parses a chat file with messages', function()
-    assert.are.same(
-      {
-        messages = {
-          { role = 'user', content = 'Count to three' },
-          { role = 'assistant', content = '1, 2, 3.' }
+    it('file with messages', function()
+      assert.are.same(
+        {
+          messages = {
+            { role = 'user', content = 'Count to three' },
+            { role = 'assistant', content = '1, 2, 3.' }
+          },
+          params = {},
         },
-        params = {},
-      },
-      chat.parse([[
+        chat.parse([[
 Count to three
 
 ======
 1, 2, 3.
 ======
 ]])
-    )
-  end)
+      )
+    end)
 
-  it('parses a chat file with params', function()
-assert.are.same(
-      {
-        params = {
-          model = 'gpt-3.5-turbo'
+    it('file with params', function()
+      assert.are.same(
+        {
+          params = {
+            model = 'gpt-3.5-turbo'
+          },
+          messages = {}
         },
-        messages = {}
-      },
-      chat.parse([[
+        chat.parse([[
 ---
 { "model": "gpt-3.5-turbo" }
 ---
 ]])
-    )
-  end)
+      )
+    end)
 
-  it('parses a chat file with system', function()
-    assert.are.same(
-      {
-        system = 'You are a helpful assistant',
-        messages = {},
-        params = {}
-      },
-      chat.parse([[
+    it('file with system', function()
+      assert.are.same(
+        {
+          system = 'You are a helpful assistant',
+          messages = {},
+          params = {}
+        },
+        chat.parse([[
 > You are a helpful assistant
 ]])
-    )
+      )
+    end)
   end)
 
+  describe('to string', function()
+    it('contents with params, system and messages', function()
+      assert.are.same(
+        [[---
+{"model": "gpt-3.5-turbo"}
+---
+> You are a helpful assistant
 
+Count to three
+
+======
+1, 2, 3.
+======
+
+Thanks
+]],
+        chat.to_string({
+          params = {
+            model = 'gpt-3.5-turbo'
+          },
+          system = 'You are a helpful assistant',
+          messages = {
+            { role = 'user', content = 'Count to three' },
+            { role = 'assistant', content = '1, 2, 3.' },
+            { role = 'user', content = 'Thanks' },
+          }
+        })
+
+      )
+    end)
+  end)
 end)
 
