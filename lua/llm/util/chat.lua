@@ -122,4 +122,32 @@ function M.parse(input)
   return vim.tbl_extend('force', messages_and_system, { params = parsed.params })
 end
 
+---@param contents LlmChatContents
+---@return string
+function M.to_string(contents)
+  local result = ''
+
+  if not vim.tbl_isempty(contents.params) then
+    result = result .. '---\n' .. vim.json.encode(contents.params) .. '\n---\n'
+  end
+
+  if contents.system then
+    result = result .. '> ' .. contents.system .. '\n'
+  end
+
+  for i,message in ipairs(contents.messages) do
+    if i ~= 1 then
+      result = result .. '\n======\n'
+    end
+
+    if message.role == 'user' then
+      result = result .. '\n' .. message.content .. '\n'
+    else
+      result = result .. message.content
+    end
+  end
+
+  return result
+end
+
 return M
