@@ -305,6 +305,30 @@ Providers implement a simple interface so it's easy to add your own. Just set yo
 ---@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
 ---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
 ```
+
+Basic provider example:
+```lua
+{
+  prompts = {
+    test = {
+      provider = {
+        request_completion = function(handlers, params, options)
+          vim.notify(vim.inspect({params=params, options=options}))
+          handlers.on_partial('a response')
+          handlers.on_finish()
+        end
+      },
+      builder = function(input, context)
+        return {
+          input = input,
+          context = context
+        }
+      end
+    }
+  }
+}
+```
+
 --- 
 
 ## Examples
