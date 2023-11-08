@@ -1,0 +1,106 @@
+local chat = require('llm.util.chat')
+
+describe('chat', function()
+  it('parses a chat file with params, system, and messages', function()
+    assert.are.same(
+      {
+        params = {
+          model = 'gpt-3.5-turbo'
+        },
+        system = 'You are a helpful assistant',
+        messages = {
+          { role = 'user', content = 'Count to three' },
+          { role = 'assistant', content = '1, 2, 3.' },
+          { role = 'user', content = 'Thanks' },
+        }
+      },
+      chat.parse([[
+---
+{ "model": "gpt-3.5-turbo" }
+---
+> You are a helpful assistant
+
+Count to three
+
+======
+1, 2, 3.
+======
+
+Thanks
+]])
+    )
+  end)
+
+  it('parses a chat file with system, and messages', function()
+    assert.are.same(
+      {
+        system = 'You are a helpful assistant',
+        params = {},
+        messages = {
+          { role = 'user', content = 'Count to three' },
+          { role = 'assistant', content = '1, 2, 3.' }
+        }
+      },
+      chat.parse([[
+> You are a helpful assistant
+
+Count to three
+
+======
+1, 2, 3.
+======
+]])
+    )
+  end)
+
+  it('parses a chat file with messages', function()
+    assert.are.same(
+      {
+        messages = {
+          { role = 'user', content = 'Count to three' },
+          { role = 'assistant', content = '1, 2, 3.' }
+        },
+        params = {},
+      },
+      chat.parse([[
+Count to three
+
+======
+1, 2, 3.
+======
+]])
+    )
+  end)
+
+  it('parses a chat file with params', function()
+assert.are.same(
+      {
+        params = {
+          model = 'gpt-3.5-turbo'
+        },
+        messages = {}
+      },
+      chat.parse([[
+---
+{ "model": "gpt-3.5-turbo" }
+---
+]])
+    )
+  end)
+
+  it('parses a chat file with system', function()
+    assert.are.same(
+      {
+        system = 'You are a helpful assistant',
+        messages = {},
+        params = {}
+      },
+      chat.parse([[
+> You are a helpful assistant
+]])
+    )
+  end)
+
+
+end)
+
