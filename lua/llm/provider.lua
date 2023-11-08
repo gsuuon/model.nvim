@@ -276,7 +276,7 @@ end
 
 -- Run a prompt and resolve the complete result. Does not do anything with the result (ignores prompt mode)
 function M.complete(prompt, input, context, callback)
-  local cancel = start_prompt(input, prompt, {
+  return start_prompt(input, prompt, {
     on_partial = function() end,
 
     on_finish = function(complete_text)
@@ -287,8 +287,6 @@ function M.complete(prompt, input, context, callback)
       util.eshow(data, 'stream error ' .. (label or ''))
     end
   }, context)
-
-  return cancel
 end
 
 ---@param prompt Prompt
@@ -314,19 +312,18 @@ function M.request_completion(prompt, args, want_visual_selection, default_hl_gr
       stream_handlers,
       handle_params.context
     )
+  else
+    ---@cast prompt_mode SegmentMode
+    local handle_params = build_request_handle_params(
+      prompt_mode,
+      want_visual_selection,
+      prompt.hl_group or default_hl_group,
+      args
+    )
 
-    return
+    request_completion_input_segment(handle_params, prompt)
   end
 
-  ---@cast prompt_mode SegmentMode
-  local handle_params = build_request_handle_params(
-    prompt_mode,
-    want_visual_selection,
-    prompt.hl_group or default_hl_group,
-    args
-  )
-
-  request_completion_input_segment(handle_params, prompt)
 end
 
 function M.request_multi_completion_streams(prompts, want_visual_selection, default_hl_group)
