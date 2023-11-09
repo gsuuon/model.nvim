@@ -1,4 +1,4 @@
-local chat = require('llm.util.chat')
+local chat = require('llm.chat')
 
 describe('chat', function()
   describe('parse', function()

@@ -4,8 +4,8 @@ local segment = require('llm.segment')
 
 local util = require('llm.util')
 local async = require('llm.util.async')
-local chat = require('llm.util.chat')
 
+local chat = require('llm.chat')
 local prompts = require('llm.prompts')
 local extract = require('llm.prompts.extract')
 local consult = require('llm.prompts.consult')
