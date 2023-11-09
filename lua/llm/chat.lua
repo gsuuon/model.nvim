@@ -1,4 +1,5 @@
 local input = require('llm.input')
+local segment = require('llm.segment')
 
 local M = {}
 
@@ -7,7 +8,7 @@ local M = {}
 ---@class ChatPrompt
 ---@field provider Provider The API provider for this prompt
 ---@field create ContentsBuilder Creates a new chat buffer with given LlmChatContents
----@field run fun(contents: LlmChatContents): table Converts chat contents into request parameters
+---@field run fun(contents: LlmChatContents): { params: table, options?: table } Converts chat contents into a run configuration
 
 ---@class LlmChatMessage
 ---@field role 'user' | 'assistant'
@@ -123,6 +124,7 @@ end
 ---     { role = 'assistant', content = '1, 2, 3.' }
 ---   }
 --- }
+---@param text string
 ---@return LlmChatContents
 function M.parse(text)
   local parsed = parse_params(text)
@@ -156,13 +158,17 @@ function M.to_string(contents)
     end
   end
 
-  return result
+  return vim.fn.trim(result, '\n', 2) -- trim trailing newline
 end
 
----@param chat_prompt ChatPrompt
+---@param opts { chats?: table<string, ChatPrompt> }
+---@param chat_name string
 ---@param want_visual_selection boolean
 ---@param args? string
-function M.create_new_chat(chat_prompt, want_visual_selection, args)
+function M.create_new_chat(opts, chat_name, want_visual_selection, args)
+  local chat_prompt = assert(vim.tbl_get(opts, 'chats', chat_name), 'Chat not found')
+  ---@cast chat_prompt ChatPrompt
+
   local input_context = input.get_input_context(
     input.get_source(want_visual_selection),
     args or ''
@@ -173,9 +179,42 @@ function M.create_new_chat(chat_prompt, want_visual_selection, args)
   vim.cmd.syntax({'sync', 'fromstart'})
 
   local chat_contents = chat_prompt.create(input_context.input, input_context.context)
+  chat_contents.params.chat = chat_name
   local new_buffer_text = M.to_string(chat_contents)
+  show({chat_contents = chat_contents, new_buffer_text = new_buffer_text})
 
   vim.api.nvim_buf_set_lines(0, 0, 0, false, vim.fn.split(new_buffer_text, '\n'))
+end
+
+---@param opts { chats?: table<string, ChatPrompt> }
+function M.run_chat(opts)
+  local buf_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local contents = M.parse(
+    table.concat(buf_lines, '\n')
+  )
+
+  local chat_name = assert(contents.params.chat, 'Chat buffer missing chat name in header')
+  local chat_prompt = assert(vim.tbl_get(opts, 'chats', chat_name), 'Chat not found')
+  ---@cast chat_prompt ChatPrompt
+
+  local run_config = chat_prompt.run(contents)
+  if run_config == nil then
+    error('Chat prompt run() returned nil')
+  end
+
+  local seg = segment.create_segment_at(#buf_lines, 0)
+  seg.add('======\n')
+
+  local handlers = {
+    on_partial = seg.add,
+    on_finish = function()
+      seg.add('\n======\n')
+      seg.clear_hl()
+    end,
+    on_error = error
+  }
+
+  chat_prompt.provider.request_completion(handlers, run_config.params, run_config.options)
 end
 
 return M

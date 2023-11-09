@@ -202,19 +202,16 @@ local function setup_commands()
         local want_visual_selection = cmd_params.range ~= 0
 
         chat.create_new_chat(
-          assert(
-            vim.tbl_get(M.opts, 'chats', chat_name),
-            'No chat named "' .. chat_name .. '"'
-          ),
+          M.opts,
+          chat_name,
           want_visual_selection
         )
       else
         if vim.o.ft ~= 'llmchat' then
           error('Not in llmchat buffer')
         end
-        -- run
-        -- parse
-        -- find chat
+
+        chat.run_chat(M.opts)
       end
     end,
     {

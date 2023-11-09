@@ -192,7 +192,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
 end
 
 function M.create_segment_at(row, col, hl_group, bufnr)
-  bufnr = bufnr == 0 and vim.fn.bufnr('%') or bufnr
+  bufnr = bufnr or 0
 
   local function get_row_length(pos)
     local line =
