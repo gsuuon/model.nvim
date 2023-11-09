@@ -220,7 +220,8 @@ local function setup_commands()
     {
       desc = 'LlmChat',
       force = true,
-      nargs='?',
+      range = true,
+      nargs = '?',
       complete = function(arglead)
         local chats = M.opts.chats
         if chats == nil then return end
