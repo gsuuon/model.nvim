@@ -149,7 +149,7 @@ end
 ---@field args string
 
 ---@class InputContextSegment
----@field input string[]
+---@field input string
 ---@field context Context
 ---@field segment Segment
 
@@ -178,7 +178,7 @@ local function create_segment_get_input_context(segment_mode, want_visual_select
   local seg = create_segment(source, mode, hl_group)
 
   return {
-    input = source.lines,
+    input = table.concat(source.lines, '\n'),
     context = {
       selection = source.selection,
       filename = util.buf.filename(),
@@ -190,26 +190,17 @@ local function create_segment_get_input_context(segment_mode, want_visual_select
   }
 end
 
----Build prompt parameters and run
----@param input string | string[]
 ---@param prompt Prompt
 ---@param handlers StreamHandlers
+---@param input string
 ---@param context Context
 ---@return function cancel callback
-local function start_prompt(input, prompt, handlers, context)
+local function build_params_run_prompt(prompt, handlers, input, context)
   -- TODO args to prompts is probably less useful than the prompt buffer / helper
   -- TODO refactor
 
-  local function concat_if_str_list(str_or_strs)
-    if type(input) == 'string' then
-      return str_or_strs
-    else
-      return table.concat(str_or_strs, '\n')
-    end
-  end
-
   local prompt_built = assert(
-    prompt.builder(concat_if_str_list(input), context),
+    prompt.builder(input, context),
     'prompt builder produced nil'
   )
 
@@ -282,31 +273,36 @@ local function create_prompt_handlers(prompt, seg)
   }
 end
 
-local function create_handlers_start_prompt(seg_input_ctx, prompt)
-  seg_input_ctx.segment.data.cancel = start_prompt(
-    seg_input_ctx.input,
+---@param ics InputContextSegment
+---@param prompt Prompt
+local function create_handlers_start_prompt(ics, prompt)
+  ics.segment.data.cancel = build_params_run_prompt(
     prompt,
     create_prompt_handlers(
       prompt,
-      seg_input_ctx.segment
+      ics.segment
     ),
-    seg_input_ctx.context
+    ics.input,
+    ics.context
   )
 end
 
 -- Run a prompt and resolve the complete result. Does not do anything with the result (ignores prompt mode)
 function M.complete(prompt, input, context, callback)
-  return start_prompt(input, prompt, {
-    on_partial = function() end,
-
-    on_finish = function(complete_text)
-      callback(complete_text)
-    end,
-
-    on_error = function(data, label)
-      util.eshow(data, 'stream error ' .. (label or ''))
-    end
-  }, context)
+  return build_params_run_prompt(
+    prompt,
+    {
+      on_partial = function() end,
+      on_finish = function(complete_text)
+        callback(complete_text)
+      end,
+      on_error = function(data, label)
+        util.eshow(data, 'stream error ' .. (label or ''))
+      end,
+    },
+    input,
+    context
+  )
 end
 
 ---@param prompt Prompt
@@ -326,10 +322,10 @@ function M.request_completion(prompt, args, want_visual_selection, default_hl_gr
       args
     )
 
-    start_prompt(
-      seg_input_ctx.input,
+    build_params_run_prompt(
       prompt,
       stream_handlers,
+      seg_input_ctx.input,
       seg_input_ctx.context
     )
   else
