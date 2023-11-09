@@ -2,6 +2,7 @@ local util = require('llm.util')
 
 ---@class Segment
 ---@field add fun(text: string): nil
+---@field set_text fun(text: string): nil
 ---@field clear_hl fun(): nil
 ---@field data table
 ---@field highlight fun(hl_group: string): nil

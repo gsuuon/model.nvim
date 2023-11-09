@@ -33,7 +33,7 @@ M.mode = {
 ---@field on_finish (fun(complete_text?: string, finish_reason?: string): nil) Complete response with finish reason. Leave complete_text nil to just use concatenated partials.
 ---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
 
-local function get_segment(source, segment_mode, hl_group)
+local function create_segment(source, segment_mode, hl_group)
   if segment_mode == M.mode.REPLACE then
     if source.selection ~= nil then
       -- clear selection
@@ -147,11 +147,11 @@ end
 ---@field after string
 ---@field filename string
 ---@field args string
----@field segment Segment
 
 ---@class InputContextSegment
 ---@field input string[]
 ---@field context Context
+---@field segment Segment
 
 ---@param segment_mode SegmentMode
 ---@param want_visual_selection boolean
@@ -175,18 +175,18 @@ local function create_segment_get_input_context(segment_mode, want_visual_select
 
   local source = get_source(want_visual_selection)
   local before_after = get_before_after(source)
-  local seg = get_segment(source, mode, hl_group)
+  local seg = create_segment(source, mode, hl_group)
 
   return {
     input = source.lines,
     context = {
-      segment = seg,
       selection = source.selection,
       filename = util.buf.filename(),
       before = before_after.before,
       after = before_after.after,
       args = args,
-    }
+    },
+    segment = seg
   }
 end
 
@@ -283,12 +283,12 @@ local function create_prompt_handlers(prompt, seg)
 end
 
 local function create_handlers_start_prompt(seg_input_ctx, prompt)
-  seg_input_ctx.context.segment.data.cancel = start_prompt(
+  seg_input_ctx.segment.data.cancel = start_prompt(
     seg_input_ctx.input,
     prompt,
     create_prompt_handlers(
       prompt,
-      seg_input_ctx.context.segment
+      seg_input_ctx.segment
     ),
     seg_input_ctx.context
   )
