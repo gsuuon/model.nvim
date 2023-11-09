@@ -1,9 +1,7 @@
 local segment = require('llm.segment')
 local util = require('llm.util')
 
-local M = {
-  default_hl = 'Comment'
-}
+local M = {}
 
 ---@class Prompt
 ---@field provider Provider The API provider for this prompt
@@ -43,7 +41,7 @@ local function create_segment(source, segment_mode, hl_group)
       local seg = segment.create_segment_at(
         source.selection.start.row,
         source.selection.start.col,
-        hl_group or M.default_hl,
+        hl_group,
         0
       )
 

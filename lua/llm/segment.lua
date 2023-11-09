@@ -8,10 +8,10 @@ local util = require('llm.util')
 ---@field highlight fun(hl_group: string): nil
 
 
-local M = {}
-
---- Join undos when adding and setting segment text
-M.join_undo = false
+local M = {
+  default_hl = 'Comment',
+  join_undo = false --- Join undos when adding and setting segment text
+}
 
 local segments_cache = {}
 
@@ -39,11 +39,15 @@ end
 ---Create a new segment
 ---@param row number 0-indexed start row
 ---@param col number 0-indexed end row
----@param hl_group string
 ---@param bufnr number
+---@param hl_group? string
 ---@param join_undo? boolean Join set_text call undos. Will join any undos made between add and set_text.
 ---@return Segment
-local function create_segment_at(row, col, hl_group, bufnr, join_undo)
+local function create_segment_at(row, col, bufnr, hl_group, join_undo)
+  local _hl_group = hl_group or M.default_hl
+  local _data = {}
+  local _did_add_text_to_undo = false
+
   local _ext_id = vim.api.nvim_buf_set_extmark(
     bufnr,
     M.ns_id(),
@@ -82,10 +86,6 @@ local function create_segment_at(row, col, hl_group, bufnr, join_undo)
       bufnr = bufnr
     }
   end
-
-  local _hl_group = hl_group
-  local _data = {}
-  local _did_add_text_to_undo = false
 
   return {
 
@@ -275,7 +275,7 @@ function M.create_segment_at(row, col, hl_group, bufnr)
       )
     )
 
-  local segment = create_segment_at(target_pos.row, target_pos.col, hl_group, bufnr, M.join_undo)
+  local segment = create_segment_at(target_pos.row, target_pos.col, bufnr, hl_group, M.join_undo)
 
   segments_cache[segment.ext_id] = segment
 

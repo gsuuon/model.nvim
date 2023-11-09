@@ -24,7 +24,7 @@ describe('provider', function()
       provider = test_provider,
       options = { optA = true },
       builder = function() return { paramA = true } end
-    }, '', false, 'Comment')
+    }, '', false)
 
     assert.spy(test_provider.request_completion).was_called_with(
       match.table_types(type_stream_handlers),
@@ -35,7 +35,7 @@ describe('provider', function()
     provider.request_completion({
       provider = test_provider,
       builder = function() return { paramA = true } end
-    }, '', false, 'Comment')
+    }, '', false)
 
     assert.spy(test_provider.request_completion).was_called_with(
       match.table_types(type_stream_handlers),
