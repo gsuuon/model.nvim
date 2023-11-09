@@ -33,19 +33,19 @@ M.mode = {
 ---@field on_finish (fun(complete_text?: string, finish_reason?: string): nil) Complete response with finish reason. Leave complete_text nil to just use concatenated partials.
 ---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
 
-local function get_segment(input, segment_mode, hl_group)
+local function get_segment(source, segment_mode, hl_group)
   if segment_mode == M.mode.REPLACE then
-    if input.selection ~= nil then
+    if source.selection ~= nil then
       -- clear selection
-      util.buf.set_text(input.selection, {})
+      util.buf.set_text(source.selection, {})
       local seg = segment.create_segment_at(
-        input.selection.start.row,
-        input.selection.start.col,
+        source.selection.start.row,
+        source.selection.start.col,
         hl_group,
         0
       )
 
-      seg.data.original = input.lines
+      seg.data.original = source.lines
 
       return seg
     else
@@ -54,20 +54,20 @@ local function get_segment(input, segment_mode, hl_group)
 
       vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
 
-      seg.data.original = input.lines
+      seg.data.original = source.lines
 
       return seg
     end
   elseif segment_mode == M.mode.APPEND then
-    if input.selection ~= nil then
+    if source.selection ~= nil then
       return segment.create_segment_at(
-        input.selection.stop.row,
-        input.selection.stop.col,
+        source.selection.stop.row,
+        source.selection.stop.col,
         hl_group,
         0
       )
     else
-      return segment.create_segment_at(#input.lines, 0, hl_group, 0)
+      return segment.create_segment_at(#source.lines, 0, hl_group, 0)
     end
   elseif segment_mode == M.mode.BUFFER then
     -- Find or create a scratch buffer for this plugin
@@ -82,7 +82,7 @@ local function get_segment(input, segment_mode, hl_group)
     vim.api.nvim_buf_set_option(llm_bfnr, 'buflisted', true)
     vim.api.nvim_buf_set_option(llm_bfnr, 'buftype', 'nowrite')
 
-    vim.api.nvim_buf_set_lines(llm_bfnr, -2, -1, false, input.lines)
+    vim.api.nvim_buf_set_lines(llm_bfnr, -2, -1, false, source.lines)
     vim.api.nvim_buf_set_lines(llm_bfnr, -1, -1, false, {'',''})
 
     -- Open the existing buffer or create a new one
@@ -100,7 +100,12 @@ local function get_segment(input, segment_mode, hl_group)
   end
 end
 
-local function get_input(want_visual_selection)
+---@class Source
+---@field selection? Selection
+---@field lines string[]
+---@field position Position
+
+local function get_source(want_visual_selection)
   if want_visual_selection then
     local selection = util.cursor.selection()
     local lines = util.buf.text(selection)
@@ -118,17 +123,17 @@ local function get_input(want_visual_selection)
   end
 end
 
-local function get_before_after(input)
+local function get_before_after(source)
   return {
     before = util.buf.text({
       start = {
         row = 0,
         col = 0
       },
-      stop = input.selection ~= nil and input.selection.start or input.position
+      stop = source.selection ~= nil and source.selection.start or source.position
     }),
     after = util.buf.text({
-      start = input.selection ~= nil and input.selection.stop or input.position,
+      start = source.selection ~= nil and source.selection.stop or source.position,
       stop = {
         row = -1,
         col = -1
@@ -144,7 +149,7 @@ end
 ---@field args string
 ---@field segment Segment
 
----@class RequestCompletionHandleParams
+---@class InputContextSegment
 ---@field input string[]
 ---@field context Context
 
@@ -152,8 +157,8 @@ end
 ---@param want_visual_selection boolean
 ---@param hl_group string
 ---@param args string
----@return RequestCompletionHandleParams
-local function build_request_handle_params(segment_mode, want_visual_selection, hl_group, args)
+---@return InputContextSegment
+local function create_segment_get_input_context(segment_mode, want_visual_selection, hl_group, args)
   -- TODO is args actually useful here?
 
   local mode = (function()
@@ -168,15 +173,15 @@ local function build_request_handle_params(segment_mode, want_visual_selection, 
     return segment_mode
   end)()
 
-  local input = get_input(want_visual_selection)
-  local before_after = get_before_after(input)
-  local seg = get_segment(input, mode, hl_group)
+  local source = get_source(want_visual_selection)
+  local before_after = get_before_after(source)
+  local seg = get_segment(source, mode, hl_group)
 
   return {
-    input = input.lines,
+    input = source.lines,
     context = {
       segment = seg,
-      selection = input.selection,
+      selection = source.selection,
       filename = util.buf.filename(),
       before = before_after.before,
       after = before_after.after,
@@ -195,7 +200,7 @@ local function start_prompt(input, prompt, handlers, context)
   -- TODO args to prompts is probably less useful than the prompt buffer / helper
   -- TODO refactor
 
-  local function as_string(str_or_strs)
+  local function concat_if_str_list(str_or_strs)
     if type(input) == 'string' then
       return str_or_strs
     else
@@ -203,7 +208,10 @@ local function start_prompt(input, prompt, handlers, context)
     end
   end
 
-  local prompt_built = assert(prompt.builder(as_string(input), context), 'prompt builder produced nil')
+  local prompt_built = assert(
+    prompt.builder(concat_if_str_list(input), context),
+    'prompt builder produced nil'
+  )
 
   local function do_request(built_params)
     local params = vim.tbl_extend(
@@ -231,12 +239,12 @@ local function start_prompt(input, prompt, handlers, context)
   end
 end
 
-local function request_completion_input_segment(handle_params, prompt)
-  local seg = handle_params.context.segment
+local function create_handlers_start_prompt(seg_input_ctx, prompt)
+  local seg = seg_input_ctx.context.segment
 
   local completion = ""
 
-  local cancel = start_prompt(handle_params.input, prompt, {
+  local cancel = start_prompt(seg_input_ctx.input, prompt, {
     on_partial = function(partial)
       completion = completion .. partial
       seg.add(partial)
@@ -271,7 +279,7 @@ local function request_completion_input_segment(handle_params, prompt)
     on_error = function(data, label)
       util.eshow(data, 'stream error ' .. (label or ''))
     end
-  }, handle_params.context)
+  }, seg_input_ctx.context)
 
   seg.data.cancel = cancel
 end
@@ -301,7 +309,7 @@ function M.request_completion(prompt, args, want_visual_selection, default_hl_gr
     -- TODO probably want to just remove streamhandlers prompt mode
     local stream_handlers = prompt_mode
 
-    local handle_params = build_request_handle_params(
+    local seg_input_ctx = create_segment_get_input_context(
       M.mode.APPEND, -- we don't use the segment here, append will create an empty segment at end of selection
       want_visual_selection,
       prompt.hl_group or default_hl_group,
@@ -309,28 +317,28 @@ function M.request_completion(prompt, args, want_visual_selection, default_hl_gr
     )
 
     start_prompt(
-      handle_params.input,
+      seg_input_ctx.input,
       prompt,
       stream_handlers,
-      handle_params.context
+      seg_input_ctx.context
     )
   else
     ---@cast prompt_mode SegmentMode
-    local handle_params = build_request_handle_params(
+    local seg_input_ctx = create_segment_get_input_context(
       prompt_mode,
       want_visual_selection,
       prompt.hl_group or default_hl_group,
       args
     )
 
-    request_completion_input_segment(handle_params, prompt)
+    create_handlers_start_prompt(seg_input_ctx, prompt)
   end
 
 end
 
 function M.request_multi_completion_streams(prompts, want_visual_selection, default_hl_group)
   for i, prompt in ipairs(prompts) do
-    local handle_params = build_request_handle_params(
+    local seg_input_ctx = create_segment_get_input_context(
       M.mode.APPEND, -- multi-mode always append only
       want_visual_selection,
       prompt.hl_group or default_hl_group,
@@ -339,7 +347,7 @@ function M.request_multi_completion_streams(prompts, want_visual_selection, defa
 
     -- try to avoid ratelimits
     vim.defer_fn(function()
-      request_completion_input_segment(handle_params, prompt)
+      create_handlers_start_prompt(seg_input_ctx, prompt)
     end, i * 200)
   end
 end
