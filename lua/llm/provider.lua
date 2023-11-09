@@ -1,5 +1,6 @@
 local segment = require('llm.segment')
 local util = require('llm.util')
+local input = require('llm.input')
 
 local M = {}
 
@@ -98,73 +99,6 @@ local function create_segment(source, segment_mode, hl_group)
   else
     error('Unknown segment mode: ' .. segment_mode)
   end
-end
-
----@class Source
----@field selection? Selection
----@field lines string[]
----@field position Position
-
-local function get_source(want_visual_selection)
-  if want_visual_selection then
-    local selection = util.cursor.selection()
-    local lines = util.buf.text(selection)
-
-    return {
-      selection = selection,
-      position = util.cursor.position(),
-      lines = lines
-    }
-  else
-    return {
-      position = util.cursor.position(),
-      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-    }
-  end
-end
-
-local function get_before_after(source)
-  return {
-    before = util.buf.text({
-      start = {
-        row = 0,
-        col = 0
-      },
-      stop = source.selection ~= nil and source.selection.start or source.position
-    }),
-    after = util.buf.text({
-      start = source.selection ~= nil and source.selection.stop or source.position,
-      stop = {
-        row = -1,
-        col = -1
-      },
-    })
-  }
-end
-
----@class Context
----@field before string
----@field after string
----@field filename string
----@field args string
-
----@class InputContext
----@field input string
----@field context Context
-
-local function get_input_context(source, args)
-  local before_after = get_before_after(source)
-
-  return {
-    input = table.concat(source.lines, '\n'),
-    context = {
-      selection = source.selection,
-      filename = util.buf.filename(),
-      before = before_after.before,
-      after = before_after.after,
-      args = args,
-    }
-  }
 end
 
 ---@param prompt Prompt
@@ -302,7 +236,7 @@ end
 ---@param args string
 ---@param want_visual_selection boolean
 function M.request_completion(prompt, args, want_visual_selection)
-  local source = get_source(want_visual_selection)
+  local source = input.get_source(want_visual_selection)
 
   if type(prompt.mode) == 'table' then -- prompt_mode is StreamHandlers
     -- TODO probably want to just remove streamhandlers prompt mode
@@ -313,12 +247,12 @@ function M.request_completion(prompt, args, want_visual_selection)
     build_params_run_prompt(
       prompt,
       stream_handlers,
-      get_input_context(source, args)
+      input.get_input_context(source, args)
     )
   else
     create_segment_handlers_run_prompt(
       prompt,
-      get_input_context(source, args),
+      input.get_input_context(source, args),
       source
     )
   end
@@ -328,13 +262,13 @@ function M.request_multi_completion_streams(prompts, want_visual_selection)
   for i, prompt in ipairs(prompts) do
     -- try to avoid ratelimits
     vim.defer_fn(function()
-      local source = get_source(want_visual_selection)
+      local source = input.get_source(want_visual_selection)
 
       create_segment_handlers_run_prompt(
         vim.tbl_extend('force', prompt, {
           mode = M.mode.APPEND -- multi-mode always append only
         }),
-        get_input_context(source, ''),
+        input.get_input_context(source, ''),
         source
       )
     end, i * 200)
