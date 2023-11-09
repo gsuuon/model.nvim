@@ -313,19 +313,16 @@ function M.request_completion(prompt, args, want_visual_selection, default_hl_gr
 
   if type(prompt_mode) == 'table' then -- prompt_mode is StreamHandlers
     -- TODO probably want to just remove streamhandlers prompt mode
-    local stream_handlers = prompt_mode
-
-    local ics = create_segment_get_input_context(
-      M.mode.APPEND, -- we don't use the segment here, append will create an empty segment at end of selection
-      want_visual_selection,
-      prompt.hl_group or default_hl_group,
-      args
-    )
-
     build_params_run_prompt(
       prompt,
-      stream_handlers,
-      ics
+      prompt_mode,
+      create_segment_get_input_context(
+        M.mode.APPEND,
+          -- we don't use the segment here, append will create an empty segment at end of selection
+        want_visual_selection,
+        prompt.hl_group or default_hl_group,
+        args
+      )
     )
   else
     ---@cast prompt_mode SegmentMode
