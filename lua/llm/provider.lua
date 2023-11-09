@@ -192,15 +192,14 @@ end
 
 ---@param prompt Prompt
 ---@param handlers StreamHandlers
----@param input string
----@param context Context
+---@param ics InputContextSegment
 ---@return function cancel callback
-local function build_params_run_prompt(prompt, handlers, input, context)
+local function build_params_run_prompt(prompt, handlers, ics)
   -- TODO args to prompts is probably less useful than the prompt buffer / helper
   -- TODO refactor
 
   local prompt_built = assert(
-    prompt.builder(input, context),
+    prompt.builder(ics.input, ics.context),
     'prompt builder produced nil'
   )
 
@@ -282,13 +281,15 @@ local function create_handlers_run_prompt(ics, prompt)
       prompt,
       ics.segment
     ),
-    ics.input,
-    ics.context
+    ics
   )
 end
 
 -- Run a prompt and resolve the complete result. Does not do anything with the result (ignores prompt mode)
-function M.complete(prompt, input, context, callback)
+---@param prompt Prompt
+---@param ics InputContextSegment
+---@param callback fun(completion: string) completion callback
+function M.complete(prompt, ics, callback)
   return build_params_run_prompt(
     prompt,
     {
@@ -300,8 +301,7 @@ function M.complete(prompt, input, context, callback)
         util.eshow(data, 'stream error ' .. (label or ''))
       end,
     },
-    input,
-    context
+    ics
   )
 end
 
@@ -325,8 +325,7 @@ function M.request_completion(prompt, args, want_visual_selection, default_hl_gr
     build_params_run_prompt(
       prompt,
       stream_handlers,
-      ics.input,
-      ics.context
+      ics
     )
   else
     ---@cast prompt_mode SegmentMode
