@@ -27,7 +27,7 @@ local function command_request_completion(cmd_params)
   local prompt, args = get_prompt_and_args(cmd_params.fargs)
   local want_visual_selection = cmd_params.range ~= 0
 
-  return provider.request_completion(prompt, args, want_visual_selection, M.opts.hl_group)
+  return provider.request_completion(prompt, args, want_visual_selection)
 end
 
 local function command_request_multi_completion_streams(cmd_params)
@@ -44,8 +44,7 @@ local function command_request_multi_completion_streams(cmd_params)
 
   return provider.request_multi_completion_streams(
     found_prompts,
-    want_visual_selection,
-    M.opts.hl_group
+    want_visual_selection
   )
 end
 
@@ -207,22 +206,24 @@ local function setup_commands()
 end
 
 function M.setup(opts)
-  local _opts = vim.tbl_extend('force', {
-    hl_group = 'Comment',
+  M.opts = vim.tbl_extend('force', {
     default_prompt = require('llm.providers.openai').default_prompt
   }, opts or {})
 
-  if _opts.prompts then
-    scopes.set_global_user_prompts(_opts.prompts)
+  if M.opts.prompts then
+    scopes.set_global_user_prompts(M.opts.prompts)
   end
 
-  if _opts.join_undo then
+  if M.opts.join_undo then
     segment.join_undo = true
+  end
+
+  if M.opts.hl_group then
+    segment.default_hl = M.opts.hl_group
   end
 
   setup_commands()
 
-  M.opts = _opts
   vim.g.did_setup_llm = true
 end
 
