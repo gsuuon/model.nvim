@@ -1,7 +1,9 @@
 local segment = require('llm.segment')
 local util = require('llm.util')
 
-local M = {}
+local M = {
+  default_hl = 'Comment'
+}
 
 ---@class Prompt
 ---@field provider Provider The API provider for this prompt
@@ -41,7 +43,7 @@ local function create_segment(source, segment_mode, hl_group)
       local seg = segment.create_segment_at(
         source.selection.start.row,
         source.selection.start.col,
-        hl_group,
+        hl_group or M.default_hl,
         0
       )
 
@@ -148,34 +150,12 @@ end
 ---@field filename string
 ---@field args string
 
----@class InputContextSegment
+---@class InputContext
 ---@field input string
 ---@field context Context
----@field segment Segment
 
----@param segment_mode SegmentMode
----@param want_visual_selection boolean
----@param hl_group string
----@param args string
----@return InputContextSegment
-local function create_segment_get_input_context(segment_mode, want_visual_selection, hl_group, args)
-  -- TODO is args actually useful here?
-
-  local mode = (function()
-    if segment_mode == M.mode.INSERT_OR_REPLACE then
-      if want_visual_selection then
-        return M.mode.REPLACE
-      else
-        return M.mode.INSERT
-      end
-    end
-
-    return segment_mode
-  end)()
-
-  local source = get_source(want_visual_selection)
+local function get_input_context(source, args)
   local before_after = get_before_after(source)
-  local seg = create_segment(source, mode, hl_group)
 
   return {
     input = table.concat(source.lines, '\n'),
@@ -185,21 +165,19 @@ local function create_segment_get_input_context(segment_mode, want_visual_select
       before = before_after.before,
       after = before_after.after,
       args = args,
-    },
-    segment = seg
+    }
   }
 end
 
 ---@param prompt Prompt
 ---@param handlers StreamHandlers
----@param ics InputContextSegment
+---@param input_context InputContext
 ---@return function cancel callback
-local function build_params_run_prompt(prompt, handlers, ics)
+local function build_params_run_prompt(prompt, handlers, input_context)
   -- TODO args to prompts is probably less useful than the prompt buffer / helper
-  -- TODO refactor
 
   local prompt_built = assert(
-    prompt.builder(ics.input, ics.context),
+    prompt.builder(input_context.input, input_context.context),
     'prompt builder produced nil'
   )
 
@@ -272,24 +250,41 @@ local function create_prompt_handlers(prompt, seg)
   }
 end
 
----@param ics InputContextSegment
 ---@param prompt Prompt
-local function create_handlers_run_prompt(ics, prompt)
-  ics.segment.data.cancel = build_params_run_prompt(
+---@param input_context InputContext
+---@param source Source
+local function create_segment_handlers_run_prompt(prompt, input_context, source)
+
+  local mode = (function()
+    if prompt.mode == M.mode.INSERT_OR_REPLACE then
+      if source.selection then
+        return M.mode.REPLACE
+      else
+        return M.mode.INSERT
+      end
+    end
+
+    return prompt.mode or M.mode.APPEND
+  end)()
+
+  local seg = create_segment(source, mode, prompt.hl_group)
+
+  seg.data.cancel = build_params_run_prompt(
     prompt,
     create_prompt_handlers(
       prompt,
-      ics.segment
+      seg
     ),
-    ics
+    input_context
   )
+
 end
 
 -- Run a prompt and resolve the complete result. Does not do anything with the result (ignores prompt mode)
 ---@param prompt Prompt
----@param ics InputContextSegment
+---@param input_context InputContext
 ---@param callback fun(completion: string) completion callback
-function M.complete(prompt, ics, callback)
+function M.complete(prompt, input_context, callback)
   return build_params_run_prompt(
     prompt,
     {
@@ -301,56 +296,48 @@ function M.complete(prompt, ics, callback)
         util.eshow(data, 'stream error ' .. (label or ''))
       end,
     },
-    ics
+    input_context
   )
 end
 
 ---@param prompt Prompt
 ---@param args string
 ---@param want_visual_selection boolean
-function M.request_completion(prompt, args, want_visual_selection, default_hl_group)
-  local prompt_mode = prompt.mode or M.mode.APPEND
+function M.request_completion(prompt, args, want_visual_selection)
+  local source = get_source(want_visual_selection)
 
-  if type(prompt_mode) == 'table' then -- prompt_mode is StreamHandlers
+  if type(prompt.mode) == 'table' then -- prompt_mode is StreamHandlers
     -- TODO probably want to just remove streamhandlers prompt mode
+
+    local stream_handlers = prompt.mode
+    ---@cast stream_handlers StreamHandlers
+
     build_params_run_prompt(
       prompt,
-      prompt_mode,
-      create_segment_get_input_context(
-        M.mode.APPEND,
-          -- we don't use the segment here, append will create an empty segment at end of selection
-        want_visual_selection,
-        prompt.hl_group or default_hl_group,
-        args
-      )
+      stream_handlers,
+      get_input_context(source, args)
     )
   else
-    ---@cast prompt_mode SegmentMode
-    create_handlers_run_prompt(
-      create_segment_get_input_context(
-        prompt_mode,
-        want_visual_selection,
-        prompt.hl_group or default_hl_group,
-        args
-      ),
-      prompt
+    create_segment_handlers_run_prompt(
+      prompt,
+      get_input_context(source, args),
+      source
     )
-    end
-
+  end
 end
 
-function M.request_multi_completion_streams(prompts, want_visual_selection, default_hl_group)
+function M.request_multi_completion_streams(prompts, want_visual_selection)
   for i, prompt in ipairs(prompts) do
     -- try to avoid ratelimits
     vim.defer_fn(function()
-      create_handlers_run_prompt(
-        create_segment_get_input_context(
-          M.mode.APPEND, -- multi-mode always append only
-          want_visual_selection,
-          prompt.hl_group or default_hl_group,
-          ''
-        ),
-        prompt
+      local source = get_source(want_visual_selection)
+
+      create_segment_handlers_run_prompt(
+        vim.tbl_extend('force', prompt, {
+          mode = M.mode.APPEND -- multi-mode always append only
+        }),
+        get_input_context(source, ''),
+        source
       )
     end, i * 200)
   end
