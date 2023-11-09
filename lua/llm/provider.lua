@@ -275,7 +275,7 @@ end
 
 ---@param ics InputContextSegment
 ---@param prompt Prompt
-local function create_handlers_start_prompt(ics, prompt)
+local function create_handlers_run_prompt(ics, prompt)
   ics.segment.data.cancel = build_params_run_prompt(
     prompt,
     create_prompt_handlers(
@@ -315,7 +315,7 @@ function M.request_completion(prompt, args, want_visual_selection, default_hl_gr
     -- TODO probably want to just remove streamhandlers prompt mode
     local stream_handlers = prompt_mode
 
-    local seg_input_ctx = create_segment_get_input_context(
+    local ics = create_segment_get_input_context(
       M.mode.APPEND, -- we don't use the segment here, append will create an empty segment at end of selection
       want_visual_selection,
       prompt.hl_group or default_hl_group,
@@ -325,35 +325,37 @@ function M.request_completion(prompt, args, want_visual_selection, default_hl_gr
     build_params_run_prompt(
       prompt,
       stream_handlers,
-      seg_input_ctx.input,
-      seg_input_ctx.context
+      ics.input,
+      ics.context
     )
   else
     ---@cast prompt_mode SegmentMode
-    local seg_input_ctx = create_segment_get_input_context(
-      prompt_mode,
-      want_visual_selection,
-      prompt.hl_group or default_hl_group,
-      args
+    create_handlers_run_prompt(
+      create_segment_get_input_context(
+        prompt_mode,
+        want_visual_selection,
+        prompt.hl_group or default_hl_group,
+        args
+      ),
+      prompt
     )
-
-    create_handlers_start_prompt(seg_input_ctx, prompt)
-  end
+    end
 
 end
 
 function M.request_multi_completion_streams(prompts, want_visual_selection, default_hl_group)
   for i, prompt in ipairs(prompts) do
-    local seg_input_ctx = create_segment_get_input_context(
-      M.mode.APPEND, -- multi-mode always append only
-      want_visual_selection,
-      prompt.hl_group or default_hl_group,
-      ''
-    )
-
     -- try to avoid ratelimits
     vim.defer_fn(function()
-      create_handlers_start_prompt(seg_input_ctx, prompt)
+      create_handlers_run_prompt(
+        create_segment_get_input_context(
+          M.mode.APPEND, -- multi-mode always append only
+          want_visual_selection,
+          prompt.hl_group or default_hl_group,
+          ''
+        ),
+        prompt
+      )
     end, i * 200)
   end
 end
