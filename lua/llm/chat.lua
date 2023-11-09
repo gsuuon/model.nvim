@@ -1,6 +1,8 @@
+local input = require('llm.input')
+
 local M = {}
 
----@alias ContentsBuilder fun(input: string, context: Context): LlmChatContents | fun(resolve: fun(results: LlmChatContents)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
+---@alias ContentsBuilder fun(input: string, context: Context): LlmChatContents Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
 
 ---@class ChatPrompt
 ---@field provider Provider The API provider for this prompt
@@ -18,10 +20,10 @@ local M = {}
 
 --- Splits lines into array of { role: 'user' | 'assistant', content: string }
 --- If first line starts with '> ', then the rest of that line is system message
----@param input string Text of input buffer. '\n======\n' denote alternations between user and assistant roles
+---@param text string Text of buffer. '\n======\n' denote alternations between user and assistant roles
 ---@return { messages: { role: 'user'|'assistant', content: string}[], system?: string }
-local function split_messages(input)
-  local lines = vim.fn.split(input, '\n')
+local function split_messages(text)
+  local lines = vim.fn.split(text, '\n')
   local messages = {}
 
   local system;
@@ -31,11 +33,11 @@ local function split_messages(input)
 
   --- Insert message and reset/toggle chunk state. User text is trimmed.
   local function add_message()
-    local text = table.concat(chunk_lines, '\n')
+    local text_ = table.concat(chunk_lines, '\n')
 
     table.insert(messages, {
       role = chunk_is_user and 'user' or 'assistant',
-      content = chunk_is_user and vim.trim(text) or text
+      content = chunk_is_user and vim.trim(text_) or text_
     })
 
     chunk_lines = {}
@@ -68,13 +70,13 @@ local function split_messages(input)
   }
 end
 
----@param input string Input text of buffer
+---@param text string Input text of buffer
 ---@return { params?: table, rest: string }
-local function parse_params(input)
-  local params_text, rest = input:match('^%-%-%-\n(.-)\n%-%-%-\n(.*)$')
+local function parse_params(text)
+  local params_text, rest = text:match('^%-%-%-\n(.-)\n%-%-%-\n(.*)$')
 
   if params_text == nil then
-    return { params = {}, rest = input }
+    return { params = {}, rest = text }
   end
 
   local params = vim.fn.luaeval(params_text)
@@ -122,8 +124,8 @@ end
 ---   }
 --- }
 ---@return LlmChatContents
-function M.parse(input)
-  local parsed = parse_params(input)
+function M.parse(text)
+  local parsed = parse_params(text)
   local messages_and_system = split_messages(parsed.rest)
 
   return vim.tbl_extend('force', messages_and_system, { params = parsed.params })
@@ -155,6 +157,29 @@ function M.to_string(contents)
   end
 
   return result
+end
+
+---@param chat_prompt ChatPrompt
+---@param want_visual_selection boolean
+---@param args? string
+function M.create_new_chat(chat_prompt, want_visual_selection, args)
+  vim.cmd.vnew()
+  vim.o.ft = 'llmchat'
+  vim.cmd.syntax({'sync', 'fromstart'})
+
+  local input_context = input.get_input_context(
+    input.get_source(want_visual_selection),
+    args or ''
+  )
+
+  local chat_contents = chat_prompt.create(input_context.input, input_context.context)
+  local new_buffer_text = M.to_string(chat_contents)
+  show({
+    new_buffer_text = new_buffer_text,
+    chat_contents = chat_contents
+  })
+
+  vim.api.nvim_buf_set_lines(0, 0, 0, false, vim.fn.split(new_buffer_text, '\n'))
 end
 
 return M

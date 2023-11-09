@@ -2,6 +2,7 @@ local segment = require('llm.segment')
 local util = require('llm.util')
 local provider = require('llm.provider')
 local scopes = require('llm.prompts.scopes')
+local chat = require('llm.chat')
 
 local M = {}
 
@@ -194,14 +195,42 @@ local function setup_commands()
 
   vim.api.nvim_create_user_command(
     'LlmChat',
-    function()
-      vim.cmd.vnew()
-      vim.o.ft = 'llmchat'
-      vim.cmd.syntax({'sync', 'fromstart'})
+    function(cmd_params)
+      local chat_name = cmd_params.fargs[1]
+
+      if chat_name ~= nil and chat_name ~= '' then
+        local want_visual_selection = cmd_params.range ~= 0
+
+        chat.create_new_chat(
+          assert(
+            vim.tbl_get(M.opts, 'chats', chat_name),
+            'No chat named "' .. chat_name .. '"'
+          ),
+          want_visual_selection
+        )
+      else
+        if vim.o.ft ~= 'llmchat' then
+          error('Not in llmchat buffer')
+        end
+        -- run
+        -- parse
+        -- find chat
+      end
     end,
     {
       desc = 'LlmChat',
-      force = true
+      force = true,
+      nargs='?',
+      complete = function(arglead)
+        local chats = M.opts.chats
+        if chats == nil then return end
+
+        local chat_names = vim.tbl_keys(chats)
+
+        if #arglead == 0 then return chat_names end
+
+        return vim.fn.matchfuzzy(chat_names, arglead)
+      end
     })
 end
 

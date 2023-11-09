@@ -12,6 +12,7 @@ local M = {}
 ---@field after string
 ---@field filename string
 ---@field args string
+---@field selection? Selection
 
 ---@class InputContext
 ---@field input string
