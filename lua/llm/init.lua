@@ -230,6 +230,32 @@ local function setup_commands()
         return vim.fn.matchfuzzy(chat_names, arglead)
       end
     })
+
+
+  vim.api.nvim_create_user_command(
+    'LlmCount',
+    function()
+      local count = require('llm.store.util').tiktoken_count
+      local text = table.concat(
+        vim.api.nvim_buf_get_lines(0, 0, -1, false),
+        '\n'
+      )
+
+      if vim.o.ft == 'llmchat' then
+        local contents = chat.parse(text)
+        local total = tap(count(tap(vim.json.encode(contents.messages))))
+
+        if contents.system then
+          total = total + tap(count(tap(contents.system)))
+        end
+
+        util.show(total)
+      else
+        util.show(count(text))
+      end
+    end,
+    {}
+  )
 end
 
 function M.setup(opts)
