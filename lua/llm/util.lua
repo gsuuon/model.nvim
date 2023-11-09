@@ -283,6 +283,16 @@ end
 
 M.cursor = {}
 
+
+---@class Position
+---@field row number 0-indexed row
+---@field col number 0-indexed column, can be vim.v.maxcol which means after end of line
+
+---@class Selection
+---@field start Position
+---@field stop Position
+
+---@return Selection
 function M.cursor.selection()
   -- NOTE These give the byte pos of column and not char pos
   -- also < and > only get updated after leaving visual mode
@@ -304,6 +314,7 @@ function M.cursor.selection()
   }
 end
 
+---@return Position
 function M.cursor.position()
   local pos = vim.api.nvim_win_get_cursor(0)
 
