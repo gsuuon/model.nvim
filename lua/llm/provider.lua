@@ -239,12 +239,12 @@ local function start_prompt(input, prompt, handlers, context)
   end
 end
 
-local function create_handlers_start_prompt(seg_input_ctx, prompt)
-  local seg = seg_input_ctx.context.segment
-
+---@param prompt Prompt
+---@param seg Segment
+local function create_prompt_handlers(prompt, seg)
   local completion = ""
 
-  local cancel = start_prompt(seg_input_ctx.input, prompt, {
+  return {
     on_partial = function(partial)
       completion = completion .. partial
       seg.add(partial)
@@ -279,9 +279,19 @@ local function create_handlers_start_prompt(seg_input_ctx, prompt)
     on_error = function(data, label)
       util.eshow(data, 'stream error ' .. (label or ''))
     end
-  }, seg_input_ctx.context)
+  }
+end
 
-  seg.data.cancel = cancel
+local function create_handlers_start_prompt(seg_input_ctx, prompt)
+  seg_input_ctx.context.segment.data.cancel = start_prompt(
+    seg_input_ctx.input,
+    prompt,
+    create_prompt_handlers(
+      prompt,
+      seg_input_ctx.context.segment
+    ),
+    seg_input_ctx.context
+  )
 end
 
 -- Run a prompt and resolve the complete result. Does not do anything with the result (ignores prompt mode)
