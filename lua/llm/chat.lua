@@ -163,14 +163,14 @@ end
 ---@param want_visual_selection boolean
 ---@param args? string
 function M.create_new_chat(chat_prompt, want_visual_selection, args)
-  vim.cmd.vnew()
-  vim.o.ft = 'llmchat'
-  vim.cmd.syntax({'sync', 'fromstart'})
-
   local input_context = input.get_input_context(
     input.get_source(want_visual_selection),
     args or ''
   )
+
+  vim.cmd.vnew()
+  vim.o.ft = 'llmchat'
+  vim.cmd.syntax({'sync', 'fromstart'})
 
   local chat_contents = chat_prompt.create(input_context.input, input_context.context)
   local new_buffer_text = M.to_string(chat_contents)
