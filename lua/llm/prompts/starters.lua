@@ -1,7 +1,5 @@
 local llm = require('llm')
 
-local segment = require('llm.util.segment')
-
 local util = require('llm.util')
 local async = require('llm.util.async')
 
