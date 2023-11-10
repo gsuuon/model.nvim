@@ -181,7 +181,6 @@ function M.create_new_chat(opts, chat_name, want_visual_selection, args)
   local chat_contents = chat_prompt.create(input_context.input, input_context.context)
   chat_contents.params.chat = chat_name
   local new_buffer_text = M.to_string(chat_contents)
-  show({chat_contents = chat_contents, new_buffer_text = new_buffer_text})
 
   vim.api.nvim_buf_set_lines(0, 0, 0, false, vim.fn.split(new_buffer_text, '\n'))
 end
