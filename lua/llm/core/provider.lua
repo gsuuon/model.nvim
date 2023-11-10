@@ -8,7 +8,7 @@ local M = {}
 ---@field provider Provider The API provider for this prompt
 ---@field builder ParamsBuilder Converts input and context to request params
 ---@field transform fun(string): string Transforms response text after completion finishes
----@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to "append".
+---@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to 'append'.
 ---@field hl_group? string Highlight group of active response
 ---@field params? table Additional static parameters to add to request body - ParamsBuilder data is merged into and overrides this.
 ---@field options? table Options for the provider
@@ -22,11 +22,11 @@ local M = {}
 
 ---@enum SegmentMode
 M.mode = {
-  APPEND = "append",
-  REPLACE = "replace",
-  BUFFER = "buffer",
-  INSERT = "insert",
-  INSERT_OR_REPLACE = "insert_or_replace"
+  APPEND = 'append',
+  REPLACE = 'replace',
+  BUFFER = 'buffer',
+  INSERT = 'insert',
+  INSERT_OR_REPLACE = 'insert_or_replace'
 }
 
 ---@class StreamHandlers
@@ -108,11 +108,6 @@ end
 local function build_params_run_prompt(prompt, handlers, input_context)
   -- TODO args to prompts is probably less useful than the prompt buffer / helper
 
-  local prompt_built = assert(
-    prompt.builder(input_context.input, input_context.context),
-    'prompt builder produced nil'
-  )
-
   local function do_request(built_params)
     local params = vim.tbl_extend(
       'force',
@@ -122,6 +117,11 @@ local function build_params_run_prompt(prompt, handlers, input_context)
 
     return prompt.provider.request_completion(handlers, params, prompt.options)
   end
+
+  local prompt_built = assert(
+    prompt.builder(input_context.input, input_context.context),
+    'prompt builder produced nil'
+  )
 
   if type(prompt_built) == 'function' then
     local cancel
@@ -142,7 +142,7 @@ end
 ---@param prompt Prompt
 ---@param seg Segment
 local function create_prompt_handlers(prompt, seg)
-  local completion = ""
+  local completion = ''
 
   return {
     on_partial = function(partial)
