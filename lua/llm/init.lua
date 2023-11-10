@@ -1,4 +1,4 @@
-local segment = require('llm.segment')
+local segment = require('llm.util.segment')
 local util = require('llm.util')
 local provider = require('llm.provider')
 local scopes = require('llm.prompts.scopes')

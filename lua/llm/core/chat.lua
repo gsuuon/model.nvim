@@ -1,5 +1,5 @@
 local input = require('llm.input')
-local segment = require('llm.segment')
+local segment = require('llm.util.segment')
 
 local M = {}
 

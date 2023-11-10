@@ -485,7 +485,7 @@ return {
 
 ```lua
 local openai = require('llm.providers.openai')
-local segment = require('llm.segment')
+local segment = require('llm.util.segment')
 
 require('llm').setup({
   prompts = {
@@ -599,7 +599,7 @@ require('llm').setup({
 
 ```lua
 local openai = require('llm.providers.openai')
-local segment = require('llm.segment')
+local segment = require('llm.util.segment')
 
 return {
   code = {
