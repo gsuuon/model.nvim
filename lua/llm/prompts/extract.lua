@@ -1,5 +1,5 @@
 local util = require('llm.util')
-local curl = require('llm.curl')
+local curl = require('llm.util.curl')
 local async = require('llm.util.async')
 
 local M = {}

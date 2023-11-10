@@ -1,4 +1,4 @@
-local curl = require('llm.curl')
+local curl = require('llm.util.curl')
 local util = require('llm.util')
 
 local M = {}

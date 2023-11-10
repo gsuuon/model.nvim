@@ -1,6 +1,6 @@
 local llm = require('llm')
 local prompts = require('llm.prompts')
-local curl = require('llm.curl')
+local curl = require('llm.util.curl')
 local util = require('llm.util')
 local async = require('llm.util.async')
 local provider_util = require('llm.providers.util')
