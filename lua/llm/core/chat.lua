@@ -1,4 +1,4 @@
-local input = require('llm.input')
+local input = require('llm.core.input')
 local segment = require('llm.util.segment')
 
 local M = {}
