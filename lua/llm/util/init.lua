@@ -201,10 +201,6 @@ function M.string.split_pattern(text, pattern)
   return parts
 end
 
-function M.string.join_lines(lines)
-  return table.concat(lines, '\n')
-end
-
 --- Removes any surrounding quotes or markdown code blocks
 function M.string.trim_quotes(text)
   local open_markers = text:match([=[^['"`]+]=])

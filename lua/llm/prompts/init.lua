@@ -10,10 +10,13 @@ local util = require('llm.util')
 
 local M = {}
 
+---@param context Context
+---@param line_count number
+---@return { before: string, after: string }
 function M.limit_before_after(context, line_count)
   return {
-    before = util.string.join_lines(util.table.slice(context.before, -line_count)),
-    after = util.string.join_lines(util.table.slice(context.after, 0, line_count))
+    before = table.concat(util.table.slice(context.before, -line_count), '\n'),
+    after = table.concat(util.table.slice(context.after, 0, line_count), '\n')
   }
 end
 
