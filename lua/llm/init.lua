@@ -1,6 +1,6 @@
 local segment = require('llm.util.segment')
 local util = require('llm.util')
-local provider = require('llm.provider')
+local provider = require('llm.core.provider')
 local scopes = require('llm.prompts.scopes')
 local chat = require('llm.chat')
 

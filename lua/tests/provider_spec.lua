@@ -14,7 +14,7 @@ local type_stream_handlers = {
 
 describe('provider', function()
 
-  local provider = require('llm.provider')
+  local provider = require('llm.core.provider')
 
   it('calls the prompt provider completion with params and options', function()
 
