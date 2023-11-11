@@ -8,6 +8,7 @@ local M = {}
 ---@field provider Provider The API provider for this prompt
 ---@field create ContentsBuilder Creates a new chat buffer with given LlmChatContents
 ---@field run fun(contents: LlmChatContents): { params: table, options?: table } Converts chat contents into completion request params and provider options
+---@field contents? LlmChatContents
 
 ---@class LlmChatMessage
 ---@field role 'user' | 'assistant'
@@ -168,9 +169,13 @@ function M.create_new_chat(chat_prompt, chat_name, input_context)
     input_context.context
   )
 
+  if chat_prompt.contents then
+    chat_contents = vim.tbl_deep_extend('force', chat_prompt.contents, chat_contents)
+  end
+
   assert(
     chat_contents.config,
-    'Chat prompt ' .. chat_name .. '.create() needs to return a table with a "config" value'
+    'Chat prompt ' .. chat_name .. '.create() needs to return a table with a "config" value or set in "contents"'
   )
 
   local new_buffer_text = M.to_string(chat_contents, chat_name)
