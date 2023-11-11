@@ -1,4 +1,3 @@
-local util = require('llm.util')
 local openai = require('llm.providers.openai')
 
 ---@type table<string, ChatPrompt>
@@ -9,7 +8,7 @@ local chats = {
       return {
         system = 'You are a helpful assistant',
         config = {
-          model = 'gpt-3.5-turbo'
+          model = 'gpt-3.5-turbo-1106'
         },
         messages = {
           {
@@ -20,27 +19,17 @@ local chats = {
       }
     end,
     run = function(contents)
-      local messages = {}
-
-      -- TODO params and options
-      local config = util.table.without(contents.config, 'chat')
+      local params = contents.config or {}
+      params.messages = contents.messages
 
       if contents.system then
-        table.insert(messages, {
+        table.insert(params.messages, 1, {
           role = 'system',
           content = contents.system
         })
       end
 
-      for _,msg in ipairs(contents.messages) do
-        table.insert(messages, msg)
-      end
-
-      config.messages = messages
-
-      return {
-        params = config
-      }
+      return { params = params }
     end
   }
 }
