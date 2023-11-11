@@ -6,10 +6,12 @@ syn include @Lua syntax/lua.vim
 
 let b:current_syntax = 1
 
-syntax match llmMessageSystem "> .*$" contained
-syntax match llmMessageSystem /\%^> .*$/
-syn region llmParams start=/\%^---$/ end="^---$" nextgroup=llmMessageSystem skipnl contains=@Lua keepend
-syn region llmMessageAssistant start="======" end="======"
+syn match llmChatName /\%^\(---\)\@!.\+/ skipnl nextgroup=llmMessageSystem,llmParams,llmMessages
+syn region llmParams start=/^---$/ end=/^---$/ nextgroup=llmMessageSystem,llmMessages skipnl contains=@Lua keepend contained
+syn region llmMessages start=/^\(---\)\@!.\+/ end=/\%$/ contains=llmMessageAssistant contained
+syn match llmMessageSystem "^> .*$" nextgroup=llmMessages skipempty contained
+syn region llmMessageAssistant start="======" end="======" contained
 
+hi link llmChatName ModeMsg
 hi link llmMessageAssistant Comment
 hi link llmMessageSystem WarningMsg
