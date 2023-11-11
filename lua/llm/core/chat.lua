@@ -174,15 +174,32 @@ function M.create_new_chat(opts, chat_name, want_visual_selection, args)
     args or ''
   )
 
+  local chat_contents = chat_prompt.create(
+    input_context.input,
+    input_context.context
+  )
+
+  assert(
+    chat_contents.config,
+    'Chat prompt ' .. chat_name .. '.create() needs to return a table with a "config" value'
+  )
+
+  -- default chat to provided chat_name
+  chat_contents.config.chat = chat_contents.config.chat or chat_name
+
+  local new_buffer_text = M.to_string(chat_contents)
+
   vim.cmd.vnew()
   vim.o.ft = 'llmchat'
   vim.cmd.syntax({'sync', 'fromstart'})
 
-  local chat_contents = chat_prompt.create(input_context.input, input_context.context)
-  chat_contents.config.chat = chat_name
-  local new_buffer_text = M.to_string(chat_contents)
-
-  vim.api.nvim_buf_set_lines(0, 0, 0, false, vim.fn.split(new_buffer_text, '\n'))
+  vim.api.nvim_buf_set_lines(
+    0,
+    0,
+    0,
+    false,
+    vim.fn.split(new_buffer_text, '\n')
+  )
 end
 
 ---@param opts { chats?: table<string, ChatPrompt> }
