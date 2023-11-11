@@ -14,7 +14,6 @@ local M = {}
 ---@field content string
 
 ---@class LlmChatContents
----@field chat string
 ---@field config? table
 ---@field system? string
 ---@field messages LlmChatMessage[]
@@ -79,6 +78,10 @@ local function parse_config(text)
     error('Chat buffer must start with chat name, not config')
   end
 
+  if text:match('^>') then
+    error('Chat buffer must start with chat name, not system instruction')
+  end
+
   local chat_name, name_rest = text:match('^(.-)\n(.*)')
   local params_text, rest = name_rest:match('%-%-%-\n(.-)\n%-%-%-\n(.*)')
 
@@ -111,19 +114,20 @@ end
 --- the system instruction. The rest of the text is parsed as alternating
 --- user/assistant messages, with `\n======\n` delimiters.
 ---@param text string
----@return LlmChatContents
+---@return { contents: LlmChatContents, chat: string }
 function M.parse(text)
   local parsed = parse_config(text)
   local messages_and_system = split_messages(parsed.rest)
 
-  return vim.tbl_extend(
-    'force',
-    messages_and_system,
-    {
-      config = parsed.config,
-      chat = parsed.chat
-    }
-  )
+  return {
+    contents = vim.tbl_extend(
+      'force',
+      messages_and_system,
+      {
+        config = parsed.config,
+      }),
+    chat = parsed.chat
+  }
 end
 
 ---@param contents LlmChatContents
@@ -132,7 +136,7 @@ end
 function M.to_string(contents, name)
   local result = name .. '\n'
 
-  if not vim.tbl_isempty(contents.config) then
+  if contents.config and not vim.tbl_isempty(contents.config) then
     result = result .. '---\n' .. vim.inspect(contents.config) .. '\n---\n'
   end
 
@@ -190,12 +194,12 @@ end
 ---@param opts { chats?: table<string, ChatPrompt> }
 function M.run_chat(opts)
   local buf_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local contents = M.parse(
+  local parsed = M.parse(
     table.concat(buf_lines, '\n')
   )
 
   local chat_name = assert(
-    contents.chat,
+    parsed.chat,
     'Chat buffer first line must be a chat prompt name'
   )
 
@@ -205,7 +209,7 @@ function M.run_chat(opts)
     'Chat "' .. chat_name .. '" not found'
   )
 
-  local run_config = chat_prompt.run(contents)
+  local run_config = chat_prompt.run(parsed.contents)
   if run_config == nil then
     error('Chat prompt run() returned nil')
   end
