@@ -199,9 +199,16 @@ function M.run_chat(opts)
     table.concat(buf_lines, '\n')
   )
 
-  local chat_name = assert(contents.config.chat, 'Chat buffer missing chat name in header')
-  local chat_prompt = assert(vim.tbl_get(opts, 'chats', chat_name), 'Chat not found')
-  ---@cast chat_prompt ChatPrompt
+  local chat_name = assert(
+    contents.config.chat,
+    'Chat buffer missing chat name in header'
+  )
+
+  ---@type ChatPrompt
+  local chat_prompt = assert(
+    vim.tbl_get(opts, 'chats', chat_name),
+    'Chat not found'
+  )
 
   local run_config = chat_prompt.run(contents)
   if run_config == nil then
