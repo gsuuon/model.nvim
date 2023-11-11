@@ -3,6 +3,7 @@ local util = require('llm.util')
 local provider = require('llm.core.provider')
 local scopes = require('llm.core.scopes')
 local chat = require('llm.core.chat')
+local input = require('llm.core.input')
 
 local M = {}
 
@@ -199,12 +200,24 @@ local function setup_commands()
       local chat_name = cmd_params.fargs[1]
 
       if chat_name ~= nil and chat_name ~= '' then
+        if vim.o.ft == 'llmchat' then
+          error("Use ':LlmChat' (without argument) to run the current chat")
+        end
+
+        local chat_prompt = assert(
+          vim.tbl_get(M.opts, 'chats', chat_name),
+          'Chat prompt "' .. chat_name .. '" not found in setup({chats = {..}})'
+        )
+
         local want_visual_selection = cmd_params.range ~= 0
 
         chat.create_new_chat(
-          M.opts,
+          chat_prompt,
           chat_name,
-          want_visual_selection
+          input.get_input_context(
+            input.get_source(want_visual_selection),
+            '' -- TODO args?
+          )
         )
       else
         if vim.o.ft ~= 'llmchat' then

@@ -1,4 +1,3 @@
-local input = require('llm.core.input')
 local segment = require('llm.util.segment')
 
 local M = {}
@@ -161,19 +160,10 @@ function M.to_string(contents)
   return vim.fn.trim(result, '\n', 2) -- trim trailing newline
 end
 
----@param opts { chats?: table<string, ChatPrompt> }
+---@param chat_prompt ChatPrompt
 ---@param chat_name string
----@param want_visual_selection boolean
----@param args? string
-function M.create_new_chat(opts, chat_name, want_visual_selection, args)
-  local chat_prompt = assert(vim.tbl_get(opts, 'chats', chat_name), 'Chat not found')
-  ---@cast chat_prompt ChatPrompt
-
-  local input_context = input.get_input_context(
-    input.get_source(want_visual_selection),
-    args or ''
-  )
-
+---@param input_context InputContext
+function M.create_new_chat(chat_prompt, chat_name, input_context)
   local chat_contents = chat_prompt.create(
     input_context.input,
     input_context.context
