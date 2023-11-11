@@ -173,9 +173,6 @@ function M.create_new_chat(chat_prompt, chat_name, input_context)
     'Chat prompt ' .. chat_name .. '.create() needs to return a table with a "config" value'
   )
 
-  -- default chat to provided chat_name
-  chat_contents.config.chat = chat_contents.config.chat or chat_name
-
   local new_buffer_text = M.to_string(chat_contents, chat_name)
 
   vim.cmd.vnew()
