@@ -45,7 +45,10 @@ end)
 
 ```lua
 require('lazy').setup({
-  'gsuuon/llm.nvim'
+  {
+    'gsuuon/llm.nvim',
+    cmd = { 'Llm', 'LlmChat' }
+  }
 })
 ```
 
@@ -151,13 +154,22 @@ https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a
 
 
 ## 🧵Configuration
+All setup options are optional. Add new prompts to `options.prompts.[name]` and chat prompts to `options.chats.[name]`.
 
 ```lua
+---@class SetupOptions
+---@field default_prompt? Prompt the default prompt (`:Llm` with no argument)
+---@field prompts? table<string, Prompt> add prompts (`:Llm [name]`)
+---@field chats? table<string, ChatPrompt> add chat prompts (`:LlmChat [name]`)
+---@field hl_group? string set the default highlight group of in-progress responses
+---@field join_undo? boolean join streaming response text as a single `u` undo. use if you intend to wait for responses to finish before editing other text, as edits during streaming will also be undone.
+
 require('llm').setup({
-  default_prompt? = .. , -- Prompt — modify the default prompt (`:Llm` with no argument)
-  hl_group? = '',        -- string — set the default highlight group of in-progress responses
-  prompts? = {}          -- table<string, Prompt>` — add prompt alternatives
-  join_undo? = false     -- boolean — join streaming response text as a single `u` undo. use if you intend to wait for responses to finish before editing other text, as edits during streaming will also be undone.
+  default_prompt = {},
+  prompts = {...},
+  chats = {...},
+  hl_group = 'Comment',
+  join_undo = false,
 })
 ```
 
@@ -169,14 +181,14 @@ With lazy.nvim:
 ```lua
 {
   'gsuuon/llm.nvim',
-  opts = function()
-    return {
+  config = function()
+    require('llm').setup({
       prompts = {
         instruct = { ... },
         code = { ... },
         ask = { ... }
       }
-    }
+    })
   end
 }
 ```
@@ -184,6 +196,9 @@ With lazy.nvim:
 A prompt entry defines how to handle a completion request - it takes in the editor input (either an entire file or a visual selection) and some context, and produces the api request data merging with any defaults. It also defines how to handle the API response - for example it can replace the selection (or file) with the response or insert it at the cursor positon.
 
 Check out the [starter prompts](./lua/llm/prompts/starters.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/llm/provider.lua). If you want to use the starter prompts alongside your own, you can use `prompts = vim.tbl_extend('force', require('llm.prompts.starters'), { ... })`.
+
+### Chat prompts
+Chat prompts have a different API than regular prompts. Execute `:LlmChat my_chat` to create a new llmchat buffer with the `my_chat` chat prompt. Check out the types in [core/chat](./lua/llm/core/chat.lua).
 
 ### Library autoload
 You can use `require('util').module.autoload` instead of a naked `require` to always re-require a module on use. This makes the feedback loop for developing prompts faster:

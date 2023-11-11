@@ -272,11 +272,11 @@ local function setup_commands()
 end
 
 ---@class SetupOptions
----@field default_prompt? Prompt
----@field prompts? table<string, Prompt>
----@field chats? table<string, ChatPrompt>
----@field hl_group? string
----@field join_undo? boolean
+---@field default_prompt? Prompt the default prompt (`:Llm` with no argument)
+---@field prompts? table<string, Prompt> add prompts (`:Llm [name]`)
+---@field chats? table<string, ChatPrompt> add chat prompts (`:LlmChat [name]`)
+---@field hl_group? string set the default highlight group of in-progress responses
+---@field join_undo? boolean join streaming response text as a single `u` undo. use if you intend to wait for responses to finish before editing other text, as edits during streaming will also be undone.
 
 ---@param opts SetupOptions
 function M.setup(opts)
