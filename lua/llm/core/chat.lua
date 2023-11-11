@@ -14,8 +14,9 @@ local M = {}
 ---@field content string
 
 ---@class LlmChatContents
+---@field chat string
+---@field config? table
 ---@field system? string
----@field config table
 ---@field messages LlmChatMessage[]
 
 --- Splits lines into array of { role: 'user' | 'assistant', content: string }
@@ -71,71 +72,65 @@ local function split_messages(text)
 end
 
 ---@param text string Input text of buffer
----@return { config?: table, rest: string }
+---@return { chat: string, config?: table, rest: string }
 local function parse_config(text)
-  local params_text, rest = text:match('^%-%-%-\n(.-)\n%-%-%-\n(.*)$')
+
+  if text:match('^---$') then
+    error('Chat buffer must start with chat name, not config')
+  end
+
+  local chat_name, name_rest = text:match('^(.-)\n(.*)')
+  local params_text, rest = name_rest:match('%-%-%-\n(.-)\n%-%-%-\n(.*)')
+
+  if chat_name == '' then
+    error('Chat buffer must start with chat name, not empty line')
+  end
 
   if params_text == nil then
-    return { config = {}, rest = text }
+    return {
+      rest = vim.fn.trim(name_rest),
+      chat = chat_name
+    }
+  else
+    local config = vim.fn.luaeval(params_text)
+
+    if type(config) ~= 'table' then
+      error('Evaluated config text is not a lua table')
+    end
+
+    return {
+      config = config,
+      rest = vim.fn.trim(rest),
+      chat = chat_name
+    }
   end
-
-  local config = vim.fn.luaeval(params_text)
-
-  if type(config) ~= 'table' then
-    error('Evaluated config text is not a lua table')
-  end
-
-  return {
-    config = config,
-    rest = rest
-  }
 end
 
---- Parse a chat file. Can begin with a lua table of config between `---`.
---- If the next line starts with `> `, it is parsed as the system instruction.
---- The rest of the text is parsed as alternating user/assistant messages, with
---- `\n======\n` delimiters.
----
---- Example file:
---- ```
---- ---
---- {
----   model = "gpt-3.5-turbo"
---- }
---- ---
---- > You are a helpful assistant
----
---- Count to three
----
---- ======
---- 1, 2, 3.
---- ======
---- ```
----
---- Returns the table:
---- {
----   config = {
----     model = 'gpt-3.5-turbo'
----   },
----   system = 'You are a helpful assistant',
----   messages = {
----     { role = 'user', content = 'Count to three' },
----     { role = 'assistant', content = '1, 2, 3.' }
----   }
---- }
+--- Parse a chat file. Must start with a chat name, can follow with a lua table
+--- of config between `---`. If the next line starts with `> `, it is parsed as
+--- the system instruction. The rest of the text is parsed as alternating
+--- user/assistant messages, with `\n======\n` delimiters.
 ---@param text string
 ---@return LlmChatContents
 function M.parse(text)
   local parsed = parse_config(text)
   local messages_and_system = split_messages(parsed.rest)
 
-  return vim.tbl_extend('force', messages_and_system, { config = parsed.config })
+  return vim.tbl_extend(
+    'force',
+    messages_and_system,
+    {
+      config = parsed.config,
+      chat = parsed.chat
+    }
+  )
 end
 
 ---@param contents LlmChatContents
+---@param name string
 ---@return string
-function M.to_string(contents)
-  local result = ''
+function M.to_string(contents, name)
+  local result = name .. '\n'
 
   if not vim.tbl_isempty(contents.config) then
     result = result .. '---\n' .. vim.inspect(contents.config) .. '\n---\n'
@@ -177,7 +172,7 @@ function M.create_new_chat(chat_prompt, chat_name, input_context)
   -- default chat to provided chat_name
   chat_contents.config.chat = chat_contents.config.chat or chat_name
 
-  local new_buffer_text = M.to_string(chat_contents)
+  local new_buffer_text = M.to_string(chat_contents, chat_name)
 
   vim.cmd.vnew()
   vim.o.ft = 'llmchat'
@@ -200,14 +195,14 @@ function M.run_chat(opts)
   )
 
   local chat_name = assert(
-    contents.config.chat,
-    'Chat buffer missing chat name in header'
+    contents.chat,
+    'Chat buffer first line must be a chat prompt name'
   )
 
   ---@type ChatPrompt
   local chat_prompt = assert(
     vim.tbl_get(opts, 'chats', chat_name),
-    'Chat not found'
+    'Chat "' .. chat_name .. '" not found'
   )
 
   local run_config = chat_prompt.run(contents)
