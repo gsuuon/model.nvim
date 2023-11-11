@@ -2,22 +2,20 @@ local segment = require('llm.util.segment')
 
 local M = {}
 
----@alias ContentsBuilder fun(input: string, context: Context): LlmChatContents Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
-
 ---@class ChatPrompt
 ---@field provider Provider The API provider for this prompt
----@field create ContentsBuilder Creates a new chat buffer with given LlmChatContents
+---@field create fun(input: string, context: Context): LlmChatContents Converts input and context to LlmChatContents used to create the new chat buffer
 ---@field run fun(contents: LlmChatContents): { params: table, options?: table } Converts chat contents into completion request params and provider options
----@field contents? LlmChatContents
+---@field contents? LlmChatContents static contents which get merged with the results of create() on creating a new buffer
 
 ---@class LlmChatMessage
 ---@field role 'user' | 'assistant'
 ---@field content string
 
 ---@class LlmChatContents
----@field config? table
----@field system? string
----@field messages LlmChatMessage[]
+---@field config? table Configuration for this chat buffer, used by chatprompt.run
+---@field system? string Optional system instruction
+---@field messages LlmChatMessage[] Messages in the chat buffer
 
 --- Splits lines into array of { role: 'user' | 'assistant', content: string }
 --- If first line starts with '> ', then the rest of that line is system message
