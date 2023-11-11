@@ -11,10 +11,10 @@ local chat_openai = {
   create = function(input, context)
     return {
       messages = {
-        {
+        context.selection and {
           role = 'user',
           content = input
-        }
+        } or nil
       }
     }
   end,
