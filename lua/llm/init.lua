@@ -258,6 +258,14 @@ local function setup_commands()
   )
 end
 
+---@class SetupOptions
+---@field default_prompt? Prompt
+---@field prompts? table<string, Prompt>
+---@field chats? table<string, ChatPrompt>
+---@field hl_group? string
+---@field join_undo? boolean
+
+---@param opts SetupOptions
 function M.setup(opts)
   M.opts = vim.tbl_extend('force', {
     default_prompt = require('llm.providers.openai').default_prompt
