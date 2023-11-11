@@ -8,7 +8,7 @@ local M = {}
 ---@class ChatPrompt
 ---@field provider Provider The API provider for this prompt
 ---@field create ContentsBuilder Creates a new chat buffer with given LlmChatContents
----@field run fun(contents: LlmChatContents): { params: table, options?: table } Converts chat contents into a run configuration
+---@field run fun(contents: LlmChatContents): { params: table, options?: table } Converts chat contents into completion request params and provider options
 
 ---@class LlmChatMessage
 ---@field role 'user' | 'assistant'
@@ -16,7 +16,7 @@ local M = {}
 
 ---@class LlmChatContents
 ---@field system? string
----@field params table
+---@field config table
 ---@field messages LlmChatMessage[]
 
 --- Splits lines into array of { role: 'user' | 'assistant', content: string }
@@ -72,27 +72,27 @@ local function split_messages(text)
 end
 
 ---@param text string Input text of buffer
----@return { params?: table, rest: string }
-local function parse_params(text)
+---@return { config?: table, rest: string }
+local function parse_config(text)
   local params_text, rest = text:match('^%-%-%-\n(.-)\n%-%-%-\n(.*)$')
 
   if params_text == nil then
-    return { params = {}, rest = text }
+    return { config = {}, rest = text }
   end
 
-  local params = vim.fn.luaeval(params_text)
+  local config = vim.fn.luaeval(params_text)
 
-  if type(params) ~= 'table' then
-    error('Evaluated params text is not a lua table')
+  if type(config) ~= 'table' then
+    error('Evaluated config text is not a lua table')
   end
 
   return {
-    params = params,
+    config = config,
     rest = rest
   }
 end
 
---- Parse a chat file. Can begin with a lua table of params between `---`.
+--- Parse a chat file. Can begin with a lua table of config between `---`.
 --- If the next line starts with `> `, it is parsed as the system instruction.
 --- The rest of the text is parsed as alternating user/assistant messages, with
 --- `\n======\n` delimiters.
@@ -115,7 +115,7 @@ end
 ---
 --- Returns the table:
 --- {
----   params = {
+---   config = {
 ---     model = 'gpt-3.5-turbo'
 ---   },
 ---   system = 'You are a helpful assistant',
@@ -127,10 +127,10 @@ end
 ---@param text string
 ---@return LlmChatContents
 function M.parse(text)
-  local parsed = parse_params(text)
+  local parsed = parse_config(text)
   local messages_and_system = split_messages(parsed.rest)
 
-  return vim.tbl_extend('force', messages_and_system, { params = parsed.params })
+  return vim.tbl_extend('force', messages_and_system, { config = parsed.config })
 end
 
 ---@param contents LlmChatContents
@@ -138,8 +138,8 @@ end
 function M.to_string(contents)
   local result = ''
 
-  if not vim.tbl_isempty(contents.params) then
-    result = result .. '---\n' .. vim.inspect(contents.params) .. '\n---\n'
+  if not vim.tbl_isempty(contents.config) then
+    result = result .. '---\n' .. vim.inspect(contents.config) .. '\n---\n'
   end
 
   if contents.system then
@@ -179,7 +179,7 @@ function M.create_new_chat(opts, chat_name, want_visual_selection, args)
   vim.cmd.syntax({'sync', 'fromstart'})
 
   local chat_contents = chat_prompt.create(input_context.input, input_context.context)
-  chat_contents.params.chat = chat_name
+  chat_contents.config.chat = chat_name
   local new_buffer_text = M.to_string(chat_contents)
 
   vim.api.nvim_buf_set_lines(0, 0, 0, false, vim.fn.split(new_buffer_text, '\n'))
@@ -192,7 +192,7 @@ function M.run_chat(opts)
     table.concat(buf_lines, '\n')
   )
 
-  local chat_name = assert(contents.params.chat, 'Chat buffer missing chat name in header')
+  local chat_name = assert(contents.config.chat, 'Chat buffer missing chat name in header')
   local chat_prompt = assert(vim.tbl_get(opts, 'chats', chat_name), 'Chat not found')
   ---@cast chat_prompt ChatPrompt
 
