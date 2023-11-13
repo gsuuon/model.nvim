@@ -13,5 +13,5 @@ syn match llmMessageSystem "^> .*$" nextgroup=llmMessages skipempty contained
 syn region llmMessageAssistant start="======" end="======" contained
 
 hi link llmChatName ModeMsg
-hi link llmMessageAssistant Comment
+hi link llmMessageAssistant Identifier
 hi link llmMessageSystem WarningMsg
