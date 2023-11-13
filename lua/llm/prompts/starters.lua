@@ -15,6 +15,8 @@ local kobold = require('llm.providers.kobold')
 local llamacpp = require('llm.providers.llamacpp')
 local codellama = require('llm.providers.codellama')
 
+local llama2 = require('llm.format.llama2')
+
 local function standard_code(input, context)
   local surrounding_text = prompts.limit_before_after(context, 30)
 
@@ -107,7 +109,7 @@ local starters = {
     -- },
     builder = function(input, context)
       return {
-        prompt = llamacpp.llama_2_user_prompt({user = context.args or '', message = input})
+        prompt = llama2.user_prompt({user = context.args or '', message = input})
       }
     end
   },
@@ -239,7 +241,6 @@ local starters = {
       end
     end,
   },
-
   commit = {
     provider = openai,
     mode = llm.mode.INSERT,
