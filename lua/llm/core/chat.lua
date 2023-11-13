@@ -215,6 +215,12 @@ function M.run_chat(opts)
   end
 
   local seg = segment.create_segment_at(#buf_lines, 0)
+
+  local last_line = buf_lines[#buf_lines]
+  if not last_line or vim.fn.trim(last_line) ~= '' then
+    seg.add('\n')
+  end
+
   seg.add('======\n')
 
   local handlers = {
