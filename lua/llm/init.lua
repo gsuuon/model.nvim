@@ -255,11 +255,11 @@ local function setup_commands()
       )
 
       if vim.o.ft == 'llmchat' then
-        local contents = chat.parse(text)
-        local total = count(vim.json.encode(contents.messages))
+        local parsed = chat.parse(text)
+        local total = count(vim.json.encode(parsed.contents.messages))
 
-        if contents.system then
-          total = total + count(contents.system)
+        if parsed.contents.system then
+          total = total + count(parsed.contents.system)
         end
 
         util.show(total)
