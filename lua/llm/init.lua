@@ -7,6 +7,51 @@ local input = require('llm.core.input')
 
 local M = {}
 
+local function yank_with_line_numbers_and_filename(opts)
+  opts = opts or {}
+  local register = opts.register or '"'
+
+  -- Get the visual selection range
+  local start_line = vim.fn.line("'<")
+  local end_line = vim.fn.line("'>")
+
+  -- Capture the selected lines
+  local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+
+  -- Get current buffer's file name
+  local filename = vim.api.nvim_buf_get_name(0)
+  filename = filename ~= "" and filename or "[No Name]"
+
+  -- Add the filename and the markdown code fence language syntax
+  local file_info = "File: `" .. filename .. "`\n```"
+
+  -- Deduce language from filetype (assuming filename includes proper extension)
+  local filetype = vim.bo.filetype
+
+  if filetype and filetype ~= "" then
+    file_info = file_info .. filetype .. "\n"
+  else
+    file_info = file_info .. "\n"
+  end
+
+  -- Add line numbers to each line
+  for i, line in ipairs(lines) do
+    lines[i] = start_line + i - 1 .. ': ' .. line
+  end
+
+  -- Join lines into a single string and close the code fence
+  local with_numbers = file_info .. table.concat(lines, "\n") .. "\n```"
+
+  -- Set the content in the chosen register
+  vim.fn.setreg(register, with_numbers)
+
+  -- Echo a message
+  vim.notify('Yanked lines ' .. start_line .. ' to ' .. end_line .. ' with line numbers to register ' .. register)
+
+  -- Return the result as a string
+  return with_numbers
+end
+
 local function command_request_completion(cmd_params)
   ---Gets the first arg as the prompt name
   ---the rest of the args are passed to the prompt builder as a string
@@ -244,7 +289,6 @@ local function setup_commands()
       end
     })
 
-
   vim.api.nvim_create_user_command(
     'LlmCount',
     function()
@@ -268,6 +312,14 @@ local function setup_commands()
       end
     end,
     {}
+  )
+
+  vim.api.nvim_create_user_command(
+    'LlmYank',
+    function(cmd_params)
+      yank_with_line_numbers_and_filename({ register = cmd_params.args })
+    end,
+    {range = true, nargs = '?'}
   )
 end
 
