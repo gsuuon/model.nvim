@@ -6,8 +6,7 @@ local async = require('llm.util.async')
 
 local M = {}
 
----Formats LlmChatContents to strings, which can be tokenized and EOS added to each message. This lets LlamaCpp naturally emit an EOS in assistant response so we don't need
----to use a stop string.
+---Format LlmChatContents to a string list so they can be individually tokenized.
 ---reference: https://huggingface.co/HuggingFaceH4/zephyr-7b-beta
 ---@param contents LlmChatContents
 ---@param include_continue boolean Include the continue partial `\n<|assistant|>\n` as the last string. Avoid adding EOS to the last string for chat prompts.
@@ -43,7 +42,7 @@ local function tokenize(text, url_base, cb)
   )
 end
 
----Tokenizes each message and system separately then inserts an EOS (2) token between each item.
+---Tokenizes each message with LlamaCpp server separately then inserts an EOS (2) token between each item.
 ---@param contents LlmChatContents
 ---@param url_base string
 ---@param cb fun(tokens: number[]): any
@@ -73,25 +72,36 @@ local function tokenize_messages(contents, url_base, cb)
   end, cb)
 end
 
+---Use as ChatPrompt.run in a zephyr ChatPrompt.
 ---Tokenizes each message individually and adds a 2 (EOS) token between messages.
 function M.chatprompt_run(contents)
-  return function(config)
+  return function(set_config)
     async(function(wait, resolve)
-      if contents.config.options.server_start then
-        wait(llamacpp.start_server(contents.config.options.server_start, resolve))
+      if contents.config.options.server.command then
+        wait(llamacpp.start_server(contents.config.options.server.command, resolve))
       end
 
-      tokenize_messages(contents, nil, function(tokens)
-        config({
-          options = contents.config.options,
+      local tokens = wait(
+        tokenize_messages(
+          contents,
+          contents.config.options.server.url or 'http://localhost:8080',
+          resolve
+        )
+      )
+
+      local config_with_prompt = vim.tbl_deep_extend(
+        'force',
+        contents.config,
+        {
           params = {
-            prompt = tokens
+            prompt = tokens,
           }
-        })
-      end)
+        }
+      )
+
+      set_config(config_with_prompt)
     end)
   end
 end
-
 
 return M
