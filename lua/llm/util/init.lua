@@ -136,6 +136,26 @@ function M.table.without(tbl, key)
   return result
 end
 
+M.list = {}
+
+function M.list.equals(as, bs)
+  if not vim.tbl_islist(as) or not vim.tbl_islist(bs) then
+    return false
+  end
+
+  if #as ~= #bs then
+    return false
+  end
+
+  for i,x in ipairs(as) do
+    if bs[i] ~= x then
+      return false
+    end
+  end
+
+  return true
+end
+
 M.json = {}
 
 function M.json.decode(string)
