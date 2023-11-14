@@ -24,9 +24,10 @@ local function start_opts_changed(a, b)
 end
 
 function M.start_server(server_start_options, cb)
-  util.show('llama.cpp server starting')
 
   local function start_server()
+    util.show('llama.cpp server starting')
+
     local stop = system(
       server_start_options.command,
       server_start_options.args,
@@ -58,10 +59,15 @@ function M.start_server(server_start_options, cb)
     start_server()
   else -- previously started server
     if start_opts_changed(M.last_server_start, server_start_options) then
+      util.show('llama.cpp server restarting')
       M.last_server_start.stop()
       start_server()
+    else
+      -- server already started with the same options
+      vim.schedule(cb)
     end
   end
+
 end
 
 ---@param handlers StreamHandlers

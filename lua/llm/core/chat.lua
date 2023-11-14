@@ -5,7 +5,7 @@ local M = {}
 ---@class ChatPrompt
 ---@field provider Provider The API provider for this prompt
 ---@field create fun(input: string, context: Context): LlmChatContents Converts input and context to LlmChatContents used to create the new chat buffer
----@field run fun(contents: LlmChatContents): { params: table, options?: table } Converts chat contents into completion request params and provider options
+---@field run fun(contents: LlmChatContents): ({ params: table, options?: table } | fun(set_config: fun(config: { params: table, options?: table }): nil ) ) Converts chat contents into completion request params and provider options
 ---@field contents? LlmChatContents static contents which get merged with the results of create() on creating a new buffer
 
 ---@class LlmChatMessage
@@ -232,7 +232,15 @@ function M.run_chat(opts)
     on_error = error
   }
 
-  chat_prompt.provider.request_completion(handlers, run_config.params, run_config.options)
+  if type(run_config) == 'function' then
+    show('run config is function')
+
+    run_config(function(config)
+      chat_prompt.provider.request_completion(handlers, config.params, config.options)
+    end)
+  else
+    chat_prompt.provider.request_completion(handlers, run_config.params, run_config.options)
+  end
 end
 
 return M
