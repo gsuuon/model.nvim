@@ -14,7 +14,6 @@ syn region llmMessages start=/^\(---\)\@!.\+/ end=/\%$/ contains=llmMessageAssis
 syn match llmMessageSystem "^> .*$" nextgroup=llmMessages skipempty contained
 syn region llmMessageAssistant start="======" end="======" contained fold
 
-
 hi link llmChatName ModeMsg
 hi link llmMessageAssistant Identifier
 hi link llmMessageSystem WarningMsg

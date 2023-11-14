@@ -233,8 +233,6 @@ function M.run_chat(opts)
   }
 
   if type(run_config) == 'function' then
-    show('run config is function')
-
     run_config(function(config)
       chat_prompt.provider.request_completion(handlers, config.params, config.options)
     end)
