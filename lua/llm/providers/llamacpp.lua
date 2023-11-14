@@ -23,6 +23,47 @@ local function start_opts_changed(a, b)
   end
 end
 
+function M.start_server(server_start_options, cb)
+  util.show('llama.cpp server starting')
+
+  local function start_server()
+    local stop = system(
+      server_start_options.command,
+      server_start_options.args,
+      {},
+      function(out)
+        if out and out:find('HTTP server listening') then
+          util.show('llama.cpp server started')
+          cb()
+        end
+      end,
+      function(err)
+        util.eshow(err)
+      end
+    )
+
+    vim.api.nvim_create_autocmd('VimLeave', {
+      group = stop_server_augroup,
+      callback = stop
+    })
+
+    M.last_server_start = vim.tbl_extend(
+      'force',
+      server_start_options,
+      { stop = stop }
+    )
+  end
+
+  if M.last_server_start == nil then
+    start_server()
+  else -- previously started server
+    if start_opts_changed(M.last_server_start, server_start_options) then
+      M.last_server_start.stop()
+      start_server()
+    end
+  end
+end
+
 ---@param handlers StreamHandlers
 ---@param params? any other params see : https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md
 ---@param options? { server_start?: { command: string, args: string[] }, server_port?: number } set server_start to auto-start llama.cpp server with a command and args. Paths should be absolute paths, example: { command = '/path/to/server', args = '-m /path/to/model -ngl 20'
@@ -32,49 +73,9 @@ function M.request_completion(handlers, params, options)
 
   local cancel = function() end
 
-  local function start_server(started_cb)
-    util.show('llama.cpp server starting')
-
-    local stop = system(
-      options_.server_start.command,
-      options_.server_start.args,
-      {},
-      function(out)
-        if out and out:find('HTTP server listening') then
-          util.show('llama.cpp server started')
-          started_cb()
-        end
-      end,
-      function(err)
-        util.eshow(err)
-      end
-    )
-
-    cancel = stop
-
-    vim.api.nvim_create_autocmd('VimLeave', {
-      group = stop_server_augroup,
-      callback = stop
-    })
-
-    M.last_server_start = vim.tbl_extend(
-      'force',
-      options_.server_start,
-      { stop = stop }
-    )
-  end
-
   async(function(wait, resolve)
-    -- if we have a server start command, start the server and send request when it's up
     if options_.server_start then
-      if M.last_server_start == nil then
-        wait(start_server(resolve))
-      else -- previously started server
-        if start_opts_changed(M.last_server_start, options_.server_start) then
-          M.last_server_start.stop()
-          wait(start_server(resolve))
-        end
-      end
+      wait(M.start_server(options_.server_start, resolve))
     end
 
     cancel = curl.stream(
