@@ -4,9 +4,11 @@ local M = {}
 
 ---@class ChatPrompt
 ---@field provider Provider The API provider for this prompt
----@field create fun(input: string, context: Context): LlmChatContents Converts input and context to LlmChatContents used to create the new chat buffer
----@field run fun(contents: LlmChatContents): ({ params: table, options?: table } | fun(set_config: fun(config: { params: table, options?: table }): nil ) ) Converts chat contents into completion request params and provider options
----@field contents? LlmChatContents static contents which get merged with the results of create() on creating a new buffer
+---@field create fun(input: string, context: Context): string Converts input and context to the first message text
+---@field run fun(messages: LlmChatMessage[], config: ChatConfig): table | fun(set_params: fun(params: table): nil ) ) Converts chat messages and config into completion request params
+---@field system? string System instruction
+---@field params? table Static request parameters
+---@field options? table Provider options
 
 ---@class LlmChatMessage
 ---@field role 'user' | 'assistant'
@@ -163,23 +165,25 @@ end
 ---@param chat_name string
 ---@param input_context InputContext
 function M.create_new_chat(chat_prompt, chat_name, input_context)
-  local chat_contents = chat_prompt.create(
+  local first_message = chat_prompt.create(
     input_context.input,
     input_context.context
   )
 
-  if chat_prompt.contents then
-    chat_contents = vim.tbl_deep_extend(
-      'force',
-      chat_prompt.contents or {},
-      chat_contents
-    )
-  end
-
-  assert(
-    chat_contents.config,
-    'Chat prompt ' .. chat_name .. '.create() needs to return a table with a "config" value or set in "contents"'
-  )
+  ---@type LlmChatContents
+  local chat_contents = {
+    config = {
+      options = chat_prompt.options,
+      params = chat_prompt.params,
+      system = chat_prompt.system,
+    },
+    messages = {
+      {
+        role = 'user',
+        message = first_message
+      }
+    }
+  }
 
   local new_buffer_text = M.to_string(chat_contents, chat_name)
 
@@ -214,8 +218,11 @@ function M.run_chat(opts)
     'Chat "' .. chat_name .. '" not found'
   )
 
-  local run_config = chat_prompt.run(parsed.contents)
-  if run_config == nil then
+  local run_params = chat_prompt.run(
+    parsed.contents.messages,
+    parsed.contents.config
+  )
+  if run_params == nil then
     error('Chat prompt run() returned nil')
   end
 
@@ -237,12 +244,38 @@ function M.run_chat(opts)
     on_error = error
   }
 
-  if type(run_config) == 'function' then
-    run_config(function(config)
-      chat_prompt.provider.request_completion(handlers, config.params, config.options)
+  local merged_options = vim.tbl_deep_extend(
+    'force',
+    chat_prompt.options or {},
+    parsed.contents.config.options or {}
+  )
+
+  if type(run_params) == 'function' then
+    run_params(function(params)
+      local merged_params = vim.tbl_deep_extend(
+        'force',
+        chat_prompt.params or {},
+        parsed.contents.config.params or {},
+        params
+      )
+
+      chat_prompt.provider.request_completion(
+        handlers,
+        merged_params,
+        merged_options
+      )
     end)
   else
-    chat_prompt.provider.request_completion(handlers, run_config.params, run_config.options)
+    chat_prompt.provider.request_completion(
+      handlers,
+      vim.tbl_deep_extend(
+        'force',
+        chat_prompt.params or {},
+        parsed.contents.config.params or {},
+        run_params
+      ),
+      merged_options
+    )
   end
 end
 

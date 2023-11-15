@@ -10,8 +10,8 @@ local M = {}
 ---@field transform fun(string): string Transforms response text after completion finishes
 ---@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to 'append'.
 ---@field hl_group? string Highlight group of active response
----@field params? table Additional static parameters to add to request body - ParamsBuilder data is merged into and overrides this.
----@field options? table Options for the provider
+---@field params? table Static request parameters
+---@field options? table Provider options
 
 ---@class Provider
 ---@field request_completion fun(handler: StreamHandlers, params?: table, options?: table): function Request a completion stream from provider, returning a cancel callback
