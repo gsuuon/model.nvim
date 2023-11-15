@@ -192,7 +192,11 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
 end
 
 function M.create_segment_at(row, col, hl_group, bufnr)
-  bufnr = bufnr or 0
+  if not bufnr or bufnr == 0 then
+    -- Pin the buffer we use to the current buffer if bufnr is 0
+    -- instead of always using the active one
+    bufnr = vim.fn.bufnr('%')
+  end
 
   local function get_row_length(pos)
     local line =
