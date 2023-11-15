@@ -156,6 +156,14 @@ function M.list.equals(as, bs)
   return true
 end
 
+function M.list.append(as, bs)
+  for _,b in ipairs(bs) do
+    table.insert(as, b)
+  end
+
+  return as
+end
+
 M.json = {}
 
 function M.json.decode(string)

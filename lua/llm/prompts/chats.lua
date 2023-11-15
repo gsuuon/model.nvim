@@ -51,30 +51,16 @@ local chats = {
   ),
   zephyr = {
     provider = llamacpp,
-    contents = {
-      config = {
-        options = {
-          server = {
-            command = {
-              '~/code/gsuuon/oss/llama.cpp/build/bin/Release/server.exe',
-              '-m', '~/code/gsuuon/oss/llama.cpp/models/zephyr-7b-beta.Q5_K_M.gguf',
-              '-c', 4096,
-              '-ngl', 24
-            }
-          }
-        }
-      },
-      system = 'You are a helpful assistant',
-    },
-    create = function(input, context)
-      return {
-        messages = {
-          context.selection and {
-            role = 'user',
-            content = input
-          } or nil
-        }
+    options = {
+      model = 'zephyr-7b-beta.Q5_K_M.gguf',
+      args = {
+        '-c', 4096,
+        '-ngl', 24
       }
+    },
+    system = 'You are a helpful assistant',
+    create = function(input, context)
+      return context.selection and input or ''
     end,
     run = zephyr.chatprompt_run
   }

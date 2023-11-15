@@ -81,15 +81,19 @@ end
 function M.chatprompt_run(messages, config)
   return function(set_params)
     async(function(wait, resolve)
-      if config.options.server.command then
-        wait(llamacpp.start_server(config.options.server.command, resolve))
+      if config.options.model then
+        wait(llamacpp.start_server(
+          config.options.model,
+          config.options.args,
+          resolve
+        ))
       end
 
       local tokens = wait(
         tokenize_messages(
           messages,
           config.system or 'You are a helpful assistant',
-          config.options.server.url or 'http://localhost:8080',
+          config.options.url or 'http://localhost:8080',
           resolve
         )
       )

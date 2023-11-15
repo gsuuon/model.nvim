@@ -180,7 +180,7 @@ function M.create_new_chat(chat_prompt, chat_name, input_context)
     messages = {
       {
         role = 'user',
-        message = first_message
+        content = first_message
       }
     }
   }

@@ -9,91 +9,103 @@ local M = {}
 
 local stop_server_augroup = vim.api.nvim_create_augroup('LlmNvimLlamaCppServerStop', {})
 
----@param start_command string[]
-function M.start_server(start_command, cb)
+---@param model string
+---@param args string[]
+local function resolve_system_opts(model, args)
+  assert(M.options, 'Missing llamacpp provider options. Call require("llm.providers.llamacpp").setup({})')
+  assert(M.options.server, 'Llamacpp options missing server')
+  assert(M.options.server.binary, 'Llamacpp options missing server binary path')
+  assert(M.options.server.models, 'Llamacpp options missing models path')
 
-  local function start_server()
-    util.show('llama.cpp server starting')
+  local path = vim.fs.normalize(M.options.server.binary)
+  local cmd = vim.fn.exepath(path)
+  assert(cmd ~= '', 'Executable not found at ' .. path)
 
-    local command = start_command[1]
-    local args = util.table.slice(command, 1)
+  local model_path = vim.fs.normalize(vim.fs.joinpath(M.options.server.models, model))
 
-    local stop = system(
-      command, args,
-      {},
-      function(out)
-        if out and out:find('HTTP server listening') then
-          util.show('llama.cpp server started')
-          cb()
-        end
-      end,
-      function(err)
-        util.eshow(err)
+  return {
+    cmd = cmd,
+    args = util.list.append({ '-m', model_path }, args)
+  }
+end
+
+local function start_server(model, args, on_started)
+  util.show('llama.cpp server starting')
+
+  local sys_opts = resolve_system_opts(model, args or {})
+
+  local stop = system(
+    sys_opts.cmd,
+    sys_opts.args,
+    {},
+    function(out)
+      if out and out:find('HTTP server listening') then
+        util.show('llama.cpp server started')
+        on_started()
       end
-    )
+    end,
+    function(err)
+      util.eshow(err)
+    end
+  )
 
-    vim.api.nvim_create_autocmd('VimLeave', {
-      group = stop_server_augroup,
-      callback = stop
-    })
+  vim.api.nvim_create_autocmd('VimLeave', {
+    group = stop_server_augroup,
+    callback = stop
+  })
 
-    M.last_server = {
-      command = start_command,
-      stop = stop
-    }
-  end
+  M.last_server = {
+    opts = util.list.append({model}, args),
+    stop = stop
+  }
+end
 
+local function start_opts_same(model, args)
+  return util.list.equals(
+    M.last_server.opts,
+    util.list.append({model}, args)
+  )
+end
+
+---Starts the server with model and args if needed. Stops last server and starts a new one if model or args have changed.
+---@param model string
+---@param args? string[]
+---@param on_finish function
+function M.start_server(model, args, on_finish)
   if M.last_server == nil then
-    start_server()
+    start_server(model, args, on_finish)
   else -- previously started server
-    if util.list.equals(M.last_server.command, start_command) then
-      -- server already started with the same options
-      vim.schedule(cb)
+    if start_opts_same(model, args) then
+      vim.schedule(on_finish)
     else
       util.show('llama.cpp server restarting')
       M.last_server.stop()
-      start_server()
+      start_server(model, args, on_finish)
     end
   end
-
 end
 
----@alias LlamaCppOptions { server?: { command?: string[], url?: string } }
+---@alias LlamaCppOptions { model?: string, args?: string[], url?: string }
 
 ---@param handlers StreamHandlers
 ---@param params? any other params see : https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md
----@param options? LlamaCppOptions set server.command to auto-start the llama.cpp server. Use complete paths.
----Example:
----```lua
----{
----  server = {
----    command = {
----      '/path/to/server',
----      '-m', '/path/to/model',
----      '-ngl', '20'
----    },
----    url = 'http://localhost:8080'
----  }
----}
----```
+---@param options? LlamaCppOptions set model to autostart server -- need to call llamacpp.setup({}) first
 function M.request_completion(handlers, params, options)
   ---@type LlamaCppOptions
   local opts = vim.tbl_extend('force', {
-    server = {
-      url = 'http://localhost:8080'
-    },
+    url = 'http://localhost:8080'
   }, options or {})
 
   local cancel = function() end
 
   async(function(wait, resolve)
-    if opts.server.command then
-      wait(M.start_server(opts.server, resolve))
+    if opts.model then
+      wait(M.start_server(opts.model, opts.args, resolve))
     end
 
     cancel = curl.stream(
       {
-        url = opts.server.url .. '/completion',
+        url = opts.url .. '/completion',
         method = 'POST',
         body = vim.tbl_extend('force', { stream = true }, params),
       },
@@ -135,5 +147,10 @@ M.default_prompt = {
     end
   end
 }
+
+---@param options { server?: { binary: string, models: string } } server binary and models directory path
+function M.setup(options)
+  M.options = options
+end
 
 return M
