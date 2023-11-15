@@ -1,4 +1,6 @@
 local openai = require('llm.providers.openai')
+local zephyr = require('llm.format.zephyr')
+local llamacpp = require('llm.providers.llamacpp')
 
 local chat_openai = {
   provider = openai,
@@ -46,7 +48,36 @@ local chats = {
         }
       }
     }
-  )
+  ),
+  zephyr = {
+    provider = llamacpp,
+    contents = {
+      config = {
+        options = {
+          server = {
+            command = {
+              '~/code/gsuuon/oss/llama.cpp/build/bin/Release/server.exe',
+              '-m', '~/code/gsuuon/oss/llama.cpp/models/zephyr-7b-beta.Q5_K_M.gguf',
+              '-c', 4096,
+              '-ngl', 24
+            }
+          }
+        }
+      },
+      system = 'You are a helpful assistant',
+    },
+    create = function(input, context)
+      return {
+        messages = {
+          context.selection and {
+            role = 'user',
+            content = input
+          } or nil
+        }
+      }
+    end,
+    run = zephyr.chatprompt_run
+  }
 }
 
 return chats

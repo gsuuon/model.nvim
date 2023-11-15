@@ -9,5 +9,6 @@ vim.filetype.add({
 })
 
 require('llm').setup({
-  prompts = require('llm.prompts.starters')
+  prompts = require('llm.prompts.starters'),
+  chats = require('llm.prompts.chats')
 })
