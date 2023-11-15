@@ -12,9 +12,10 @@ local M = {}
 ---@field role 'user' | 'assistant'
 ---@field content string
 
+---@alias ChatConfig { system?: string, params?: table, options?: table }
+
 ---@class LlmChatContents
----@field config? table Configuration for this chat buffer, used by chatprompt.run
----@field system? string Optional system instruction
+---@field config ChatConfig Configuration for this chat buffer, used by chatprompt.run
 ---@field messages LlmChatMessage[] Messages in the chat buffer
 
 --- Splits lines into array of { role: 'user' | 'assistant', content: string }
@@ -90,6 +91,7 @@ local function parse_config(text)
 
   if params_text == nil then
     return {
+      config = {},
       rest = vim.fn.trim(name_rest),
       chat = chat_name
     }
@@ -117,14 +119,13 @@ end
 function M.parse(text)
   local parsed = parse_config(text)
   local messages_and_system = split_messages(parsed.rest)
+  parsed.config.system = messages_and_system.system
 
   return {
-    contents = vim.tbl_extend(
-      'force',
-      messages_and_system,
-      {
-        config = parsed.config,
-      }),
+    contents = {
+      messages = messages_and_system.messages,
+      config = parsed.config
+    },
     chat = parsed.chat
   }
 end
@@ -135,12 +136,12 @@ end
 function M.to_string(contents, name)
   local result = name .. '\n'
 
-  if contents.config and not vim.tbl_isempty(contents.config) then
+  if not vim.tbl_isempty(contents.config) then
     result = result .. '---\n' .. vim.inspect(contents.config) .. '\n---\n'
   end
 
-  if contents.system then
-    result = result .. '> ' .. contents.system .. '\n'
+  if contents.config.system then
+    result = result .. '> ' .. contents.config.system .. '\n'
   end
 
   for i,message in ipairs(contents.messages) do
@@ -168,7 +169,11 @@ function M.create_new_chat(chat_prompt, chat_name, input_context)
   )
 
   if chat_prompt.contents then
-    chat_contents = vim.tbl_deep_extend('force', chat_prompt.contents, chat_contents)
+    chat_contents = vim.tbl_deep_extend(
+      'force',
+      chat_prompt.contents or {},
+      chat_contents
+    )
   end
 
   assert(
