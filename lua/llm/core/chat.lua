@@ -4,7 +4,7 @@ local M = {}
 
 ---@class ChatPrompt
 ---@field provider Provider The API provider for this prompt
----@field create fun(input: string, context: Context): string Converts input and context to the first message text
+---@field create fun(input: string, context: Context): string | LlmChatContents Converts input and context to the first message text or LlmChatContents
 ---@field run fun(messages: LlmChatMessage[], config: ChatConfig): table | fun(set_params: fun(params: table): nil ) ) Converts chat messages and config into completion request params
 ---@field system? string System instruction
 ---@field params? table Static request parameters
@@ -165,25 +165,39 @@ end
 ---@param chat_name string
 ---@param input_context InputContext
 function M.create_new_chat(chat_prompt, chat_name, input_context)
-  local first_message = chat_prompt.create(
+  local first_message_or_contents = chat_prompt.create(
     input_context.input,
     input_context.context
   )
 
+  local config = {
+    options = chat_prompt.options,
+    params = chat_prompt.params,
+    system = chat_prompt.system,
+  }
+
   ---@type LlmChatContents
-  local chat_contents = {
-    config = {
-      options = chat_prompt.options,
-      params = chat_prompt.params,
-      system = chat_prompt.system,
-    },
-    messages = {
-      {
-        role = 'user',
-        content = first_message
+  local chat_contents
+
+  if type(first_message_or_contents) == 'string' then
+    chat_contents = {
+      config = config,
+      messages = {
+        {
+          role = 'user',
+          content = first_message_or_contents
+        }
       }
     }
-  }
+  elseif type(first_message_or_contents) == 'table' then
+    chat_contents = vim.tbl_deep_extend(
+      'force',
+      { config = config },
+      first_message_or_contents
+    )
+  else
+    error('ChatPrompt.create() needs to return a string for the first message or an LlmChatContents')
+  end
 
   local new_buffer_text = M.to_string(chat_contents, chat_name)
 
