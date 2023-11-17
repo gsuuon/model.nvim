@@ -7,6 +7,7 @@ syn include @Lua syntax/lua.vim
 let b:current_syntax = 1
 
 set foldmethod=syntax
+syn sync fromstart
 
 syn match llmChatName /\%^\(---\)\@!.\+/ skipnl nextgroup=llmMessageSystem,llmParams,llmMessages
 syn region llmParams start=/^---$/ end=/^---$/ nextgroup=llmMessageSystem,llmMessages skipnl contains=@Lua keepend contained fold
