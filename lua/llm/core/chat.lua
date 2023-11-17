@@ -1,4 +1,5 @@
 local segment = require('llm.util.segment')
+local util = require('llm.util')
 
 local M = {}
 
@@ -139,12 +140,18 @@ function M.to_string(contents, name)
   local result = name .. '\n'
 
   if not vim.tbl_isempty(contents.config) then
-    result = result .. '---\n' .. vim.inspect(contents.config) .. '\n---\n'
+    -- TODO consider refactoring this so we're not treating system special
+    -- Either remove it from contents.config so that it sits next to config
+    -- or just let it be a normal config field
+    local without_system = util.table.without(contents.config, 'system')
+
+    result = result .. '---\n' .. vim.inspect(without_system) .. '\n---\n'
+
+    if contents.config.system then
+      result = result .. '> ' .. contents.config.system .. '\n'
+    end
   end
 
-  if contents.config.system then
-    result = result .. '> ' .. contents.config.system .. '\n'
-  end
 
   for i,message in ipairs(contents.messages) do
     if i ~= 1 then
