@@ -265,25 +265,21 @@ function M.run_chat(opts)
     on_error = error
   }
 
-  local merged_options = vim.tbl_deep_extend(
-    'force',
-    chat_prompt.options or {},
-    parsed.contents.config.options or {}
-  )
+  local options = parsed.contents.config.options or {}
+  local params = parsed.contents.config.params or {}
 
   if type(run_params) == 'function' then
-    run_params(function(params)
+    run_params(function(async_params)
       local merged_params = vim.tbl_deep_extend(
         'force',
-        chat_prompt.params or {},
-        parsed.contents.config.params or {},
-        params
+        params,
+        async_params
       )
 
       chat_prompt.provider.request_completion(
         handlers,
         merged_params,
-        merged_options
+        options
       )
     end)
   else
@@ -291,11 +287,10 @@ function M.run_chat(opts)
       handlers,
       vim.tbl_deep_extend(
         'force',
-        chat_prompt.params or {},
-        parsed.contents.config.params or {},
+        params,
         run_params
       ),
-      merged_options
+      options
     )
   end
 end
