@@ -3,14 +3,16 @@ local uv = vim.loop
 -- TODO eventually switch to using vim.system(), neovim 0.10 feature
 ---@param cmd string
 ---@param args string[]
+---@param opts object additional options for uv.spawn
 ---@param on_stdout fun(text: string): nil
 ---@param on_error fun(text: string): nil
 ---@param on_exit? fun(): nil
----@param opts object additional options for uv.spawn
+---@param stdin_text? string
 ---@return function interrupt sends SIGINT to process
-local function system(cmd, args, opts, on_stdout, on_error, on_exit)
+local function system(cmd, args, opts, on_stdout, on_error, on_exit, stdin_text)
   local stdout = assert(uv.new_pipe(false), 'Failed to open stdout pipe')
   local stderr = assert(uv.new_pipe(false), 'Failed to open stderr pipe')
+  local stdin = assert(uv.new_pipe(false), 'Failed to open stdin pipe')
 
   local _error_output = ''
 
@@ -20,7 +22,7 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit)
       'force',
       {
         args = args,
-        stdio = { nil, stdout, stderr }
+        stdio = { stdin, stdout, stderr }
       }, opts
     ),
     function(exit_code, signal)
@@ -63,6 +65,12 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit)
       error(handler_err_trace, 2)
     end
   end)
+
+  if stdin_text then
+    stdin:write(stdin_text)
+  end
+
+  stdin:shutdown()
 
   return function() handle:kill('sigint') end
 end
