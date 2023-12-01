@@ -10,7 +10,7 @@ local util = require('llm.util')
 
 local M = {
   default_hl = 'Comment',
-  join_undo = false --- Join undos when adding and setting segment text
+  join_undo = true --- Join undos when adding and setting segment text
 }
 
 local segments_cache = {}
