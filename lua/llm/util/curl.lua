@@ -6,6 +6,7 @@ local M = {}
 local function build_args(opts, stream)
   local args = {
     '-sS', -- silent (no progress) but show errors
+    '-H', 'Content-Type: application/json'
   }
 
   if opts.args ~= nil and vim.tbl_islist(opts.args) then
