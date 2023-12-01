@@ -24,10 +24,12 @@ local function parse_sse_message(message_text)
   for _,line in ipairs(split_lines) do
     local label, value = line:match('(.-): (.+)')
 
-    if label == 'data' then
-      table.insert(data, value)
-    elseif label ~= '' then
-      message[label] = value
+    if label ~= nil and label ~= '' then
+      if label == 'data' then
+        table.insert(data, value)
+      else
+        message[label] = value
+      end
     end
   end
 
