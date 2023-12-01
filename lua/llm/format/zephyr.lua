@@ -100,6 +100,8 @@ function M.chatprompt_run(messages, config)
         )
       )
 
+      util.show(#tokens, '#tokens')
+
       set_params({
         prompt = tokens
       })

@@ -40,8 +40,8 @@ local chats = {
     options = {
       model = 'zephyr-7b-beta.Q5_K_M.gguf',
       args = {
-        '-c', 4096,
-        '-ngl', 24
+        '-c', 8192,
+        '-ngl', 35
       }
     },
     system = 'You are a helpful assistant',
