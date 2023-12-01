@@ -274,32 +274,67 @@ Set the model field on the params returned by the builder (or the static params 
 
 #### LlamaCpp
 
-This provider uses the [llama.cpp server example](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md). You can start the server manually or autostart it when you run a prompt. To autostart the server, provide a start command binary path and args in the `options.server_start` field, eg:
-```lua
-  llamacpp = {
-    provider = llamacpp,
-    options = {
-      server_start = {
-        command = '/path/to/server',
-        args = {
-          '-m', '/path/to/model',
-          '-c', 4096,
-          '-ngl', 22
+This provider uses the [llama.cpp server](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md).
+
+You can start the server manually or have it autostart when you run a llamacpp prompt. To autostart the server call `require('llm.providers.llamacpp').setup({})` in your config function and set a `model` in the prompt options (see below). The server restarts if the prompt model or args change.
+
+To talk to an existing server, just don't set the prompt `model` option.
+
+##### Setup
+1. Build [llama.cpp](https://github.com/ggerganov/llama.cpp)
+1. Download the model you want to use, e.g. [Zephyr 7b beta](https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF/tree/main)
+1. Setup the llamacpp provider if you plan to use autostart:
+    ```lua
+    config = function()
+      require('llm').setup({ .. })
+
+      require('llm.providers.llamacpp').setup({
+        server = {
+          binary = '~/path/to/server/binary',
+          models = '~/path/to/models/directory'
+        }
+      })
+    end
+    ```
+1. Use the llamacpp provider in a prompt:
+    ```lua
+    local llamacpp = require('llm.providers.llamacpp')
+
+    require('llm').setup({
+      prompts = {
+        zephyr = {
+          provider = llamacpp,
+          options = {
+            model = 'zephyr-7b-beta.Q5_K_M.gguf',
+            args = {
+              '-c', 8192,
+              '-ngl', 35
+            }
+          },
+          builder = function(input, context)
+            return {
+              prompt =
+                '<|system|>'
+                .. (context.args or 'You are a helpful assistant')
+                .. '\n</s>\n<|user|>\n'
+                .. input
+                .. '</s>\n<|assistant|>',
+              stops = { '</s>' }
+            }
+          end
         }
       }
-    },
-    builder = function(input, context)
-      return {
-        prompt = llamacpp.llama_2_user_prompt({
-          user = context.args or '',
-          message = input
-        })
-      }
-    end
-  },
-```
+    })
+    ```
 
-The server will be restarted if a prompt with different args is run. See [llama.cpp server docs](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md#llamacppexampleserver).
+Llamacpp setup options:
+ - `server?.binary: string` - path to the llamacpp server binary executable
+ - `server?.models: string` - path to the parent directory of the models (joined with `prompt.model`)
+
+Llamacpp prompt options:
+ - `options.model?: string` - use with `require('llm.providers.llamacpp').setup()` to autostart the server with this model.
+ - `options.args?: string[]` - additional arguments for the server.
+ - `options.url?: string` - url of the server. Defaults to http://localhost:8080.
 
 
 #### Codellama

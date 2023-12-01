@@ -96,17 +96,6 @@ local starters = {
   },
   llamacpp = {
     provider = llamacpp,
-    -- To autostart llamacpp:
-    --
-    -- options = {
-    --   server_start = {
-    --     command = '/path/to/server/bin',
-    --     args = {
-    --       '-m', '/path/to/model',
-    --       -- https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md#llamacppexampleserver
-    --     }
-    --   }
-    -- },
     builder = function(input, context)
       return {
         prompt = llama2.user_prompt({user = context.args or '', message = input})
