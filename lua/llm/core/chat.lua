@@ -276,14 +276,14 @@ function M.run_chat(opts)
         async_params
       )
 
-      chat_prompt.provider.request_completion(
+      seg.data.cancel = chat_prompt.provider.request_completion(
         handlers,
         merged_params,
         options
       )
     end)
   else
-    chat_prompt.provider.request_completion(
+    seg.data.cancel = chat_prompt.provider.request_completion(
       handlers,
       vim.tbl_deep_extend(
         'force',
