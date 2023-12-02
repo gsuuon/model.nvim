@@ -1,5 +1,5 @@
 local openai = require('llm.providers.openai')
-local zephyr = require('llm.format.zephyr')
+local zephyr_fmt = require('llm.format.zephyr')
 local llamacpp = require('llm.providers.llamacpp')
 
 local chat_openai = {
@@ -48,7 +48,11 @@ local chats = {
     create = function(input, context)
       return context.selection and input or ''
     end,
-    run = zephyr.chatprompt_run
+    run = function(messages, config)
+      return {
+        prompt = zephyr_fmt.content_to_prompt(messages, config)
+      }
+    end
   }
 }
 
