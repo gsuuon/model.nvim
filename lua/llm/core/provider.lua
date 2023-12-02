@@ -6,32 +6,32 @@ local M = {}
 
 ---@class Prompt
 ---@field provider Provider The API provider for this prompt
----@field builder ParamsBuilder Converts input and context to request params
----@field transform fun(string): string Transforms response text after completion finishes
+---@field builder ParamsBuilder Converts input and context to request params. Input is either the visual selection if there is one or the entire buffer text.
+---@field transform? fun(string): string Transforms the completed response text after on_finish, e.g. to extract code
 ---@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to 'append'.
 ---@field hl_group? string Highlight group of active response
 ---@field params? table Static request parameters
----@field options? table Provider options
+---@field options? table Options for the provider
 
 ---@class Provider
----@field request_completion fun(handler: StreamHandlers, params?: table, options?: table): function Request a completion stream from provider, returning a cancel callback
+---@field request_completion fun(handler: StreamHandlers, params?: table, options?: table): function Request a completion stream from provider, returning a cancel callback. Call the handler methods to feed the completion parts back to the prompt runner, and call on_finish after the completion is done.
 ---@field default_prompt? Prompt
 ---@field adapt? fun(prompt: StandardPrompt): table Adapt a standard prompt to params for this provider
 
----@alias ParamsBuilder fun(input: string, context: Context): table | fun(resolve: fun(results: table)) Converts input and context to request data. Returns a table of results or a function that takes a resolve function taking a table of results.
+---@alias ParamsBuilder fun(input: string, context: Context): table | fun(resolve: fun(params: table)) Converts input and context to request data. Returns the params to use for this request or a function that takes a callback which should be called with the params for this request.
 
 ---@enum SegmentMode
 M.mode = {
-  APPEND = 'append',
-  REPLACE = 'replace',
-  BUFFER = 'buffer',
-  INSERT = 'insert',
-  INSERT_OR_REPLACE = 'insert_or_replace'
+  APPEND = 'append', -- append to the end of input
+  REPLACE = 'replace', -- replace input
+  BUFFER = 'buffer', -- create a new buffer and insert
+  INSERT = 'insert', -- insert at the cursor position
+  INSERT_OR_REPLACE = 'insert_or_replace' -- insert at the cursor position if no selection, or replace the selection
 }
 
 ---@class StreamHandlers
 ---@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
----@field on_finish (fun(complete_text?: string, finish_reason?: string): nil) Complete response with finish reason. Leave complete_text nil to just use concatenated partials.
+---@field on_finish (fun(complete_text?: string, finish_reason?: string): nil) Complete response with finish reason. When implementing a provider you can call this with with no arguments to just finish with the concatenated partials.
 ---@field on_error (fun(data: any, label?: string): nil) Error data and optional label
 
 local function create_segment(source, segment_mode, hl_group)
