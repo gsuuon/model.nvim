@@ -188,7 +188,7 @@ https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a
 
 
 ## 🧵Configuration
-All setup options are optional. Add new prompts to `options.prompts.[name]` and chat prompts to `options.chats.[name]`.
+All [setup options](#setupoptions) are optional. Add new prompts to `options.prompts.[name]` and chat prompts to `options.chats.[name]`.
 
 ```lua
 ---@class SetupOptions
