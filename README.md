@@ -397,7 +397,7 @@ Setup `require('llm').setup(SetupOptions)`
 
 **Prompt**
 
-Setup `require('llm').setup({prompts = { [name] = Prompt, .. }})`  
+Setup `require('llm').setup({prompts = { [prompt name] = Prompt, .. }})`  
 Run `:Llm [prompt name]`
 - `provider: Provider` - The API provider for this prompt, responsible for requesting and returning completion suggestions.
 - `builder: ParamsBuilder` - Converts input (either the visual selection or entire buffer text) and context to request parameters. Returns either a table of params or a function that takes a callback with the params.
@@ -435,8 +435,8 @@ llm.mode.--
 
 **ChatPrompt**
 
-Setup `require('llm').setup({chats = { [name] = ChatPrompt, .. }})`  
-Run `:LlmChat [chat prompt name]`
+Setup `require('llm').setup({chats = { [chat name] = ChatPrompt, .. }})`  
+Run `:LlmChat [chat name]`
 - `provider: APIProvider` - The API provider for this chat prompt. This field contains the specific implementation of the chat feature being used.
 - `create: fun(input: string, context: Context): string | ChatContents` - Converts input and context into the first message text or ChatContents, which are written into the new chat buffer.
 - `run: fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil )` - Converts chat messages and configuration into completion request parameters. This function returns a table containing the required parameters for generating completions, or it can return a function that takes a callback to resolve the parameters.
