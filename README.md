@@ -11,17 +11,17 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
   - LlamaCpp
   - Google PaLM
   - Huggingface
-  - Kobold
 - 🎨 Programmatic prompts in lua
   - customize everything
-  - async and multistep prompt building
+  - async and multistep prompts
+  - starter examples
 - 🌠 Streaming completions
   - directly in buffer
-  - transform / extract text
+  - transform/extract text
   - append/replace/insert modes
-- 🦜 Chat in editable `llmchat` filetype buffer
-  - basic syntax highlights and folds
+- 🦜 Chat in `llmchat` filetype buffer
   - edit settings or messages at any point
+  - basic syntax highlights and folds
   - can switch to different models
   - save/reload chat session as a simple file
 
@@ -42,28 +42,46 @@ If you have any questions feel free to ask in [discussions](https://github.com/g
 ### Requirements
 - Nvim 0.8.0 or higher
 - curl
-- For the OpenAI provider (default), set the `OPENAI_API_KEY` environment variable to your [api key](https://platform.openai.com/account/api-keys)
-- For the PaLM provider, set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey)
 
-#### Optional
-For local vector store:
-- Python 3.10+
-- `pip install numpy openai tiktoken`
-
-### With [packer.nvim](https://github.com/wbthomason/packer.nvim)
-
-```lua
-require('packer').startup(function(use)
-  use 'gsuuon/llm.nvim'
-end)
-```
 ### With [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
 require('lazy').setup({
   {
     'gsuuon/llm.nvim',
-    cmd = { 'Llm', 'LlmChat' }
+
+    -- Don't need these if lazy = false
+    cmd = { 'Llm', 'LlmChat' },
+    init = function()
+      vim.filetype.add({
+        extension = {
+          llmchat = 'llmchat',
+        }
+      })
+    end,
+    ft = 'llmchat',
+
+    -- Request chat assistant response
+    keys = {
+      {'<C-m><space>', ':LlmChat<cr>', mode = 'n' }
+    },
+
+    -- To override defaults add a config field and call setup()
+
+    -- config = function()
+    --   require('llm').setup({
+    --     prompts = {..},
+    --     chats = {..},
+    --     ..
+    --   })
+    --
+    --   require('llm.providers.llamacpp').setup({
+    --     server = {
+    --       binary = '~/path/to/server/binary',
+    --       models = '~/path/to/models/directory'
+    --     }
+    --   })
+    --end
   }
 })
 ```
@@ -379,17 +397,7 @@ This is a llama.cpp based provider specialized for codellama infill / Fill in th
 For older models that don't work with llama.cpp, koboldcpp might still support them. Check their [repo](https://github.com/LostRuins/koboldcpp/) for setup info.
 
 #### Adding your own
-Providers implement a simple interface so it's easy to add your own. Just set your provider as the `provider` field in a prompt. Your provider needs to kick off the request and call the handlers as data streams in, finishes, or errors. Check [the hf provider](./lua/llm/providers/huggingface.lua) for a simpler example supporting server-sent events streaming. If you don't need streaming, just make a request and call `handler.on_finish` with the result.
-
-```lua
----@class Provider
----@field request_completion fun(handler: StreamHandlers, params?: table, options?: table): function Request a completion stream from provider, returning a cancel callback
-
----@class StreamHandlers
----@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
----@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
----@field on_error (fun(data: any, label?: string): nil) Error data and optional label
-```
+[Providers](#provider) implement a simple interface so it's easy to add your own. Just set your provider as the `provider` field in a prompt. Your provider needs to kick off the request and call the handlers as data streams in, finishes, or errors. Check [the hf provider](./lua/llm/providers/huggingface.lua) for a simpler example supporting server-sent events streaming. If you don't need streaming, just make a request and call `handler.on_finish` with the result.
 
 Basic provider example:
 ```lua
