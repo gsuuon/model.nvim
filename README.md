@@ -1,6 +1,6 @@
 # 🧠 llm.nvim
 
-Use LLM's in Neovim. Build editor integrated prompts and customize your LLM workflow. This plugin comes with some starter prompts out of the box but it's designed for those who want to customize their prompts, experiment with multiple providers or use local LLM's. All prompts are in lua and can be instantly-reloaded.
+Use LLM's in Neovim for completions or chat. Build prompts programatically with lua. Designed for those who want to customize their prompts, experiment with multiple providers or use local LLM's.
 
 https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a419-eeec04cb7e99.mp4
 
