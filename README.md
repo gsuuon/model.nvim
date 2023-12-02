@@ -6,11 +6,24 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 
 ### Features
 
-- 🎪 OpenAI GPT (and compatible API's), Google PaLM, Huggingface, LlamaCpp, Kobold
-- 🛸 Add LLM capabilities from other Neovim plugins
-- 🎨 Build your own editor integrated completions
-- 🔎 Basic local (to your git repo) vector store
-- 🌠 Streaming responses where available
+- 🎪 Provider agnostic. Comes with:
+  - OpenAI GPT (and compatible API's)
+  - LlamaCpp
+  - Google PaLM
+  - Huggingface
+  - Kobold
+- 🎨 Programmatic prompts in lua
+  - customize everything
+  - async and multistep prompt building
+- 🌠 Streaming completions
+  - directly in buffer
+  - transform / extract text
+  - append/replace/insert modes
+- 🦜 Chat in editable `llmchat` filetype buffer
+  - basic syntax highlights and folds
+  - edit settings or messages at any point
+  - can switch to different models
+  - save/reload chat session as a simple file
 
 ### Contents
 - [Setup](#-setup)
@@ -178,7 +191,7 @@ require('llm').setup({
 
 ### Prompts
 
-Prompts go in the `prompts` field of the setup table and are ran by the command `:Llm [prompt name]` which will tab complete the available prompts.
+[Prompts](#prompt) go in the `prompts` field of the setup table and are ran by the command `:Llm [prompt name]` which will tab complete the available prompts. 
 
 With lazy.nvim:
 ```lua
@@ -202,9 +215,27 @@ Check out the [starter prompts](./lua/llm/prompts/starters.lua) to see how to cr
 
 
 ### Chat prompts
-Chat prompts go in `setup({ prompts = {..}, chats = { [name] = { <chat prompt> }, .. } })` next to `prompts`.
+[Chat prompts](#chatprompt) go in `setup({ prompts = {..}, chats = { [name] = { <chat prompt> }, .. } })` next to `prompts`. Defaults to [the starter chat prompts](./lua/llm/prompts/chats.lua). 
 
-Chat prompts have a different API than regular prompts. Use `:LlmChat my_chat` to create a new llmchat buffer with the `my_chat` chat prompt. You can save the buffer with `.llmchat` extension and continue the chat later with `:LlmChat` using the same settings (shown in the header). It's a normal buffer so you can edit messages or settings as needed. `llmchat` comes with some syntax highlighting to show the various parts - name of the chatprompt runner, options and params in the header, and a system message. The header and llm responses have fold levels set.
+Use `:LlmChat my_chat` to create a new llmchat buffer with the `my_chat` chat prompt. You can save the buffer with `.llmchat` extension and continue the chat later with `:LlmChat` using the same settings (shown in the header). It's a normal buffer so you can edit messages or settings as needed. `llmchat` comes with some syntax highlighting to show the various parts - name of the chatprompt runner, options and params in the header, and a system message. The header and llm responses have fold levels set.
+
+A brand new `llmchat` buffer might look like this:
+```
+openai
+---
+{
+  params = {
+    model = "gpt-4-1106-preview"
+  }
+}
+---
+> You are a helpful assistant
+
+Count to three
+```
+
+Run `:LlmChat` to get the assistant response.  You can edit any of the messages, params, options or system message (first line if it starts with `> `) as necessary throughout the conversation.
+
 
 ### Library autoload
 You can use `require('util').module.autoload` instead of a naked `require` to always re-require a module on use. This makes the feedback loop for developing prompts faster:
@@ -386,8 +417,9 @@ Basic provider example:
 --- 
 
 ## Reference
-**SetupOptions**
+`params` are generally data that go directly into the request sent by the provider (e.g. content, temperature). `options` are used _by_ the provider to know how to operate (e.g. server url or model name if a local LLM).
 
+#### SetupOptions
 Setup `require('llm').setup(SetupOptions)`
 - `default_prompt?: string` - The default prompt to use with `:Llm`. Default is the openai starter.
 - `prompts?: {string: Prompt}` - A table of custom prompts to use with `:Llm [name]`. Keys are the names of the prompts. Default are the starters.
@@ -395,8 +427,7 @@ Setup `require('llm').setup(SetupOptions)`
 - `hl_group?: string` - The default highlight group for in-progress responses. Default is `'Comment'`.
 - `join_undo?: boolean` - Whether to join streaming response text as a single undo command. When true, unrelated edits during streaming will also be undone. Default is `true`.
 
-**Prompt**
-
+#### Prompt
 Setup `require('llm').setup({prompts = { [prompt name] = Prompt, .. }})`  
 Run `:Llm [prompt name]`
 - `provider: Provider` - The API provider for this prompt, responsible for requesting and returning completion suggestions.
@@ -407,17 +438,19 @@ Run `:Llm [prompt name]`
 - `params?: table` - Static request parameters for this prompt.
 - `options?: table` - Optional options for the provider.
 
-**Provider**
+#### Provider
 - `request_completion: fun(handler: StreamHandlers, params?: table, options?: table): function` - Requests a completion stream from the provider and returns a cancel callback. Feeds completion parts back to the prompt runner using handler methods and calls on_finish after completion is done.
 - `default_prompt? : Prompt` - Default prompt for this provider (optional).
 - `adapt?: fun(prompt: StandardPrompt): table` - Adapts a standard prompt to params for this provider (optional).
 
-**ParamsBuilder** (function)
+#### ParamsBuilder
+(function)
 - `fun(input: string, context: Context): table | fun(resolve: fun(params: table))` - Converts input and context to request data. Returns either a table of params or a function that takes a callback with the params.
 
-**SegmentMode** (enum)
+#### SegmentMode
+(enum)
 
-Exported as 
+Exported as
 ```lua
 local llm = require('llm')
 llm.mode.--
@@ -428,12 +461,12 @@ llm.mode.--
 - `INSERT = 'insert'` - Insert at the cursor position.
 - `INSERT_OR_REPLACE = 'insert_or_replace'` - Insert at the cursor position if no selection, or replace the selection.
 
-**StreamHandlers**
+#### StreamHandlers
 - `on_partial: fun(partial_text: string): nil` - Called by the provider to pass partial incremental text completions during a completion request.
 - `on_finish: fun(complete_text?: string, finish_reason?: string): nil` - Called by the provider when the completion is done. Takes an optional argument for the completed text (`complete_text`) and an optional argument for the finish reason (`finish_reason`).
 - `on_error: fun(data: any, label?: string): nil` - Called by the provider to pass error data and an optional label during a completion request.
 
-**ChatPrompt**
+#### ChatPrompt
 
 Setup `require('llm').setup({chats = { [chat name] = ChatPrompt, .. }})`  
 Run `:LlmChat [chat name]`
@@ -444,16 +477,16 @@ Run `:LlmChat [chat name]`
 - `params?: table` - Static request parameters that are provided to the API provider during completion generation.
 - `options?: table` - Provider options, which can be customized by the user to modify the chat prompt behavior.
 
-**ChatMessage**
+#### ChatMessage
 - `role: 'user' | 'assistant'` - Indicates whether this message was generated by the user or the assistant.
 - `content: string` - The actual content of the message.
 
-**ChatConfig**
+#### ChatConfig
 - `system?: string` - Optional system instruction used to provide context or specific instructions for the API provider.
 - `params?: table` - Static request parameters that are provided to the API provider during completion generation.
 - `options?: table` - Provider options, which can be customized by the user to modify the chat prompt behavior.
 
-**ChatContents**
+#### ChatContents
 - `config: ChatConfig` - Configuration for this chat buffer, used by `chatprompt.run`. This includes information such as the system instruction, static request parameters, and provider options.
 - `messages: ChatMessage[]` - Messages in the chat buffer.
 
