@@ -5,21 +5,21 @@ local M = {}
 
 ---@class ChatPrompt
 ---@field provider Provider The API provider for this prompt
----@field create fun(input: string, context: Context): string | LlmChatContents Converts input and context to the first message text or LlmChatContents
----@field run fun(messages: LlmChatMessage[], config: ChatConfig): table | fun(set_params: fun(params: table): nil ) ) Converts chat messages and config into completion request params
+---@field create fun(input: string, context: Context): string | ChatContents Converts input and context to the first message text or ChatContents
+---@field run fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil ) ) Converts chat messages and config into completion request params
 ---@field system? string System instruction
 ---@field params? table Static request parameters
 ---@field options? table Provider options
 
----@class LlmChatMessage
+---@class ChatMessage
 ---@field role 'user' | 'assistant'
 ---@field content string
 
 ---@alias ChatConfig { system?: string, params?: table, options?: table }
 
----@class LlmChatContents
+---@class ChatContents
 ---@field config ChatConfig Configuration for this chat buffer, used by chatprompt.run
----@field messages LlmChatMessage[] Messages in the chat buffer
+---@field messages ChatMessage[] Messages in the chat buffer
 
 --- Splits lines into array of { role: 'user' | 'assistant', content: string }
 --- If first line starts with '> ', then the rest of that line is system message
@@ -118,7 +118,7 @@ end
 --- the system instruction. The rest of the text is parsed as alternating
 --- user/assistant messages, with `\n======\n` delimiters.
 ---@param text string
----@return { contents: LlmChatContents, chat: string }
+---@return { contents: ChatContents, chat: string }
 function M.parse(text)
   local parsed = parse_config(text)
   local messages_and_system = split_messages(parsed.rest)
@@ -133,7 +133,7 @@ function M.parse(text)
   }
 end
 
----@param contents LlmChatContents
+---@param contents ChatContents
 ---@param name string
 ---@return string
 function M.to_string(contents, name)
@@ -183,7 +183,7 @@ function M.create_new_chat(chat_prompt, chat_name, input_context)
     system = chat_prompt.system,
   }
 
-  ---@type LlmChatContents
+  ---@type ChatContents
   local chat_contents
 
   if type(first_message_or_contents) == 'string' then
@@ -203,7 +203,7 @@ function M.create_new_chat(chat_prompt, chat_name, input_context)
       first_message_or_contents
     )
   else
-    error('ChatPrompt.create() needs to return a string for the first message or an LlmChatContents')
+    error('ChatPrompt.create() needs to return a string for the first message or an ChatContents')
   end
 
   local new_buffer_text = M.to_string(chat_contents, chat_name)

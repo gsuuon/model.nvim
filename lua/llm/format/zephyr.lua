@@ -6,9 +6,9 @@ local async = require('llm.util.async')
 
 local M = {}
 
----Format LlmChatContents to a string list so they can be individually tokenized.
+---Format ChatContents to a string list so they can be individually tokenized.
 ---reference: https://huggingface.co/HuggingFaceH4/zephyr-7b-beta
----@param messages LlmChatMessage[]
+---@param messages ChatMessage[]
 ---@param system string
 ---@param include_continue? boolean Include the continue partial `\n<|assistant|>\n` as the last string. Avoid adding EOS to the last string for chat prompts.
 ---@return string[]
@@ -44,7 +44,7 @@ local function tokenize(text, url_base, cb)
 end
 
 ---Tokenizes each message with LlamaCpp server separately then inserts an EOS (2) token between each item.
----@param messages LlmChatMessage[]
+---@param messages ChatMessage[]
 ---@param system string
 ---@param url_base string
 ---@param cb fun(tokens: number[]): any
@@ -76,7 +76,7 @@ end
 
 ---Use as ChatPrompt.run in a zephyr ChatPrompt.
 ---Tokenizes each message individually and adds a 2 (EOS) token between messages.
----@param messages LlmChatMessage[]
+---@param messages ChatMessage[]
 ---@param config table
 function M.chatprompt_run(messages, config)
   local options = config.options or {}
