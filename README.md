@@ -16,8 +16,11 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 - [Setup](#-setup)
 - [Usage](#-usage)
 - [Config](#configuration)
+- [Reference](#reference)
 - [Examples](#examples)
 - [Contributing](#contributing)
+
+If you have any questions feel free to ask in [discussions](https://github.com/gsuuon/llm.nvim/discussions)!
 
 ---
 
@@ -58,7 +61,7 @@ llm.nvim comes with some [starter prompts](./lua/llm/prompts/starters.lua) and m
 
 It can also be used from another plugin to easily add LLM capabilities, for an example look at [note.nvim](https://github.com/gsuuon/note.nvim/blob/main/lua/note/llm/prompts.lua) which adds some [buffer-local](https://github.com/gsuuon/note.nvim/blob/main/ftplugin/note.lua) prompts to note files.
 
-If you have more questions about usage, check out the [discussions](https://github.com/gsuuon/llm.nvim/discussions).
+### Commands
 
 - `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided.
 
@@ -195,7 +198,8 @@ With lazy.nvim:
 
 A prompt entry defines how to handle a completion request - it takes in the editor input (either an entire file or a visual selection) and some context, and produces the api request data merging with any defaults. It also defines how to handle the API response - for example it can replace the selection (or file) with the response or insert it at the cursor positon.
 
-Check out the [starter prompts](./lua/llm/prompts/starters.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/llm/provider.lua). If you want to use the starter prompts alongside your own, you can use `prompts = vim.tbl_extend('force', require('llm.prompts.starters'), { ... })`.
+Check out the [starter prompts](./lua/llm/prompts/starters.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/llm/provider.lua).
+
 
 ### Chat prompts
 Chat prompts have a different API than regular prompts. Execute `:LlmChat my_chat` to create a new llmchat buffer with the `my_chat` chat prompt. Check out the types in [core/chat](./lua/llm/core/chat.lua).
@@ -276,9 +280,7 @@ Set the model field on the params returned by the builder (or the static params 
 
 This provider uses the [llama.cpp server](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md).
 
-You can start the server manually or have it autostart when you run a llamacpp prompt. To autostart the server call `require('llm.providers.llamacpp').setup({})` in your config function and set a `model` in the prompt options (see below). The server restarts if the prompt model or args change.
-
-To talk to an existing server, just don't set the prompt `model` option.
+You can start the server manually or have it autostart when you run a llamacpp prompt. To autostart the server call `require('llm.providers.llamacpp').setup({})` in your config function and set a `model` in the prompt options (see below). Leave `model` empty to not autostart. The server restarts if the prompt model or args change.
 
 ##### Setup
 1. Build [llama.cpp](https://github.com/ggerganov/llama.cpp)
@@ -380,6 +382,41 @@ Basic provider example:
 ```
 
 --- 
+
+## Reference
+
+### Types
+**Prompt**
+- `provider: Provider` - The API provider for this prompt, responsible for requesting and returning completion suggestions.
+- `builder: ParamsBuilder` - Converts input (either the visual selection or entire buffer text) and context to request parameters. Returns either a table of params or a function that takes a callback with the params.
+- `transform?: fun(string): string` - Optional function that transforms completed response text after on_finish, e.g. to extract code.
+- `mode?: SegmentMode | StreamHandlers` - Response handling mode. Defaults to 'append'. Can be one of 'append', 'replace', 'buffer', 'insert', or 'insert_or_replace'.
+- `hl_group?: string` - Highlight group of active response.
+- `params?: table` - Static request parameters for this prompt.
+- `options?: table` - Optional options for the provider.
+
+**Provider**
+- `request_completion: fun(handler: StreamHandlers, params?: table, options?: table): function` - Requests a completion stream from the provider and returns a cancel callback. Feeds completion parts back to the prompt runner using handler methods and calls on_finish after completion is done.
+- `default_prompt? : Prompt` - Default prompt for this provider (optional).
+- `adapt?: fun(prompt: StandardPrompt): table` - Adapts a standard prompt to params for this provider (optional).
+
+**ParamsBuilder** (function)
+- `fun(input: string, context: Context): table | fun(resolve: fun(params: table))` - Converts input and context to request data. Returns either a table of params or a function that takes a callback with the params.
+
+**SegmentMode** (enum)
+
+Exported as `local mode = require('llm').mode`
+- `APPEND = 'append'` - Append to the end of input.
+- `REPLACE = 'replace'` - Replace input.
+- `BUFFER = 'buffer'` - Create a new buffer and insert.
+- `INSERT = 'insert'` - Insert at the cursor position.
+- `INSERT_OR_REPLACE = 'insert_or_replace'` - Insert at the cursor position if no selection, or replace the selection.
+
+**StreamHandlers**
+- `on_partial: fun(partial_text: string): nil` - Called by the provider to pass partial incremental text completions during a completion request.
+- `on_finish: fun(complete_text?: string, finish_reason?: string): nil` - Called by the provider when the completion is done. Takes an optional argument for the completed text (`complete_text`) and an optional argument for the finish reason (`finish_reason`).
+- `on_error: fun(data: any, label?: string): nil` - Called by the provider to pass error data and an optional label during a completion request.
+
 
 ## Examples
 
