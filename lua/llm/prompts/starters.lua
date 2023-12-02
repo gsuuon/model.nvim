@@ -73,7 +73,7 @@ local starters = {
         error('Not in a chat buffer')
       end
 
-      return tap(chat.parse(input))
+      return chat.parse(input)
     end
   },
   palm = palm.default_prompt,
@@ -142,7 +142,7 @@ local starters = {
       model = 'gpt-3.5-turbo-0613'
     },
     builder = function(input, context)
-      return tap(openai.adapt(standard_code(input, context)))
+      return openai.adapt(standard_code(input, context))
     end,
     transform = extract.markdown_code
   },
