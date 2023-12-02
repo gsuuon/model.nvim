@@ -20,7 +20,7 @@ local llama2 = require('llm.format.llama2')
 local function standard_code(input, context)
   local surrounding_text = prompts.limit_before_after(context, 30)
 
-  local instruction = 'Start generating the code which should replace the special token <@@> in the following code, keeping sure to have consistent whitespace.'
+  local instruction = 'You are an expert programmer. You are given a snippet of code which includes the symbol <@@>. Complete the correct code that should replace the <@@> symbol given the content.'
 
   local fewshot = {
     {
@@ -118,8 +118,7 @@ local starters = {
           .. (context.args or 'You are a helpful assistant')
           .. '\n</s>\n<|user|>\n'
           .. input
-          .. '</s>\n<|assistant|>',
-        stops = {'</s>'}
+          .. '</s>\n<|assistant|>'
       }
     end
   },
