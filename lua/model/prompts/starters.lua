@@ -20,7 +20,7 @@ local llama2 = require('llm.format.llama2')
 local function standard_code(input, context)
   local surrounding_text = prompts.limit_before_after(context, 30)
 
-  local instruction = 'You are an expert programmer. You are given a snippet of code which includes the symbol <@@>. Complete the correct code that should replace the <@@> symbol given the content.'
+  local instruction = 'You are an expert programmer. You are given a snippet of code which includes the symbol <@@>. Complete the correct code that should replace the <@@> symbol given the content. Only respond with the code that should replace the symbole <@@>. If you include any other code, the program will fail to compile and the user will be very sad.'
 
   local fewshot = {
     {
