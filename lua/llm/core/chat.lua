@@ -209,7 +209,7 @@ function M.create_new_chat(chat_prompt, chat_name, input_context)
   local new_buffer_text = M.to_string(chat_contents, chat_name)
 
   vim.cmd.vnew()
-  vim.o.ft = 'llmchat'
+  vim.o.ft = 'mchat'
   vim.cmd.syntax({'sync', 'fromstart'})
 
   vim.api.nvim_buf_set_lines(

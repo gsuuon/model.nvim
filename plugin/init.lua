@@ -1,10 +1,10 @@
-if vim.g.did_setup_llm then
+if vim.g.did_setup_model then
   return
 end
 
 vim.filetype.add({
   extension = {
-    llmchat = 'llmchat',
+    mchat = 'mchat',
   }
 })
 

@@ -69,8 +69,8 @@ local starters = {
       return '\n======\n' .. response .. '\n======\n\n'
     end,
     builder = function(input)
-      if vim.o.ft ~= 'llmchat' then
-        error('Not in a chat buffer')
+      if vim.o.ft ~= 'mchat' then
+        error('Not in mchat buffer')
       end
 
       return chat.parse(input)

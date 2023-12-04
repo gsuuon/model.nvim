@@ -110,7 +110,7 @@ local function setup_commands()
     end, wait)
   end
 
-  vim.api.nvim_create_user_command('LlmMulti', command_request_multi_completion_streams, {
+  vim.api.nvim_create_user_command('Mmulti', command_request_multi_completion_streams, {
     force = true,
     range = true,
     nargs = '+',
@@ -118,7 +118,7 @@ local function setup_commands()
     complete = scopes.complete_arglead_prompt_names
   })
 
-  vim.api.nvim_create_user_command('LlmCancel',
+  vim.api.nvim_create_user_command('Mcancel',
     function()
       local seg = segment.query(util.cursor.position())
 
@@ -139,7 +139,7 @@ local function setup_commands()
     }
   )
 
-  vim.api.nvim_create_user_command('LlmDelete',
+  vim.api.nvim_create_user_command('Mdelete',
     function()
       local seg = segment.query(util.cursor.position())
       if seg then
@@ -153,7 +153,7 @@ local function setup_commands()
     }
   )
 
-  vim.api.nvim_create_user_command('LlmShow',
+  vim.api.nvim_create_user_command('Mshow',
     function()
       local seg = segment.query(util.cursor.position())
       if seg then
@@ -167,7 +167,7 @@ local function setup_commands()
     }
   )
 
-  vim.api.nvim_create_user_command('LlmSelect',
+  vim.api.nvim_create_user_command('Mselect',
     function()
       local seg = segment.query(util.cursor.position())
 
@@ -198,7 +198,7 @@ local function setup_commands()
     }
   )
 
-  vim.api.nvim_create_user_command('Llm', command_request_completion, {
+  vim.api.nvim_create_user_command('M', command_request_completion, {
     range = true,
     desc = 'Request completion of selection',
     force = true,
@@ -220,18 +220,18 @@ local function setup_commands()
     end
   }
 
-  vim.api.nvim_create_user_command('LlmStore', function(a)
+  vim.api.nvim_create_user_command('Mstore', function(a)
     -- local args = a.fargs
     local command = a.fargs[1]
 
     local handler = handle_llm_store[command]
     if handler == nil then
-      error('Unknown LlmStore command ' .. command)
+      error('Unknown Mstore command ' .. command)
     else
       return handler(a)
     end
   end, {
-      desc = 'LlmStore',
+      desc = 'Mstore',
       force = true,
       nargs='+',
       complete = function(arglead)
@@ -240,13 +240,13 @@ local function setup_commands()
     })
 
   vim.api.nvim_create_user_command(
-    'LlmChat',
+    'Mchat',
     function(cmd_params)
       local chat_name = cmd_params.fargs[1]
 
       if chat_name ~= nil and chat_name ~= '' then
-        if vim.o.ft == 'llmchat' then
-          error("Use ':LlmChat' (without argument) to run the current chat")
+        if vim.o.ft == 'mchat' then
+          error("Use ':Mchat' (without argument) to run the current chat")
         end
 
         local chat_prompt = assert(
@@ -265,15 +265,15 @@ local function setup_commands()
           )
         )
       else
-        if vim.o.ft ~= 'llmchat' then
-          error('Not in llmchat buffer')
+        if vim.o.ft ~= 'mchat' then
+          error('Not in mchat buffer')
         end
 
         chat.run_chat(M.opts)
       end
     end,
     {
-      desc = 'LlmChat',
+      desc = 'Mchat',
       force = true,
       range = true,
       nargs = '?',
@@ -290,7 +290,7 @@ local function setup_commands()
     })
 
   vim.api.nvim_create_user_command(
-    'LlmCount',
+    'Mcount',
     function()
       local count = require('llm.store.util').tiktoken_count
       local text = table.concat(
@@ -298,7 +298,7 @@ local function setup_commands()
         '\n'
       )
 
-      if vim.o.ft == 'llmchat' then
+      if vim.o.ft == 'mchat' then
         local parsed = chat.parse(text)
         local total = count(vim.json.encode(parsed.contents.messages))
 
@@ -315,7 +315,7 @@ local function setup_commands()
   )
 
   vim.api.nvim_create_user_command(
-    'LlmYank',
+    'Myank',
     function(cmd_params)
       yank_with_line_numbers_and_filename({ register = cmd_params.args })
     end,
@@ -324,9 +324,9 @@ local function setup_commands()
 end
 
 ---@class SetupOptions
----@field default_prompt? Prompt default = openai. The default prompt (`:Llm` with no argument)
----@field prompts? table<string, Prompt> default = starters. Add prompts (`:Llm [name]`)
----@field chats? table<string, ChatPrompt> default = prompts/chats. Add chat prompts (`:LlmChat [name]`)
+---@field default_prompt? Prompt default = openai. The default prompt (`:M` or `:Model` with no argument)
+---@field prompts? table<string, Prompt> default = starters. Add prompts (`:M [name]`)
+---@field chats? table<string, ChatPrompt> default = prompts/chats. Add chat prompts (`:MChat [name]`)
 ---@field hl_group? string default = 'Comment'. Set the default highlight group of in-progress responses
 ---@field join_undo? boolean default = true. Join streaming response text as a single `u` undo. Edits during streaming will also be undone.
 
@@ -350,7 +350,7 @@ function M.setup(opts)
 
   setup_commands()
 
-  vim.g.did_setup_llm = true
+  vim.g.did_setup_model = true
 end
 
 M.mode = provider.mode -- convenience export
