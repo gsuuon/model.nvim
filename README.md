@@ -10,7 +10,7 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
   - OpenAI GPT (and compatible API's)
   - LlamaCpp
   - Google PaLM
-  - Huggingface
+  - .. and more
 - 🎨 Programmatic prompts in lua
   - customize everything
   - async and multistep prompts
