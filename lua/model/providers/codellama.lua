@@ -1,9 +1,9 @@
-local llm = require('model')
 local util = require('model.util')
 local curl = require('model.util.curl')
 local prompts = require('model.util.prompts')
 local async = require('model.util.async')
 local provider_util = require('model.providers.util')
+local mode = require('model').mode
 
 --- This is a llamacpp based provider that only supports infill with codellama 7b and 13b, which require special token handling.
 --- Note that the base models seem to perform better than Instruct models. I'm also not sure how to actually add instructions to a FIM prompt.
@@ -112,7 +112,7 @@ end
 
 M.default_prompt = {
   provider = M,
-  mode = llm.mode.INSERT, -- weird things happen if we have a visual selection
+  mode = mode.INSERT, -- weird things happen if we have a visual selection
   params = {
     temperature = 0.1,    -- Seems to rarely decode EOT if temp is high
     top_p = 0.9,

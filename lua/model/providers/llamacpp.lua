@@ -7,12 +7,12 @@ local llama2 = require('model.format.llama2')
 
 local M = {}
 
-local stop_server_augroup = vim.api.nvim_create_augroup('LlmNvimLlamaCppServerStop', {})
+local stop_server_augroup = vim.api.nvim_create_augroup('ModelNvimLlamaCppServerStop', {})
 
 ---@param model string
 ---@param args string[]
 local function resolve_system_opts(model, args)
-  assert(M.options, 'Missing llamacpp provider options. Call require("llm.providers.llamacpp").setup({})')
+  assert(M.options, 'Missing llamacpp provider options. Call require("model.providers.llamacpp").setup({})')
   assert(M.options.server, 'Llamacpp options missing server')
   assert(M.options.server.binary, 'Llamacpp options missing server binary path')
   assert(M.options.server.models, 'Llamacpp options missing models path')

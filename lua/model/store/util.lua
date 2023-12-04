@@ -8,9 +8,9 @@ end
 --- This only works if immediately used in a py3eval - otherwise the value will just be the last set
 --- As in, can't call to_py on several variables before running py3eval
 local function to_py(x)
-  vim.g.__llm_python_call_arg = x
+  vim.g.__model_python_call_arg = x
 
-  return 'vim.eval("g:__llm_python_call_arg")'
+  return 'vim.eval("g:__model_python_call_arg")'
 end
 
 function M.tiktoken_count(text)

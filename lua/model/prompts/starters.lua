@@ -1,8 +1,7 @@
-local llm = require('model')
-
 local util = require('model.util')
 local async = require('model.util.async')
 local prompts = require('model.util.prompts')
+local mode = require('model').mode
 
 local chat = require('model.core.chat')
 local extract = require('model.prompts.extract')
@@ -134,7 +133,7 @@ local starters = {
   },
   code = {
     provider = openai,
-    mode = llm.mode.INSERT_OR_REPLACE,
+    mode = mode.INSERT_OR_REPLACE,
     params = {
       temperature = 0.1,
       max_tokens = 500,
@@ -147,7 +146,7 @@ local starters = {
   },
   ['code palm'] = {
     provider = palm,
-    mode = llm.mode.INSERT_OR_REPLACE,
+    mode = mode.INSERT_OR_REPLACE,
     builder = function(input, context)
       return palm.adapt(standard_code(input, context))
     end,
@@ -155,7 +154,7 @@ local starters = {
   },
   ['code gpt4'] = {
     provider = openai,
-    mode = llm.mode.INSERT_OR_REPLACE,
+    mode = mode.INSERT_OR_REPLACE,
     params = {
       temperature = 0.2,
       max_tokens = 1000,
@@ -168,7 +167,7 @@ local starters = {
   },
   ['ask code'] = {
     provider = openai,
-    mode = llm.mode.BUFFER,
+    mode = mode.BUFFER,
     params = {
       temperature = 0.2,
       max_tokens = 1000,
@@ -200,7 +199,7 @@ local starters = {
   },
   ['ask commit review'] = {
     provider = openai,
-    mode = llm.mode.BUFFER,
+    mode = mode.BUFFER,
     builder = function()
       local git_diff = vim.fn.system {'git', 'diff', '--staged'}
       -- TODO extract relevant code from store
@@ -221,7 +220,7 @@ local starters = {
       temperature = 0.3,
       max_tokens = 1500
     },
-    mode = llm.mode.REPLACE,
+    mode = mode.REPLACE,
     builder = function(input)
       local messages = {
         {
@@ -252,7 +251,7 @@ local starters = {
   },
   commit = {
     provider = openai,
-    mode = llm.mode.INSERT,
+    mode = mode.INSERT,
     builder = function()
       local git_diff = vim.fn.system {'git', 'diff', '--staged'}
 
@@ -276,7 +275,7 @@ local starters = {
     provider = openai,
     builder = function(input, context)
       if context.args == nil or #context.args == 0 then
-        error('Provide the schema url as a command arg (:Llm openapi https://myurl.json)')
+        error('Provide the schema url as a command arg (:M openapi https://myurl.json)')
       end
 
       local schema_url = context.args
