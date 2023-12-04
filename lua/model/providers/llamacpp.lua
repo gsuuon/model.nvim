@@ -1,9 +1,9 @@
-local curl = require('llm.util.curl')
-local util = require('llm.util')
-local async = require('llm.util.async')
-local system = require('llm.util.system')
-local provider_util = require('llm.providers.util')
-local llama2 = require('llm.format.llama2')
+local curl = require('model.util.curl')
+local util = require('model.util')
+local async = require('model.util.async')
+local system = require('model.util.system')
+local provider_util = require('model.providers.util')
+local llama2 = require('model.format.llama2')
 
 local M = {}
 

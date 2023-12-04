@@ -1,4 +1,4 @@
-local chat = require('llm.core.chat')
+local chat = require('model.core.chat')
 
 describe('chat', function()
   describe('parse', function()

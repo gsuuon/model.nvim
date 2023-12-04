@@ -1,4 +1,4 @@
-local u = require('llm.store.util')
+local u = require('model.store.util')
 
 local M = {}
 
@@ -57,7 +57,7 @@ function M.query_store(prompt, count, similarity)
 end
 
 
-local ts_source = require('llm.store.sources.treesitter')
+local ts_source = require('model.store.sources.treesitter')
 
 ---@param function_item FunctionItem
 local function normalize_function_item_filepath_to_store(function_item)

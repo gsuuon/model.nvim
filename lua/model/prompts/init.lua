@@ -1,6 +1,6 @@
 vim.notify(
-  [[require('llm.prompts') is deprecated, use require('llm.util.prompts')]],
+  [[require('model.prompts') is deprecated, use require('model.util.prompts')]],
   vim.log.levels.WARN
 )
 
-return require('llm.util.prompts')
+return require('model.util.prompts')

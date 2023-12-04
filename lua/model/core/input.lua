@@ -1,4 +1,4 @@
-local util = require('llm.util')
+local util = require('model.util')
 
 local M = {}
 

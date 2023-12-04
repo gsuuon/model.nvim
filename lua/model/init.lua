@@ -1,9 +1,9 @@
-local segment = require('llm.util.segment')
-local util = require('llm.util')
-local provider = require('llm.core.provider')
-local scopes = require('llm.core.scopes')
-local chat = require('llm.core.chat')
-local input = require('llm.core.input')
+local segment = require('model.util.segment')
+local util = require('model.util')
+local provider = require('model.core.provider')
+local scopes = require('model.core.scopes')
+local chat = require('model.core.chat')
+local input = require('model.core.input')
 
 local M = {}
 
@@ -254,7 +254,7 @@ local function setup_commands()
     }
   )
 
-  local store = require('llm.store')
+  local store = require('model.store')
 
   local handle_llm_store = {
     query = function(args)
@@ -345,7 +345,7 @@ local function setup_commands()
   vim.api.nvim_create_user_command(
     'Mcount',
     function()
-      local count = require('llm.store.util').tiktoken_count
+      local count = require('model.store.util').tiktoken_count
       local text = table.concat(
         vim.api.nvim_buf_get_lines(0, 0, -1, false),
         '\n'
@@ -389,7 +389,7 @@ end
 ---@param opts SetupOptions
 function M.setup(opts)
   M.opts = vim.tbl_extend('force', {
-    default_prompt = require('llm.providers.openai').default_prompt
+    default_prompt = require('model.providers.openai').default_prompt
   }, opts or {})
 
   if M.opts.prompts then

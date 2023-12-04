@@ -1,5 +1,5 @@
-local util = require('llm.util')
-local system = require('llm.util.system')
+local util = require('model.util')
+local system = require('model.util.system')
 
 local M = {}
 

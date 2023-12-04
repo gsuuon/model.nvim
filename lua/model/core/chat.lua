@@ -1,5 +1,5 @@
-local segment = require('llm.util.segment')
-local util = require('llm.util')
+local segment = require('model.util.segment')
+local util = require('model.util')
 
 local M = {}
 

@@ -1,4 +1,4 @@
-local util = require('llm.util')
+local util = require('model.util')
 
 ---@class Segment
 ---@field add fun(text: string): nil

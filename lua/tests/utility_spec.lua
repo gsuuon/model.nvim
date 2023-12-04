@@ -4,7 +4,7 @@ describe('cursor.selection', function()
 
   it('gets 0-indexed cursor position', function()
 
-    local util = require('llm.util')
+    local util = require('model.util')
 
     local buf = vim.api.nvim_create_buf(false, true)
 
@@ -28,7 +28,7 @@ describe('cursor.selection', function()
 end)
 
 describe('server-sent events iterator', function()
-  local p_util = require('llm.providers.util')
+  local p_util = require('model.providers.util')
 
   local function parse_expect_sse(outputs, expected)
     local got = {}

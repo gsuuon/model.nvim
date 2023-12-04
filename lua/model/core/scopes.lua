@@ -1,4 +1,4 @@
-local util = require('llm.util')
+local util = require('model.util')
 
 -- TODO revisit this. Refactor so I can also use with chats, or remove.
 

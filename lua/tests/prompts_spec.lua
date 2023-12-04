@@ -6,7 +6,7 @@ local u = require('tests.util')
 
 describe('prompt', function()
 
-  local provider = require('llm.core.provider')
+  local provider = require('model.core.provider')
   local test_provider = mock({ request_completion = function() end })
 
   it('provides builder with input and context', function()

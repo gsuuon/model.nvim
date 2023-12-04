@@ -5,7 +5,7 @@ describe('setup', function()
 
   local test_provider = mock({ request_completion = function() end })
 
-  require('llm').setup({
+  require('model').setup({
     default_prompt = {
       provider = test_provider,
       builder = function()
@@ -67,8 +67,8 @@ describe('setup', function()
   end)
 
   it('can merge opts which contain prompts', function()
-    require('llm').setup({
-      default_prompt = require('llm.providers.palm').default_prompt
+    require('model').setup({
+      default_prompt = require('model.providers.palm').default_prompt
     })
   end)
 end)

@@ -1,5 +1,5 @@
-local curl = require('llm.util.curl')
-local util = require('llm.util')
+local curl = require('model.util.curl')
+local util = require('model.util')
 
 local M = {}
 

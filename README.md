@@ -69,13 +69,13 @@ require('lazy').setup({
     -- To override defaults add a config field and call setup()
 
     -- config = function()
-    --   require('llm').setup({
+    --   require('model').setup({
     --     prompts = {..},
     --     chats = {..},
     --     ..
     --   })
     --
-    --   require('llm.providers.llamacpp').setup({
+    --   require('model.providers.llamacpp').setup({
     --     server = {
     --       binary = '~/path/to/server/binary',
     --       models = '~/path/to/models/directory'
@@ -131,8 +131,8 @@ https://user-images.githubusercontent.com/6422188/233774216-4e100122-3a93-4dfb-a
 Check the module functions exposed in [store](./lua/llm/store/init.lua). This uses the OpenAI embeddings api to generate vectors and queries them by cosine similarity.
 
 To add items call into the `llm.store` lua module functions, e.g.
-  - `:lua require('llm.store').add_lua_functions()`
-  - `:lua require('llm.store').add_files('.')`
+  - `:lua require('model.store').add_lua_functions()`
+  - `:lua require('model.store').add_files('.')`
 
 Look at `store.add_lua_functions` for an example of how to use treesitter to parse files to nodes and add them to the local store.
 
@@ -141,7 +141,7 @@ To get query results call `store.prompt.query_store` with your input text, desir
 ```lua
 builder = function(input, context)
   ---@type {id: string, content: string}[]
-  local store_results = require('llm.store').prompt.query_store(input, 2, 0.75)
+  local store_results = require('model.store').prompt.query_store(input, 2, 0.75)
 
   -- add store_results to your messages
 end
@@ -198,7 +198,7 @@ All [setup options](#setupoptions) are optional. Add new prompts to `options.pro
 ---@field hl_group? string set the default highlight group of in-progress responses
 ---@field join_undo? boolean join streaming response text as a single `u` undo. use if you intend to wait for responses to finish before editing other text, as edits during streaming will also be undone.
 
-require('llm').setup({
+require('model').setup({
   default_prompt = {},
   prompts = {...},
   chats = {...},
@@ -216,7 +216,7 @@ With lazy.nvim:
 {
   'gsuuon/llm.nvim',
   config = function()
-    require('llm').setup({
+    require('model').setup({
       prompts = {
         instruct = { ... },
         code = { ... },
@@ -259,9 +259,9 @@ Run `:LlmChat` to get the assistant response.  You can edit any of the messages,
 You can use `require('util').module.autoload` instead of a naked `require` to always re-require a module on use. This makes the feedback loop for developing prompts faster:
 
 ```diff
-require('llm').setup({
+require('model').setup({
 -  prompts = require('prompt_library')
-+  prompts = require('llm.util').module.autoload('prompt_library')
++  prompts = require('model.util').module.autoload('prompt_library')
 })
 ```
 
@@ -279,7 +279,7 @@ Configuration
 Add default request parameters for [/chat/completions](https://platform.openai.com/docs/api-reference/chat/create) with `initialize()`:
 
 ```
-require('llm.providers.openai').initialize({
+require('model.providers.openai').initialize({
   max_tokens = 120,
   temperature = 0.7,
   model = 'gpt-3.5-turbo-0301'
@@ -331,7 +331,7 @@ Set the model field on the params returned by the builder (or the static params 
 
 This provider uses the [llama.cpp server](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md).
 
-You can start the server manually or have it autostart when you run a llamacpp prompt. To autostart the server call `require('llm.providers.llamacpp').setup({})` in your config function and set a `model` in the prompt options (see below). Leave `model` empty to not autostart. The server restarts if the prompt model or args change.
+You can start the server manually or have it autostart when you run a llamacpp prompt. To autostart the server call `require('model.providers.llamacpp').setup({})` in your config function and set a `model` in the prompt options (see below). Leave `model` empty to not autostart. The server restarts if the prompt model or args change.
 
 ##### Setup
 1. Build [llama.cpp](https://github.com/ggerganov/llama.cpp)
@@ -339,9 +339,9 @@ You can start the server manually or have it autostart when you run a llamacpp p
 1. Setup the llamacpp provider if you plan to use autostart:
     ```lua
     config = function()
-      require('llm').setup({ .. })
+      require('model').setup({ .. })
 
-      require('llm.providers.llamacpp').setup({
+      require('model.providers.llamacpp').setup({
         server = {
           binary = '~/path/to/server/binary',
           models = '~/path/to/models/directory'
@@ -351,9 +351,9 @@ You can start the server manually or have it autostart when you run a llamacpp p
     ```
 1. Use the llamacpp provider in a prompt:
     ```lua
-    local llamacpp = require('llm.providers.llamacpp')
+    local llamacpp = require('model.providers.llamacpp')
 
-    require('llm').setup({
+    require('model').setup({
       prompts = {
         zephyr = {
           provider = llamacpp,
@@ -385,7 +385,7 @@ Llamacpp setup options:
  - `server?.models: string` - path to the parent directory of the models (joined with `prompt.model`)
 
 Llamacpp prompt options:
- - `options.model?: string` - use with `require('llm.providers.llamacpp').setup()` to autostart the server with this model.
+ - `options.model?: string` - use with `require('model.providers.llamacpp').setup()` to autostart the server with this model.
  - `options.args?: string[]` - additional arguments for the server.
  - `options.url?: string` - url of the server. Defaults to http://localhost:8080.
 
@@ -428,7 +428,7 @@ Basic provider example:
 `params` are generally data that go directly into the request sent by the provider (e.g. content, temperature). `options` are used _by_ the provider to know how to operate (e.g. server url or model name if a local LLM).
 
 #### SetupOptions
-Setup `require('llm').setup(SetupOptions)`
+Setup `require('model').setup(SetupOptions)`
 - `default_prompt?: string` - The default prompt to use with `:Llm`. Default is the openai starter.
 - `prompts?: {string: Prompt}` - A table of custom prompts to use with `:Llm [name]`. Keys are the names of the prompts. Default are the starters.
 - `chats?: {string: ChatPrompt}` - A table of chat prompts to use with `:LlmChat [name]`. Keys are the names of the chats.
@@ -436,7 +436,7 @@ Setup `require('llm').setup(SetupOptions)`
 - `join_undo?: boolean` - Whether to join streaming response text as a single undo command. When true, unrelated edits during streaming will also be undone. Default is `true`.
 
 #### Prompt
-Setup `require('llm').setup({prompts = { [prompt name] = Prompt, .. }})`  
+Setup `require('model').setup({prompts = { [prompt name] = Prompt, .. }})`  
 Run `:Llm [prompt name]`
 - `provider: Provider` - The API provider for this prompt, responsible for requesting and returning completion suggestions.
 - `builder: ParamsBuilder` - Converts input (either the visual selection or entire buffer text) and context to request parameters. Returns either a table of params or a function that takes a callback with the params.
@@ -460,7 +460,7 @@ Run `:Llm [prompt name]`
 
 Exported as
 ```lua
-local llm = require('llm')
+local llm = require('model')
 llm.mode.--
 ```
 - `APPEND = 'append'` - Append to the end of input.
@@ -476,7 +476,7 @@ llm.mode.--
 
 #### ChatPrompt
 
-Setup `require('llm').setup({chats = { [chat name] = ChatPrompt, .. }})`  
+Setup `require('model').setup({chats = { [chat name] = ChatPrompt, .. }})`  
 Run `:LlmChat [chat name]`
 - `provider: APIProvider` - The API provider for this chat prompt. This field contains the specific implementation of the chat feature being used.
 - `create: fun(input: string, context: Context): string | ChatContents` - Converts input and context into the first message text or ChatContents, which are written into the new chat buffer.
@@ -503,7 +503,7 @@ Run `:LlmChat [chat name]`
 ### Prompts
 
 ```lua
-require('llm').setup({
+require('model').setup({
   prompts = {
     ['prompt name'] = ...
   }
@@ -651,10 +651,10 @@ return {
 <summary>Replace text with Spanish</summary>
 
 ```lua
-local openai = require('llm.providers.openai')
-local segment = require('llm.util.segment')
+local openai = require('model.providers.openai')
+local segment = require('model.util.segment')
 
-require('llm').setup({
+require('model').setup({
   prompts = {
     ['to spanish'] =
       {
@@ -686,9 +686,9 @@ require('llm').setup({
 <summary>Notifies each stream part and the complete response</summary>
 
 ```lua
-local openai = require('llm.providers.openai')
+local openai = require('model.providers.openai')
 
-require('llm').setup({
+require('model').setup({
   prompts = {
     ['show parts'] = {
       provider = openai,
@@ -721,7 +721,7 @@ You can move prompts into their own file and use `util.module.autoload` to quick
 #### `config = function()`
 
 ```lua
-local openai = require('llm.providers.openai')
+local openai = require('model.providers.openai')
 
 -- configure default model params here for the provider
 openai.initialize({
@@ -730,9 +730,9 @@ openai.initialize({
   temperature = 0.2,
 })
 
-local util = require('llm.util')
+local util = require('model.util')
 
-require('llm').setup({
+require('model').setup({
   hl_group = 'Substitute',
   prompts = util.module.autoload('prompt_library'),
   default_prompt = {
@@ -765,8 +765,8 @@ require('llm').setup({
 #### `lua/prompt_library.lua`
 
 ```lua
-local openai = require('llm.providers.openai')
-local segment = require('llm.util.segment')
+local openai = require('model.providers.openai')
+local segment = require('model.util.segment')
 
 return {
   code = {

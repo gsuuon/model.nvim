@@ -1,10 +1,10 @@
-local llamacpp = require('llm.providers.llamacpp')
+local llamacpp = require('model.providers.llamacpp')
 
 -- NOTE: llamacpp may be handling text that matches stop tokens itself now? it seems to be stopping correctly with just '</s>' text between turns instead of spitting out </s>.
 
-local util = require('llm.util')
-local curl = require('llm.util.curl')
-local async = require('llm.util.async')
+local util = require('model.util')
+local curl = require('model.util.curl')
+local async = require('model.util.async')
 
 local function tokenize(text, url_base, cb)
   curl.request(

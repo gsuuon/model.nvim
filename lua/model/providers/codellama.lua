@@ -1,9 +1,9 @@
-local llm = require('llm')
-local util = require('llm.util')
-local curl = require('llm.util.curl')
-local prompts = require('llm.util.prompts')
-local async = require('llm.util.async')
-local provider_util = require('llm.providers.util')
+local llm = require('model')
+local util = require('model.util')
+local curl = require('model.util.curl')
+local prompts = require('model.util.prompts')
+local async = require('model.util.async')
+local provider_util = require('model.providers.util')
 
 --- This is a llamacpp based provider that only supports infill with codellama 7b and 13b, which require special token handling.
 --- Note that the base models seem to perform better than Instruct models. I'm also not sure how to actually add instructions to a FIM prompt.

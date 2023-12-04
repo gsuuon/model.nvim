@@ -1,6 +1,6 @@
-local segment = require('llm.util.segment')
-local util = require('llm.util')
-local input = require('llm.core.input')
+local segment = require('model.util.segment')
+local util = require('model.util')
+local input = require('model.core.input')
 
 local M = {}
 

@@ -1,6 +1,6 @@
-local openai = require('llm.providers.openai')
-local zephyr_fmt = require('llm.format.zephyr')
-local llamacpp = require('llm.providers.llamacpp')
+local openai = require('model.providers.openai')
+local zephyr_fmt = require('model.format.zephyr')
+local llamacpp = require('model.providers.llamacpp')
 
 local chat_openai = {
   provider = openai,

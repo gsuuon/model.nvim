@@ -1,7 +1,7 @@
-local util = require('llm.util')
+local util = require('model.util')
 
-local provider = require('llm.core.provider')
-local openai = require('llm.providers.openai')
+local provider = require('model.core.provider')
+local openai = require('model.providers.openai')
 
 local M = {}
 
