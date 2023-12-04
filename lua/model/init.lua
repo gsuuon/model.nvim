@@ -256,7 +256,7 @@ local function setup_commands()
 
   local store = require('model.store')
 
-  local handle_llm_store = {
+  local handle_store_command = {
     query = function(args)
       local query_prompt = args.args:sub(7)
       -- TODO figure out sane defaults for count and similarity threshold
@@ -275,7 +275,7 @@ local function setup_commands()
       -- local args = a.fargs
       local command = a.fargs[1]
 
-      local handler = handle_llm_store[command]
+      local handler = handle_store_command[command]
       if handler == nil then
         error('Unknown Mstore command ' .. command)
       else
@@ -287,7 +287,7 @@ local function setup_commands()
       force = true,
       nargs='+',
       complete = function(arglead)
-        return vim.fn.matchfuzzy(vim.tbl_keys(handle_llm_store), arglead)
+        return vim.fn.matchfuzzy(vim.tbl_keys(handle_store_command), arglead)
       end
     }
   )

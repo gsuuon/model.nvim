@@ -9,12 +9,12 @@ let b:current_syntax = 1
 set foldmethod=syntax
 syn sync fromstart
 
-syn match llmChatName /\%^\(---\)\@!.\+/ skipnl nextgroup=llmMessageSystem,llmParams,llmMessages
-syn region llmParams start=/^---$/ end=/^---$/ nextgroup=llmMessageSystem,llmMessages skipnl contains=@Lua keepend contained fold
-syn region llmMessages start=/^\(---\)\@!.\+/ end=/\%$/ contains=llmMessageAssistant contained
-syn match llmMessageSystem "^> .*$" nextgroup=llmMessages skipempty contained
-syn region llmMessageAssistant start="======" end="======" contained fold
+syn match modelChatName /\%^\(---\)\@!.\+/ skipnl nextgroup=modelChatMessageSystem,modelChatParams,modelChatMessages
+syn region modelChatParams start=/^---$/ end=/^---$/ nextgroup=modelChatMessageSystem,modelChatMessages skipnl contains=@Lua keepend contained fold
+syn region modelChatMessages start=/^\(---\)\@!.\+/ end=/\%$/ contains=modelChatMessageAssistant contained
+syn match modelChatMessageSystem "^> .*$" nextgroup=modelChatMessages skipempty contained
+syn region modelChatMessageAssistant start="======" end="======" contained fold
 
-hi link llmChatName ModeMsg
-hi link llmMessageAssistant Identifier
-hi link llmMessageSystem WarningMsg
+hi link modelChatName ModeMsg
+hi link modelChatMessageAssistant Identifier
+hi link modelChatMessageSystem WarningMsg
