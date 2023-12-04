@@ -95,6 +95,18 @@ local function command_request_multi_completion_streams(cmd_params)
   )
 end
 
+local function create_deprecated_command(deprecated_name, new_name, cmd_fn, opts)
+  vim.api.nvim_create_user_command(deprecated_name, function(...)
+    vim.notify(
+      "Command '" .. deprecated_name .. "' is deprecated. Use '" .. new_name .. "' instead.",
+      vim.log.levels.WARN
+    )
+    return cmd_fn(...)
+  end, opts)
+
+  vim.api.nvim_create_user_command(new_name, cmd_fn, opts)
+end
+
 local function setup_commands()
   local function flash(count, wait, seg, highlight, after)
     vim.defer_fn(function ()
@@ -110,15 +122,28 @@ local function setup_commands()
     end, wait)
   end
 
-  vim.api.nvim_create_user_command('Mmulti', command_request_multi_completion_streams, {
-    force = true,
-    range = true,
-    nargs = '+',
-    desc = 'Request multiple prompts at the same time',
-    complete = scopes.complete_arglead_prompt_names
-  })
+  vim.api.nvim_create_user_command(
+    'LlmMulti',
+    function(...)
+      vim.notify(
+        'LlmMulti is going to be removed. Open a GH issue to keep it if you use it!',
+        vim.log.levels.WARN
+      )
 
-  vim.api.nvim_create_user_command('Mcancel',
+      return command_request_multi_completion_streams(...)
+    end,
+    {
+      force = true,
+      range = true,
+      nargs = '+',
+      desc = 'Request multiple prompts at the same time',
+      complete = scopes.complete_arglead_prompt_names,
+    }
+  )
+
+  create_deprecated_command(
+    'LlmCancel',
+    'Mcancel',
     function()
       local seg = segment.query(util.cursor.position())
 
@@ -139,7 +164,9 @@ local function setup_commands()
     }
   )
 
-  vim.api.nvim_create_user_command('Mdelete',
+  create_deprecated_command(
+    'LlmDelete',
+    'Mdelete',
     function()
       local seg = segment.query(util.cursor.position())
       if seg then
@@ -153,7 +180,9 @@ local function setup_commands()
     }
   )
 
-  vim.api.nvim_create_user_command('Mshow',
+  create_deprecated_command(
+    'LlmShow',
+    'Mshow',
     function()
       local seg = segment.query(util.cursor.position())
       if seg then
@@ -167,7 +196,9 @@ local function setup_commands()
     }
   )
 
-  vim.api.nvim_create_user_command('Mselect',
+  create_deprecated_command(
+    'LlmSelect',
+    'Mselect',
     function()
       local seg = segment.query(util.cursor.position())
 
@@ -198,13 +229,30 @@ local function setup_commands()
     }
   )
 
-  vim.api.nvim_create_user_command('M', command_request_completion, {
-    range = true,
-    desc = 'Request completion of selection',
-    force = true,
-    nargs='*',
-    complete = scopes.complete_arglead_prompt_names
-  })
+  create_deprecated_command(
+    'Llm',
+    'M',
+    command_request_completion,
+    {
+      range = true,
+      desc = 'Request completion of selection',
+      force = true,
+      nargs='*',
+      complete = scopes.complete_arglead_prompt_names,
+    }
+  )
+
+  vim.api.nvim_create_user_command(
+    'Model',
+    command_request_completion,
+    {
+      range = true,
+      desc = 'Request completion of selection',
+      force = true,
+      nargs='*',
+      complete = scopes.complete_arglead_prompt_names,
+    }
+  )
 
   local store = require('llm.store')
 
@@ -220,24 +268,29 @@ local function setup_commands()
     end
   }
 
-  vim.api.nvim_create_user_command('Mstore', function(a)
-    -- local args = a.fargs
-    local command = a.fargs[1]
+  create_deprecated_command(
+    'LlmStore',
+    'Mstore',
+    function(a)
+      -- local args = a.fargs
+      local command = a.fargs[1]
 
-    local handler = handle_llm_store[command]
-    if handler == nil then
-      error('Unknown Mstore command ' .. command)
-    else
-      return handler(a)
-    end
-  end, {
+      local handler = handle_llm_store[command]
+      if handler == nil then
+        error('Unknown Mstore command ' .. command)
+      else
+        return handler(a)
+      end
+    end,
+    {
       desc = 'Mstore',
       force = true,
       nargs='+',
       complete = function(arglead)
         return vim.fn.matchfuzzy(vim.tbl_keys(handle_llm_store), arglead)
       end
-    })
+    }
+  )
 
   vim.api.nvim_create_user_command(
     'Mchat',
@@ -319,7 +372,10 @@ local function setup_commands()
     function(cmd_params)
       yank_with_line_numbers_and_filename({ register = cmd_params.args })
     end,
-    {range = true, nargs = '?'}
+    {
+      range = true,
+      nargs = '?',
+    }
   )
 end
 
