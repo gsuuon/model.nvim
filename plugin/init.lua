@@ -8,7 +8,4 @@ vim.filetype.add({
   }
 })
 
-require('model').setup({
-  prompts = require('model.prompts.starters'),
-  chats = require('model.prompts.chats')
-})
+require('model').setup()

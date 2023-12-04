@@ -407,10 +407,12 @@ end
 ---@field hl_group? string default = 'Comment'. Set the default highlight group of in-progress responses
 ---@field join_undo? boolean default = true. Join streaming response text as a single `u` undo. Edits during streaming will also be undone.
 
----@param opts SetupOptions
+---@param opts? SetupOptions
 function M.setup(opts)
   M.opts = vim.tbl_extend('force', {
-    default_prompt = require('model.providers.openai').default_prompt
+    default_prompt = require('model.providers.openai').default_prompt,
+    prompts = require('model.prompts.starters'),
+    chats = require('model.prompts.chats')
   }, opts or {})
 
   if M.opts.prompts then
