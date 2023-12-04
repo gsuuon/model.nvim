@@ -297,32 +297,53 @@ local function setup_commands()
     function(cmd_params)
       local chat_name = cmd_params.fargs[1]
 
-      if chat_name ~= nil and chat_name ~= '' then
-        if vim.o.ft == 'mchat' then
-          error("Use ':Mchat' (without argument) to run the current chat")
-        end
+      if chat_name ~= nil and chat_name ~= '' then -- `:Mchat [name]`
 
         local chat_prompt = assert(
           vim.tbl_get(M.opts, 'chats', chat_name),
           'Chat prompt "' .. chat_name .. '" not found in setup({chats = {..}})'
         )
 
-        local want_visual_selection = cmd_params.range ~= 0
-
-        chat.create_new_chat(
-          chat_prompt,
-          chat_name,
+        local input_context =
           input.get_input_context(
-            input.get_source(want_visual_selection),
-            '' -- TODO args?
+            input.get_source(cmd_params.range ~= 0), -- want_visual_selection
+            '' -- TODO args to system instruction?
           )
-        )
-      else
+
+        if vim.o.ft == 'mchat' then
+          -- copy current messages to a new built buffer with target settings
+
+          local current = chat.parse(
+            table.concat(
+              vim.api.nvim_buf_get_lines(0, 0, -1, false),
+              '\n'
+            )
+          )
+
+          local target = chat.build_contents(chat_prompt, input_context)
+
+          chat.create_buffer(
+            chat.to_string(
+              {
+                config = target.config,
+                messages = current.contents.messages,
+              },
+              chat_name
+            )
+          )
+        else
+          local chat_contents = chat.build_contents(chat_prompt, input_context)
+          chat.create_buffer(chat.to_string(chat_contents, chat_name))
+        end
+
+      else -- `:Mchat`
+
         if vim.o.ft ~= 'mchat' then
-          error('Not in mchat buffer')
+          error('Not in mchat buffer. Either `:set ft=mchat` or run `:Mchat [name]`.')
         end
 
         chat.run_chat(M.opts)
+
       end
     end,
     {
@@ -355,8 +376,8 @@ local function setup_commands()
         local parsed = chat.parse(text)
         local total = count(vim.json.encode(parsed.contents.messages))
 
-        if parsed.contents.system then
-          total = total + count(parsed.contents.system)
+        if parsed.contents.config.system then
+          total = total + count(parsed.contents.config.system)
         end
 
         util.show(total)

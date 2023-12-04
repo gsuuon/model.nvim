@@ -165,13 +165,16 @@ function M.to_string(contents, name)
     end
   end
 
+  local last = contents.messages[#contents.messages]
+
+  if #contents.messages % 2 == 0 then
+    result = result .. '\n======\n'
+  end
+
   return vim.fn.trim(result, '\n', 2) -- trim trailing newline
 end
 
----@param chat_prompt ChatPrompt
----@param chat_name string
----@param input_context InputContext
-function M.create_new_chat(chat_prompt, chat_name, input_context)
+function M.build_contents(chat_prompt, input_context)
   local first_message_or_contents = chat_prompt.create(
     input_context.input,
     input_context.context
@@ -206,19 +209,33 @@ function M.create_new_chat(chat_prompt, chat_name, input_context)
     error('ChatPrompt.create() needs to return a string for the first message or an ChatContents')
   end
 
-  local new_buffer_text = M.to_string(chat_contents, chat_name)
+  return chat_contents
+end
 
+function M.create_buffer(text)
   vim.cmd.vnew()
   vim.o.ft = 'mchat'
   vim.cmd.syntax({'sync', 'fromstart'})
+
+  local lines = vim.fn.split(text, '\n')
+  ---@cast lines string[]
 
   vim.api.nvim_buf_set_lines(
     0,
     0,
     0,
     false,
-    vim.fn.split(new_buffer_text, '\n')
+    lines
   )
+end
+
+---@param chat_prompt ChatPrompt
+---@param chat_name string
+---@param input_context InputContext
+function M.create_new_chat(chat_prompt, chat_name, input_context)
+  local chat_contents = M.build_contents(chat_prompt, input_context)
+
+  M.create_buffer(M.to_string(chat_contents, chat_name))
 end
 
 ---@param opts { chats?: table<string, ChatPrompt> }
