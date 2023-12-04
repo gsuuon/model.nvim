@@ -23,7 +23,7 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
   - edit settings or messages at any point
   - basic syntax highlights and folds
   - can switch to different models
-  - save/reload chat session as a simple file
+  - save/load/run chat buffer as is
 
 ### Contents
 - [Setup](#-setup)
@@ -33,7 +33,7 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 - [Examples](#examples)
 - [Contributing](#contributing)
 
-If you have any questions feel free to ask in [discussions](https://github.com/gsuuon/model.nvim/discussions)!
+If you have any questions feel free to ask in [discussions](https://github.com/gsuuon/model.nvim/discussions)
 
 ---
 
@@ -61,8 +61,9 @@ require('lazy').setup({
     end,
     ft = 'mchat',
 
-    -- Request chat assistant response
     keys = {
+      {'<C-m>d', ':Mdelete<cr>', mode = 'n'},
+      {'<C-m>s', ':Mselect<cr>', mode = 'n'},
       {'<C-m><space>', ':Mchat<cr>', mode = 'n' }
     },
 
@@ -88,7 +89,7 @@ require('lazy').setup({
 
 ## 💭 Usage
 
-model.nvim comes with some [starter prompts](./lua/model/prompts/starters.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt (e.g. curl, ask gpt for intermediate data, then include data in a final prompt) look at the `openapi` starter prompt.
+**model.nvim** comes with some [starter prompts](./lua/model/prompts/starters.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt where we curl for openapi schema, ask gpt for relevant endpoint, then include that in a final prompt look at the `openapi` starter prompt.
 
 It can also be used from another plugin to easily add LLM capabilities, for an example look at [note.nvim](https://github.com/gsuuon/note.nvim/blob/main/lua/note/llm/prompts.lua) which adds some [buffer-local](https://github.com/gsuuon/note.nvim/blob/main/ftplugin/note.lua) prompts to note files.
 
@@ -217,9 +218,8 @@ Check out the [starter prompts](./lua/model/prompts/starters.lua) to see how to 
 ### Chat prompts
 [Chat prompts](#chatprompt) go in `setup({ prompts = {..}, chats = { [name] = { <chat prompt> }, .. } })` next to `prompts`. Defaults to [the starter chat prompts](./lua/model/prompts/chats.lua). 
 
-Use `:Mchat my_chat` to create a new mchat buffer with the `my_chat` chat prompt. You can save the buffer with `.mchat` extension and continue the chat later with `:Mchat` using the same settings (shown in the header). It's a normal buffer so you can edit messages or settings as needed. `mchat` comes with some syntax highlighting to show the various parts - name of the chatprompt runner, options and params in the header, and a system message. The header and llm responses have fold levels set.
+Use `:Mchat [name]` to create a new mchat buffer with that chat prompt. A brand new `mchat` buffer might look like this:
 
-A brand new `mchat` buffer might look like this:
 ```
 openai
 ---
@@ -234,7 +234,9 @@ openai
 Count to three
 ```
 
-Run `:Mchat` to get the assistant response.  You can edit any of the messages, params, options or system message (first line if it starts with `> `) as necessary throughout the conversation.
+Run `:Mchat` to get the assistant response.  You can edit any of the messages, params, options or system message (first line if it starts with `> `) as necessary throughout the conversation. You can also copy/paste to a new buffer, `:set ft=mchat` and run `:Mchat`.
+
+You can save the buffer with an `.mchat` extension to continue the chat later using the same settings shown in the header. `mchat` comes with some syntax highlighting and folds to show the various chat parts - name of the chatprompt runner, options and params in the header, and a system message.
 
 
 ### Library autoload
