@@ -106,6 +106,9 @@ function M.request_completion(handlers, params, options)
     cancel = curl.stream(
       {
         url = opts.url .. '/completion',
+        headers = {
+          ['Content-Type'] = 'application/json'
+        },
         method = 'POST',
         body = vim.tbl_extend('force', { stream = true }, params),
       },
