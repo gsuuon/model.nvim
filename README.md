@@ -216,6 +216,11 @@ Check out the [starter prompts](./lua/model/prompts/starters.lua) to see how to 
 
 
 ### Chat prompts
+
+
+https://github.com/gsuuon/llm.nvim/assets/6422188/b5082daa-173a-4739-9690-a40ce2c39d15
+
+
 [Chat prompts](#chatprompt) go in `setup({ prompts = {..}, chats = { [name] = { <chat prompt> }, .. } })` next to `prompts`. Defaults to [the starter chat prompts](./lua/model/prompts/chats.lua). 
 
 Use `:Mchat [name]` to create a new mchat buffer with that chat prompt. A brand new `mchat` buffer might look like this:
@@ -422,7 +427,7 @@ Setup `require('model').setup(SetupOptions)`
 #### Prompt
 Setup `require('model').setup({prompts = { [prompt name] = Prompt, .. }})`  
 Run `:Model [prompt name]`
-- `provider: Provider` - The API provider for this prompt, responsible for requesting and returning completion suggestions.
+- `provider: Provider` - The provider for this prompt, responsible for requesting and returning completion suggestions.
 - `builder: ParamsBuilder` - Converts input (either the visual selection or entire buffer text) and context to request parameters. Returns either a table of params or a function that takes a callback with the params.
 - `transform?: fun(string): string` - Optional function that transforms completed response text after on_finish, e.g. to extract code.
 - `mode?: SegmentMode | StreamHandlers` - Response handling mode. Defaults to 'append'. Can be one of 'append', 'replace', 'buffer', 'insert', or 'insert_or_replace'.
@@ -458,11 +463,11 @@ Exported as `local mode = require('model').mode`
 
 Setup `require('model').setup({chats = { [chat name] = ChatPrompt, .. }})`  
 Run `:Mchat [chat name]`
-- `provider: APIProvider` - The API provider for this chat prompt. This field contains the specific implementation of the chat feature being used.
+- `provider: Provider` - The provider for this chat prompt. This field contains the specific implementation of the chat feature being used.
 - `create: fun(input: string, context: Context): string | ChatContents` - Converts input and context into the first message text or ChatContents, which are written into the new chat buffer.
 - `run: fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil )` - Converts chat messages and configuration into completion request parameters. This function returns a table containing the required parameters for generating completions, or it can return a function that takes a callback to resolve the parameters.
-- `system?: string` - Optional system instruction used to provide specific instructions for the API provider.
-- `params?: table` - Static request parameters that are provided to the API provider during completion generation.
+- `system?: string` - Optional system instruction used to provide specific instructions for the provider.
+- `params?: table` - Static request parameters that are provided to the provider during completion generation.
 - `options?: table` - Provider options, which can be customized by the user to modify the chat prompt behavior.
 
 #### ChatMessage
@@ -470,8 +475,8 @@ Run `:Mchat [chat name]`
 - `content: string` - The actual content of the message.
 
 #### ChatConfig
-- `system?: string` - Optional system instruction used to provide context or specific instructions for the API provider.
-- `params?: table` - Static request parameters that are provided to the API provider during completion generation.
+- `system?: string` - Optional system instruction used to provide context or specific instructions for the provider.
+- `params?: table` - Static request parameters that are provided to the provider during completion generation.
 - `options?: table` - Provider options, which can be customized by the user to modify the chat prompt behavior.
 
 #### ChatContents
