@@ -71,27 +71,18 @@ local function create_segment(source, segment_mode, hl_group)
       return segment.create_segment_at(#source.lines, 0, hl_group, 0)
     end
   elseif segment_mode == M.mode.BUFFER then
-    -- Find or create a scratch buffer for this plugin
-    local bufname = '__model_scratch_buf__'
-    local bufnr = vim.fn.bufnr(bufname, true)
+    vim.cmd.vnew()
 
-    if bufnr == -1 then
-      bufnr = vim.api.nvim_create_buf(true, true)
-      vim.api.nvim_buf_set_name(bufnr, bufname)
-    end
+    vim.api.nvim_set_option_value('buflisted', true, { scope = 'local' })
+    vim.api.nvim_set_option_value('buftype', 'nowrite', { scope = 'local' })
 
-    vim.api.nvim_buf_set_option(bufnr, 'buflisted', true)
-    vim.api.nvim_buf_set_option(bufnr, 'buftype', 'nowrite')
+    table.insert(source.lines, '')
 
-    vim.api.nvim_buf_set_lines(bufnr, -2, -1, false, source.lines)
-    vim.api.nvim_buf_set_lines(bufnr, -1, -1, false, {'',''})
-
-    -- Open the existing buffer or create a new one
-    vim.api.nvim_set_current_buf(bufnr)
+    vim.api.nvim_buf_set_lines(0, -2, -1, false, source.lines)
 
     -- Create a segment at the end of the buffer
-    local line_count = vim.api.nvim_buf_line_count(bufnr)
-    return segment.create_segment_at(line_count, 0, hl_group, bufnr)
+    local line_count = vim.api.nvim_buf_line_count(0)
+    return segment.create_segment_at(line_count, 0, hl_group, 0)
   elseif segment_mode == M.mode.INSERT then
     local pos = util.cursor.position()
 

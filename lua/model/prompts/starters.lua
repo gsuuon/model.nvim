@@ -273,6 +273,7 @@ local starters = {
     -- Extract the relevant path from an OpenAPI spec and include in the gpt request.
     -- Expects schema url as a command arg.
     provider = openai,
+    mode = mode.BUFFER,
     builder = function(input, context)
       if context.args == nil or #context.args == 0 then
         error('Provide the schema url as a command arg (:M openapi https://myurl.json)')
