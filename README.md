@@ -95,10 +95,18 @@ Prompts can have 5 different [modes](#segmentmode) which determine what happens 
 
 ### Commands
 
-Run a prompt
+#### Run prompts
+Run a completion [prompt](#prompts)
 
 - `:Model [name]` or `:M [name]` — Start a completion of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided.
 
+Start a new [chat](#chat-prompts)
+- `:Mchat [name] [instruction]` — Start a new chat buffer with the `name` [ChatPrompt](#chatprompt). Provide an optional instruction override - if currently in an `mchat` buffer use `-` to re-use the same instruction (e.g. `:Mchat openai -`)
+
+Run a chat buffer
+- `:Mchat` — Request the assistant response in a chat buffer.
+
+#### Manage responses
 Responses are inserted with extmarks, so once the buffer is closed the responses become normal text and won't work with the following commands.
 <details>
 <summary>
