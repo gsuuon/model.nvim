@@ -91,7 +91,7 @@ require('lazy').setup({
 
 **model.nvim** comes with some [starter prompts](./lua/model/prompts/starters.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt where we curl for openapi schema, ask gpt for relevant endpoint, then include that in a final prompt look at the `openapi` starter prompt.
 
-It can also be used from another plugin to easily add LLM capabilities, for an example look at [note.nvim](https://github.com/gsuuon/note.nvim/blob/main/lua/note/llm/prompts.lua) which adds some [buffer-local](https://github.com/gsuuon/note.nvim/blob/main/ftplugin/note.lua) prompts to note files.
+Prompts can have 5 different [modes](#segmentmode) which determine what happens to the response: append, insert, replace, buffer, insert_or_replace. The default is to append, and with no visual selection the default input is the entire buffer, so your response will be at the end of the file. Modes are configured on a per-prompt basis.
 
 ### Commands
 
@@ -428,9 +428,9 @@ Setup `require('model').setup(SetupOptions)`
 Setup `require('model').setup({prompts = { [prompt name] = Prompt, .. }})`  
 Run `:Model [prompt name]`
 - `provider: Provider` - The provider for this prompt, responsible for requesting and returning completion suggestions.
-- `builder: ParamsBuilder` - Converts input (either the visual selection or entire buffer text) and context to request parameters. Returns either a table of params or a function that takes a callback with the params.
+- [`builder: ParamsBuilder`](#paramsbuilder) - Converts input (either the visual selection or entire buffer text) and [context](#context) to request parameters. Returns either a table of params or a function that takes a callback with the params.
 - `transform?: fun(string): string` - Optional function that transforms completed response text after on_finish, e.g. to extract code.
-- `mode?: SegmentMode | StreamHandlers` - Response handling mode. Defaults to 'append'. Can be one of 'append', 'replace', 'buffer', 'insert', or 'insert_or_replace'.
+- `mode?: SegmentMode | StreamHandlers` - Response handling mode. Defaults to 'append'. Can be one of 'append', 'replace', 'buffer', 'insert', or 'insert_or_replace'. Can be a table of [StreamHandlers](#streamhandlers) to manually handle the provider response.
 - `hl_group?: string` - Highlight group of active response.
 - `params?: table` - Static request parameters for this prompt.
 - `options?: table` - Optional options for the provider.
@@ -442,7 +442,7 @@ Run `:Model [prompt name]`
 
 #### ParamsBuilder
 (function)
-- `fun(input: string, context: Context): table | fun(resolve: fun(params: table))` - Converts input and context to request data. Returns either a table of params or a function that takes a callback with the params.
+- `fun(input: string, context: Context): table | fun(resolve: fun(params: table))` - Converts input (either the visual selection or entire buffer text) and [context](#context) to request parameters. Returns either a table of params or a function that takes a callback with the params.
 
 #### SegmentMode
 (enum)
@@ -482,6 +482,21 @@ Run `:Mchat [chat name]`
 #### ChatContents
 - `config: ChatConfig` - Configuration for this chat buffer, used by `chatprompt.run`. This includes information such as the system instruction, static request parameters, and provider options.
 - `messages: ChatMessage[]` - Messages in the chat buffer.
+
+#### Context
+- `before: string` - The text present before the selection or cursor.
+- `after: string` - The text present after the selection or cursor.
+- `filename: string` - The filename of the buffer containing the selected text.
+- `args: string` - Any additional command arguments provided to the plugin.
+- `selection?: Selection` - An optional `Selection` object representing the selected text, if available.
+
+#### Position
+- `row: number` - The 0-indexed row of the position within the buffer.
+- `col: number or vim.v.maxcol` - The 0-indexed column of the position within the line. If `vim.v.maxcol` is provided, it indicates the end of the line.
+
+#### Selection
+- `start: Position` - The starting position of the selection within the buffer.
+- `stop: Position` - The ending position of the selection within the buffer.
 
 ## Examples
 
