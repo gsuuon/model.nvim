@@ -463,7 +463,7 @@ Exported as `local mode = require('model').mode`
 
 Setup `require('model').setup({chats = { [chat name] = ChatPrompt, .. }})`  
 Run `:Mchat [chat name]`
-- `provider: Provider` - The provider for this chat prompt. This field contains the specific implementation of the chat feature being used.
+- `provider: Provider` - The provider for this chat prompt.
 - `create: fun(input: string, context: Context): string | ChatContents` - Converts input and context into the first message text or ChatContents, which are written into the new chat buffer.
 - `run: fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil )` - Converts chat messages and configuration into completion request parameters. This function returns a table containing the required parameters for generating completions, or it can return a function that takes a callback to resolve the parameters.
 - `system?: string` - Optional system instruction used to provide specific instructions for the provider.
