@@ -295,7 +295,8 @@ local function setup_commands()
   vim.api.nvim_create_user_command(
     'Mchat',
     function(cmd_params)
-      local chat_name = cmd_params.fargs[1]
+      local chat_name = table.remove(cmd_params.fargs, 1)
+      local args = table.concat(cmd_params.fargs, ' ')
 
       if chat_name ~= nil and chat_name ~= '' then -- `:Mchat [name]`
 
@@ -307,7 +308,7 @@ local function setup_commands()
         local input_context =
           input.get_input_context(
             input.get_source(cmd_params.range ~= 0), -- want_visual_selection
-            '' -- TODO args to system instruction?
+            args
           )
 
         if vim.o.ft == 'mchat' then
@@ -322,6 +323,12 @@ local function setup_commands()
 
           local target = chat.build_contents(chat_prompt, input_context)
 
+          if args == '-' then -- if args is `-`, use the current system instruction
+            target.config.system = current.contents.config.system
+          elseif args ~= '' then -- if args is not empty, use that as system instruction
+            target.config.system = args
+          end
+
           chat.create_buffer(
             chat.to_string(
               {
@@ -333,6 +340,11 @@ local function setup_commands()
           )
         else
           local chat_contents = chat.build_contents(chat_prompt, input_context)
+
+          if args ~= '' then
+            chat_contents.config.system = args
+          end
+
           chat.create_buffer(chat.to_string(chat_contents, chat_name))
         end
 
@@ -350,7 +362,7 @@ local function setup_commands()
       desc = 'Mchat',
       force = true,
       range = true,
-      nargs = '?',
+      nargs = '*',
       complete = function(arglead)
         local chats = M.opts.chats
         if chats == nil then return end
