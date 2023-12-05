@@ -8,11 +8,11 @@ local M = {}
 ---@field position Position
 
 ---@class Context
----@field before string
----@field after string
----@field filename string
----@field args string
----@field selection? Selection
+---@field before string Text before the selection or cursor
+---@field after string Text after the selection or cursor
+---@field filename string Selection buffer filename
+---@field args string Additional command argument
+---@field selection? Selection Selection if given
 
 ---@class InputContext
 ---@field input string
