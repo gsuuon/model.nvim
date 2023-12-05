@@ -95,8 +95,11 @@ Prompts can have 5 different [modes](#segmentmode) which determine what happens 
 
 ### Commands
 
+Run a prompt
+
 - `:Model [name]` or `:M [name]` — Start a completion of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided.
 
+Responses are inserted with extmarks, so once the buffer is closed the responses become normal text and won't work with the following commands.
 <details>
 <summary>
 Select response
@@ -121,7 +124,30 @@ https://user-images.githubusercontent.com/6422188/233774216-4e100122-3a93-4dfb-a
 
 <details>
 <summary>
-🚧 WIP - Local vector store 
+Cancel response
+</summary>
+
+https://user-images.githubusercontent.com/6422188/233773436-3e9d2a15-bc87-47c2-bc5b-d62d62480297.mp4
+
+</details>
+
+- `:Mcancel` — Cancel the active response under the cursor.
+
+<details>
+<summary>
+Show response
+</summary>
+
+https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a699-6a8f5cf4bcd5.mp4
+
+</details>
+
+- `:Mshow` — Flash the response under the cursor if there is one.
+
+### 🚧 WIP - Local vector store 
+<details>
+<summary>
+Setup and usage
 </summary>
 
 ### Requirements
@@ -153,28 +179,6 @@ end
 - `:Mstore [command]`
   - `:Mstore init` — initialize a store.json file at the closest git root directory
   - `:Mstore query <query text>` — query a store.json
-
-<details>
-<summary>
-Cancel a long-running prompt
-</summary>
-
-https://user-images.githubusercontent.com/6422188/233773436-3e9d2a15-bc87-47c2-bc5b-d62d62480297.mp4
-
-</details>
-
-- `:Mcancel` — Cancel the active response under the cursor.
-
-<details>
-<summary>
-Show response
-</summary>
-
-https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a699-6a8f5cf4bcd5.mp4
-
-</details>
-
-- `:Mshow` — Flash the response under the cursor if there is one.
 
 
 ## 🧵Configuration
