@@ -71,7 +71,7 @@ local function command_request_completion(cmd_params)
     return prompt, table.concat(args, ' ')
   end
 
-  local prompt, args = get_prompt_and_args(cmd_params.fargs)
+  local prompt, args = get_prompt_and_args(cmd_params.fargs or {}) -- seems like fargs can be nil
   local want_visual_selection = cmd_params.range ~= 0
 
   return provider.request_completion(prompt, args, want_visual_selection)
