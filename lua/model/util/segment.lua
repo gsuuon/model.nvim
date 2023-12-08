@@ -2,7 +2,9 @@ local util = require('model.util')
 
 ---@class Segment
 ---@field add fun(text: string): nil
+---@field add_virt fun(text: string): nil
 ---@field set_text fun(text: string): nil
+---@field set_virt fun(text: string): nil
 ---@field clear_hl fun(): nil
 ---@field data table
 ---@field highlight fun(hl_group: string): nil
@@ -88,6 +90,8 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     }
   end
 
+  local virt_text = ''
+
   return {
 
     set_text = vim.schedule_wrap(function(text)
@@ -105,8 +109,8 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
         bufnr,
         mark.row,
         mark.col,
-        mark.details.end_row,
-        mark.details.end_col,
+        mark.details.end_row or mark.row,
+        mark.details.end_col or mark.col,
         lines
       )
 
@@ -117,6 +121,36 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
         end_col = end_pos.col,
         end_row = end_pos.row,
         hl_group = _hl_group
+      })
+    end),
+
+    set_virt = vim.schedule_wrap(function(text)
+      local mark = get_details()
+
+      virt_text = text
+
+      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, {
+        id = _ext_id,
+        hl_group = _hl_group,
+        virt_text = {
+          { virt_text, _hl_group }
+        },
+        virt_text_pos = 'inline'
+      })
+    end),
+
+    add_virt = vim.schedule_wrap(function(text)
+      local mark = get_details()
+
+      virt_text = virt_text .. text
+
+      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, {
+        id = _ext_id,
+        hl_group = _hl_group,
+        virt_text = {
+          { virt_text, _hl_group }
+        },
+        virt_text_pos = 'inline'
       })
     end),
 
