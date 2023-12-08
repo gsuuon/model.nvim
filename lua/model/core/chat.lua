@@ -280,6 +280,7 @@ function M.run_chat(opts)
       seg.clear_hl()
     end,
     on_error = error
+    segment = seg
   }
 
   local options = parsed.contents.config.options or {}

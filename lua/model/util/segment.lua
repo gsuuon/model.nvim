@@ -6,6 +6,7 @@ local util = require('model.util')
 ---@field clear_hl fun(): nil
 ---@field data table
 ---@field highlight fun(hl_group: string): nil
+---@field details fun(): {row: number, col: number, details: table, bufnr: number}
 
 
 local M = {
@@ -99,6 +100,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
         vim.cmd.undojoin()
       end
 
+      -- TODO FIXME can end_row be before row? no docs on the details dict
       vim.api.nvim_buf_set_text(
         bufnr,
         mark.row,

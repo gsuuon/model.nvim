@@ -1,5 +1,6 @@
-local curl = require('model.util.curl')
 local util = require('model.util')
+local curl = require('model.util.curl')
+local segment = require('model.util.segment')
 
 local M = {}
 
@@ -11,11 +12,50 @@ local function extract_text_response(candidate)
   return candidate.output
 end
 
+local function scroll(text, rate, set)
+  local run = true
+
+  local function scroll_(t)
+    vim.defer_fn(function ()
+      if run then
+        local tail = t:sub(#t)
+        local head = t:sub(1, #t - 1)
+        local text_ = tail .. head
+
+        set('<' .. text_ .. '>')
+
+        return scroll_(text_)
+      end
+    end, rate)
+  end
+
+  scroll_(text)
+
+  return function()
+    set('')
+    run = false
+  end
+end
+
+local function show_pending_marquee(handlers)
+  if handlers.segment then
+    local handler_seg = handlers.segment.details()
+    local pending = segment.create_segment_at(
+      handler_seg.row + 1,
+      handler_seg.col,
+      'Comment'
+    )
+    return scroll('PaLM   ', 160, pending.set_text)
+  end
+
+  return function() end
+end
+
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for PaLM endpoint
 ---@param options { model: string, method: string }
-function M.request_completion(handlers, params, _options)
-  local options = _options or {}
+function M.request_completion(handlers, params, options)
+  options = options or {}
 
   local model = options.model or 'chat-bison-001'
   local method = options.method or 'generateMessage'
@@ -27,7 +67,7 @@ function M.request_completion(handlers, params, _options)
     extract = extract_text_response
   end
 
-  handlers.on_partial('<- palm ->') -- on_finish should ovewrite all partials
+  local remove_marquee = show_pending_marquee(handlers)
 
   local function handle_raw(raw_data)
     local response = util.json.decode(raw_data)
@@ -38,6 +78,7 @@ function M.request_completion(handlers, params, _options)
 
     if response.error ~= nil or not response.candidates then
       handlers.on_error(response)
+      remove_marquee()
     else
       local first_candidate = response.candidates[1]
 
@@ -49,6 +90,7 @@ function M.request_completion(handlers, params, _options)
 
       -- TODO change reason to error, return nil for successful completion
       handlers.on_finish(result, 'stop')
+      remove_marquee()
     end
   end
 
