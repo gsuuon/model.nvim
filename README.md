@@ -198,7 +198,7 @@ require('model').setup({
   prompts = {...},
   chats = {...},
   hl_group = 'Comment',
-  join_undo = false,
+  join_undo = true,
 })
 ```
 
@@ -428,6 +428,8 @@ Basic provider example:
 ## Reference
 `params` are generally data that go directly into the request sent by the provider (e.g. content, temperature). `options` are used _by_ the provider to know how to operate (e.g. server url or model name if a local LLM).
 
+The following are types and the fields they contain:
+
 #### SetupOptions
 Setup `require('model').setup(SetupOptions)`
 - `default_prompt?: string` - The default prompt to use with `:Model` or `:M`. Default is the openai starter.
@@ -438,7 +440,7 @@ Setup `require('model').setup(SetupOptions)`
 
 #### Prompt
 Setup `require('model').setup({prompts = { [prompt name] = Prompt, .. }})`  
-Run `:Model [prompt name]`
+Run `:Model [prompt name]` or `:M [prompt name]`
 - `provider: Provider` - The provider for this prompt, responsible for requesting and returning completion suggestions.
 - [`builder: ParamsBuilder`](#paramsbuilder) - Converts input (either the visual selection or entire buffer text) and [context](#context) to request parameters. Returns either a table of params or a function that takes a callback with the params.
 - `transform?: fun(string): string` - Optional function that transforms completed response text after on_finish, e.g. to extract code.
