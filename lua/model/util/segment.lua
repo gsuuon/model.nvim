@@ -90,10 +90,9 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
   return {
 
     set_text = vim.schedule_wrap(function(text)
+      if text == nil then return end
+
       local lines = util.string.split_char(text, '\n')
-
-      if lines == nil or #lines == 0 then return end
-
       local mark = get_details()
 
       if _did_add_text_to_undo and join_undo then
