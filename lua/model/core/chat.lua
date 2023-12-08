@@ -238,6 +238,12 @@ function M.create_new_chat(chat_prompt, chat_name, input_context)
   M.create_buffer(M.to_string(chat_contents, chat_name))
 end
 
+local function needs_nl(buf_lines)
+  local last_line = buf_lines[#buf_lines]
+
+  return not last_line or vim.fn.trim(last_line) ~= ''
+end
+
 ---@param opts { chats?: table<string, ChatPrompt> }
 function M.run_chat(opts)
   local buf_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
@@ -266,20 +272,29 @@ function M.run_chat(opts)
 
   local seg = segment.create_segment_at(#buf_lines, 0)
 
-  local last_line = buf_lines[#buf_lines]
-  if not last_line or vim.fn.trim(last_line) ~= '' then
-    seg.add('\n')
-  end
+  local starter_seperator = needs_nl(buf_lines) and '\n======\n' or '======\n'
+  seg.add(starter_seperator)
 
-  seg.add('======\n')
-
+  ---@type StreamHandlers
   local handlers = {
     on_partial = seg.add,
-    on_finish = function()
-      seg.add('\n======\n')
+    on_finish = function(text, reason)
+      if text then
+        seg.set_text(starter_seperator .. text .. '\n======\n')
+      else
+        seg.add('\n======\n')
+      end
+
+      seg.clear_hl()
+      if reason and reason ~= 'stop' and reason ~= 'done' then
+        vim.notify(reason)
+      end
+    end,
+    on_error = function(err, label)
+      vim.notify(vim.inspect(err), vim.log.levels.ERROR, { title = label })
+      seg.set_text('')
       seg.clear_hl()
     end,
-    on_error = error
     segment = seg
   }
 
