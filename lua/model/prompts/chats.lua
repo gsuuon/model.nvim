@@ -1,4 +1,5 @@
 local openai = require('model.providers.openai')
+local palm = require('model.providers.palm')
 local zephyr_fmt = require('model.format.zephyr')
 local llamacpp = require('model.providers.llamacpp')
 
@@ -51,6 +52,30 @@ local chats = {
     run = function(messages, config)
       return {
         prompt = zephyr_fmt.content_to_prompt(messages, config)
+      }
+    end
+  },
+  palm = {
+    provider = palm,
+    system = 'You are a helpful assistant',
+    create = function(input, context)
+      return context.selection and input or ''
+    end,
+    options = {
+      method = 'generateMessage',
+      model = 'chat-bison-001'
+    },
+    run = function(messages, config)
+      return {
+        prompt = {
+          context = config.system,
+          messages = vim.tbl_map(function(msg)
+            return {
+              content = msg.content,
+              author = msg.role
+            }
+          end, messages)
+        }
       }
     end
   }
