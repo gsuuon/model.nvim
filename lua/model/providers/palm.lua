@@ -41,11 +41,11 @@ local function show_pending_marquee(handlers)
   if handlers.segment then
     local handler_seg = handlers.segment.details()
     local pending = segment.create_segment_at(
-      handler_seg.row + 1,
-      handler_seg.col,
+      handler_seg.details.end_row,
+      handler_seg.details.end_col,
       'Comment'
     )
-    return scroll('PaLM   ', 160, pending.set_text)
+    return scroll('PaLM   ', 160, pending.set_virt)
   end
 
   return function() end
