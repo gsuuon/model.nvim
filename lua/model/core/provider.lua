@@ -139,7 +139,7 @@ local function create_prompt_handlers(prompt, seg)
   return {
     on_partial = function(partial)
       completion = completion .. partial
-      seg.add(partial)
+      seg.add_virt(partial)
     end,
 
     on_finish = function(complete_text, reason)
@@ -171,7 +171,7 @@ local function create_prompt_handlers(prompt, seg)
     on_error = function(data, label)
       util.eshow(data, 'stream error ' .. (label or ''))
     end,
-    
+
     segment = seg
   }
 end
