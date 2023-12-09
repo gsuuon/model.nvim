@@ -1,20 +1,23 @@
-local util = require('model.util')
-local async = require('model.util.async')
-local prompts = require('model.util.prompts')
-local mode = require('model').mode
-
-local chat = require('model.core.chat')
-local extract = require('model.prompts.extract')
-local consult = require('model.prompts.consult')
-
+-- providers
 local openai = require('model.providers.openai')
 local palm = require('model.providers.palm')
 local huggingface = require('model.providers.huggingface')
 local kobold = require('model.providers.kobold')
 local llamacpp = require('model.providers.llamacpp')
 local codellama = require('model.providers.codellama')
+local together = require('model.providers.together')
 
+-- prompt helpers
+local chat = require('model.core.chat')
+local extract = require('model.prompts.extract')
+local consult = require('model.prompts.consult')
 local llama2 = require('model.format.llama2')
+
+-- utils
+local util = require('model.util')
+local async = require('model.util.async')
+local prompts = require('model.util.prompts')
+local mode = require('model').mode
 
 local function standard_code(input, context)
   local surrounding_text = prompts.limit_before_after(context, 30)
@@ -122,6 +125,31 @@ local starters = {
     end
   },
   codellama = codellama.default_prompt,
+  ['together/stripedhyena'] = {
+    provider = together,
+    params = {
+      model = 'togethercomputer/StripedHyena-Nous-7B',
+      max_tokens = 512
+    },
+    builder = function(input)
+      return {
+        prompt = '### Instruction:\n' .. input .. '\n\n### Response:\n',
+        stop = '</s>'
+      }
+    end
+  },
+  ['together/phind-codellama34b_v2'] = {
+    provider = together,
+    params = {
+      model = 'Phind/Phind-CodeLlama-34B-v2',
+      max_tokens = 512
+    },
+    builder = function(input)
+      return {
+        prompt = '### System Prompt\nYou are an intellegient programming assistant\n\n### User Message\n' .. input  ..'\n\n### Assistant\n'
+      }
+    end
+  },
   ['hf starcoder'] = {
     provider = huggingface,
     options = {
