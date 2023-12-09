@@ -78,10 +78,8 @@ require('lazy').setup({
     --   })
     --
     --   require('model.providers.llamacpp').setup({
-    --     server = {
-    --       binary = '~/path/to/server/binary',
-    --       models = '~/path/to/models/directory'
-    --     }
+    --     binary = '~/path/to/server/binary',
+    --     models = '~/path/to/models/directory'
     --   })
     --end
   }
@@ -205,7 +203,7 @@ require('model').setup({
 
 ### Prompts
 
-[Prompts](#prompt) go in the `prompts` field of the setup table and are ran by the command `:Model [prompt name]` which will tab complete the available prompts. 
+[Prompts](#prompt) go in the `prompts` field of the setup table and are ran by the command `:Model [prompt name]` or `:M [prompt name]`. The commands tab-complete with the available prompts.
 
 With lazy.nvim:
 ```lua
@@ -236,7 +234,7 @@ https://github.com/gsuuon/llm.nvim/assets/6422188/b5082daa-173a-4739-9690-a40ce2
 
 [Chat prompts](#chatprompt) go in `setup({ prompts = {..}, chats = { [name] = { <chat prompt> }, .. } })` next to `prompts`. Defaults to [the starter chat prompts](./lua/model/prompts/chats.lua). 
 
-Use `:Mchat [name]` to create a new mchat buffer with that chat prompt. A brand new `mchat` buffer might look like this:
+Use `:Mchat [name]` to create a new mchat buffer with that chat prompt. `:Mchat ` will tab complete with available chat prompts. A brand new `mchat` buffer might look like this:
 
 ```
 openai
@@ -252,7 +250,7 @@ openai
 Count to three
 ```
 
-Run `:Mchat` to get the assistant response.  You can edit any of the messages, params, options or system message (first line if it starts with `> `) as necessary throughout the conversation. You can also copy/paste to a new buffer, `:set ft=mchat` and run `:Mchat`.
+Run `:Mchat` in the new buffer to get the assistant response.  You can edit any of the messages, params, options or system instruction (the first line, if it starts with `> `) as necessary throughout the conversation. You can also copy/paste to a new buffer, `:set ft=mchat` and run `:Mchat`.
 
 You can save the buffer with an `.mchat` extension to continue the chat later using the same settings shown in the header. `mchat` comes with some syntax highlighting and folds to show the various chat parts - name of the chatprompt runner, options and params in the header, and a system message.
 
@@ -316,10 +314,8 @@ You can start the server manually or have it autostart when you run a llamacpp p
       require('model').setup({ .. })
 
       require('model.providers.llamacpp').setup({
-        server = {
-          binary = '~/path/to/server/binary',
-          models = '~/path/to/models/directory'
-        }
+        binary = '~/path/to/server/binary',
+        models = '~/path/to/models/directory'
       })
     end
     ```
@@ -354,12 +350,12 @@ You can start the server manually or have it autostart when you run a llamacpp p
     })
     ```
 
-#### Llamacpp setup options
+#### LlamaCpp setup options
 Setup `require('model.providers.llamacpp').setup({})`
- - `server?.binary: string` - path to the llamacpp server binary executable
- - `server?.models: string` - path to the parent directory of the models (joined with `prompt.model`)
+ - `binary: string` - path to the llamacpp server binary executable
+ - `models: string` - path to the parent directory of the models (joined with `prompt.model`)
 
-#### Llamacpp prompt options
+#### LlamaCpp prompt options
 - `model: string (optional)` - The path to the LLM model file to use with server autostart. If not specified, the default model will be used.
 - `args: string[] (optional)` - An array of additional arguments to pass to the LLM server at startup.
 - `url: string (optional)` - The URL to connect to the LLM server instead of using the default one. This can be useful for connecting to a remote LLM server or a customized local one.
