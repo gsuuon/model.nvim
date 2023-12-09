@@ -234,7 +234,9 @@ https://github.com/gsuuon/llm.nvim/assets/6422188/b5082daa-173a-4739-9690-a40ce2
 
 [Chat prompts](#chatprompt) go in `setup({ prompts = {..}, chats = { [name] = { <chat prompt> }, .. } })` next to `prompts`. Defaults to [the starter chat prompts](./lua/model/prompts/chats.lua). 
 
-Use `:Mchat [name]` to create a new mchat buffer with that chat prompt. `:Mchat ` will tab complete with available chat prompts. A brand new `mchat` buffer might look like this:
+Use `:Mchat [name]` to create a new mchat buffer with that chat prompt. `:Mchat ` will tab complete with available chat prompts. You can prefix the command with `:horizontal Mchat [name]` or `:tab Mchat [name]` to create the buffer in a horizontal split or new tab.
+
+A brand new `mchat` buffer might look like this:
 
 ```
 openai
