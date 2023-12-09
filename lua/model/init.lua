@@ -345,7 +345,7 @@ local function setup_commands()
             chat_contents.config.system = args
           end
 
-          chat.create_buffer(chat.to_string(chat_contents, chat_name))
+          chat.create_buffer(chat.to_string(chat_contents, chat_name), chat_name)
         end
 
       else -- `:Mchat`
