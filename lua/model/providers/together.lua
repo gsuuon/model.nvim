@@ -4,10 +4,10 @@ local p_util = require('model.providers.util')
 
 ---@type Provider
 local M = {
-  request_completion = function (handler, params, options)
+  request_completion = function (handler, params)
     return curl.stream(
       {
-        url = 'https://api.together.xyz/v1/completions',
+        url = 'https://api.together.xyz/inference',
         headers = {
           ['Authorization'] = 'Bearer ' .. util.env('TOGETHER_API_KEY'),
           ['accept'] = 'application/json',
