@@ -212,11 +212,10 @@ function M.build_contents(chat_prompt, input_context)
   return chat_contents
 end
 
-function M.create_buffer(text, name)
+function M.create_buffer(text)
   vim.cmd.vnew()
   vim.o.ft = 'mchat'
   vim.cmd.syntax({'sync', 'fromstart'})
-  vim.cmd.f(name .. '.mchat')
 
   local lines = vim.fn.split(text, '\n')
   ---@cast lines string[]
