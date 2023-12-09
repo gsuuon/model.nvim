@@ -367,7 +367,9 @@ local function setup_commands()
         local chats = M.opts.chats
         if chats == nil then return end
 
-        local chat_names = vim.tbl_keys(chats)
+        local chat_names = vim.tbl_map(function(name)
+          return name:gsub(' ', '\\ ')
+        end, vim.tbl_keys(chats))
 
         if #arglead == 0 then return chat_names end
 
