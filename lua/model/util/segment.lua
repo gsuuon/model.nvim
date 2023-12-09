@@ -92,6 +92,34 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
 
   local virt_text = ''
 
+  local function set_virt_text(text)
+    -- virtual text can't be multiline and doesn't wrap
+    -- this workaround will set the first line of the virt text at the mark
+    -- the other lines will start at the row under
+    -- this can be weird in some cases. If the virt text is intended to replace
+    -- a bit of inline text, e.g. foo<virt>baz -- in a multiline case the first
+    -- line goes at <virt> while the rest will start the line under, leaving the baz.
+    local mark = get_details()
+    virt_text = text
+
+    local virt_lines = vim.tbl_map(
+      function(line)
+        return { { line, _hl_group} }
+      end,
+      util.string.split_char(virt_text, '\n')
+    )
+
+    local t = table.remove(virt_lines, 1)
+
+    vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, {
+      id = _ext_id,
+      hl_group = _hl_group,
+      virt_text = t,
+      virt_text_pos = 'inline',
+      virt_lines = #virt_lines > 0 and virt_lines or nil
+    })
+  end
+
   return {
 
     set_text = vim.schedule_wrap(function(text)
@@ -124,34 +152,10 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       })
     end),
 
-    set_virt = vim.schedule_wrap(function(text)
-      local mark = get_details()
-
-      virt_text = text
-
-      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, {
-        id = _ext_id,
-        hl_group = _hl_group,
-        virt_text = {
-          { virt_text, _hl_group }
-        },
-        virt_text_pos = 'inline'
-      })
-    end),
+    set_virt = vim.schedule_wrap(set_virt_text),
 
     add_virt = vim.schedule_wrap(function(text)
-      local mark = get_details()
-
-      virt_text = virt_text .. text
-
-      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, {
-        id = _ext_id,
-        hl_group = _hl_group,
-        virt_text = {
-          { virt_text, _hl_group }
-        },
-        virt_text_pos = 'inline'
-      })
+      set_virt_text(virt_text .. text)
     end),
 
     add = vim.schedule_wrap(function(text)

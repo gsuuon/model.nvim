@@ -139,7 +139,7 @@ local function create_prompt_handlers(prompt, seg)
   return {
     on_partial = function(partial)
       completion = completion .. partial
-      seg.add_virt(partial)
+      seg.add(partial)
     end,
 
     on_finish = function(complete_text, reason)
