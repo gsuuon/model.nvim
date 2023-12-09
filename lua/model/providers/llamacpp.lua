@@ -13,15 +13,14 @@ local stop_server_augroup = vim.api.nvim_create_augroup('ModelNvimLlamaCppServer
 ---@param args string[]
 local function resolve_system_opts(model, args)
   assert(M.options, 'Missing llamacpp provider options. Call require("model.providers.llamacpp").setup({})')
-  assert(M.options.server, 'Llamacpp options missing server')
-  assert(M.options.server.binary, 'Llamacpp options missing server binary path')
-  assert(M.options.server.models, 'Llamacpp options missing models path')
+  assert(M.options.binary, 'Llamacpp options missing server binary path')
+  assert(M.options.models, 'Llamacpp options missing models path')
 
-  local path = vim.fs.normalize(M.options.server.binary)
+  local path = vim.fs.normalize(M.options.binary)
   local cmd = vim.fn.exepath(path)
   assert(cmd ~= '', 'Executable not found at ' .. path)
 
-  local model_path = vim.fs.normalize(vim.fs.joinpath(M.options.server.models, model))
+  local model_path = vim.fs.normalize(vim.fs.joinpath(M.options.models, model))
 
   return {
     cmd = cmd,
@@ -154,7 +153,11 @@ M.default_prompt = {
   end
 }
 
----@param options { server?: { binary: string, models: string } } server binary and models directory path
+---@class LlamaCppSetupOptions
+---@field binary string Server binary path
+---@field models string Models directory
+
+---@param options LlamaCppSetupOptions
 function M.setup(options)
   M.options = options
 end
