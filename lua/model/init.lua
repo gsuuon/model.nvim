@@ -336,7 +336,8 @@ local function setup_commands()
                 messages = current.contents.messages,
               },
               chat_name
-            )
+            ),
+            cmd_params.smods
           )
         else
           local chat_contents = chat.build_contents(chat_prompt, input_context)
@@ -345,7 +346,10 @@ local function setup_commands()
             chat_contents.config.system = args
           end
 
-          chat.create_buffer(chat.to_string(chat_contents, chat_name))
+          chat.create_buffer(
+            chat.to_string(chat_contents, chat_name),
+            cmd_params.smods
+          )
         end
 
       else -- `:Mchat`

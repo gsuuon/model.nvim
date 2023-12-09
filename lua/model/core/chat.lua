@@ -212,8 +212,15 @@ function M.build_contents(chat_prompt, input_context)
   return chat_contents
 end
 
-function M.create_buffer(text)
-  vim.cmd.vnew()
+function M.create_buffer(text, smods)
+  if smods.tab then
+    vim.cmd.tabnew()
+  elseif smods.horizontal then
+    vim.cmd.new()
+  else
+    vim.cmd.vnew()
+  end
+
   vim.o.ft = 'mchat'
   vim.cmd.syntax({'sync', 'fromstart'})
 
