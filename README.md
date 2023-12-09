@@ -29,6 +29,7 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 - [Setup](#-setup)
 - [Usage](#-usage)
 - [Config](#configuration)
+- [Providers](#providers)
 - [Reference](#reference)
 - [Examples](#examples)
 - [Contributing](#contributing)
@@ -268,73 +269,45 @@ require('model').setup({
 
 I recommend setting this only during active prompt development, and switching to a normal `require` otherwise.
 
-### Providers
-#### OpenAI ChatGPT (default)
-Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform.openai.com/account/api-keys) before starting nvim. OpenAI prompts can take an additional option field with a table containing `{ url?, endpoint?, authorization?, curl_args? }` fields to talk to compatible API's. Check the `compat` starter prompt for an example.
+## Providers
 
-<details>
-<summary>
-Configuration
-</summary>
+- [openai](#openai-chatgpt)
+- [llama.cpp](#llamacpp)
+  - [codellama](#codellama)
+- [google palm](#google-palm)
+- [together](#together)
+- [huggingface](#huggingface-api)
+- [kobold](#kobold)
+- [your own](#adding-your-own)
 
-Add default request parameters for [/chat/completions](https://platform.openai.com/docs/api-reference/chat/create) with `initialize()`:
+### OpenAI ChatGPT
+(default)
 
+Set the `OPENAI_API_KEY` environment variable to your [api key](https://platform.openai.com/account/api-keys).
+
+#### openai prompt options
+OpenAI prompts can take an additional option field to talk to compatible API's.
+
+```lua
+  compat = vim.tbl_extend('force', openai.default_prompt, {
+    options = {
+      url = 'http://127.0.0.1:8000/v1/'
+    }
+  })
 ```
-require('model.providers.openai').initialize({
-  max_tokens = 120,
-  temperature = 0.7,
-  model = 'gpt-3.5-turbo-0301'
-})
-```
+
+- `url?: string` - (Optional) Custom URL to use for API requests. Defaults to 'https://api.openai.com/v1/'. If `url` is provided then the environment key will not be sent, you'll need to include `authorization`.
+- `endpoint?: string` - (Optional) Endpoint to use in the request URL. Defaults to 'chat/completions'.
+- `authorization?: string` - (Optional) Authorization header to include in the request. Overrides any authorization given through the environment key.
 
 </details>
 
-#### Google PaLM
-Set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey).
-
-Check the palm prompt in [starter prompts](./lua/model/prompts/starters.lua) for a reference. Palm provider defaults to the chat model (`chat-bison-001`). The builder's return params can include `model = 'text-bison-001'` to use the text model instead.
-
-Params should be either a [generateMessage](https://developers.generativeai.google/api/rest/generativelanguage/models/generateMessage#request-body) body by default, or a [generateText](https://developers.generativeai.google/api/rest/generativelanguage/models/generateText#request-body) body if using `model = 'text-bison-001'`.
-
-```lua
-['palm text completion'] = {
-  provider = palm,
-  builder = function(input, context)
-    return {
-      model = 'text-bison-001',
-      prompt = {
-        text = input
-      },
-      temperature = 0.2
-    }
-  end
-}
-```
-
-#### Huggingface API
-Set the `HUGGINGFACE_API_KEY` environment variable to your [api key](https://huggingface.co/settings/tokens).
-
-Set the model field on the params returned by the builder (or the static params in `prompt.params`). Set `params.stream = false` for models which don't support it (e.g. `gpt2`). Check [huggingface api docs](https://huggingface.co/docs/api-inference/detailed_parameters) for per-task request body types.
-
-```lua
-['huggingface bigcode'] = {
-  provider = huggingface,
-  params = {
-    model = 'bigcode/starcoder'
-  },
-  builder = function(input)
-    return { inputs = input }
-  end
-}
-```
-
-#### LlamaCpp
-
+### LlamaCpp
 This provider uses the [llama.cpp server](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md).
 
 You can start the server manually or have it autostart when you run a llamacpp prompt. To autostart the server call `require('model.providers.llamacpp').setup({})` in your config function and set a `model` in the prompt options (see below). Leave `model` empty to not autostart. The server restarts if the prompt model or args change.
 
-##### Setup
+#### Setup
 1. Build [llama.cpp](https://github.com/ggerganov/llama.cpp)
 1. Download the model you want to use, e.g. [Zephyr 7b beta](https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF/tree/main)
 1. Setup the llamacpp provider if you plan to use autostart:
@@ -381,37 +354,83 @@ You can start the server manually or have it autostart when you run a llamacpp p
     })
     ```
 
-Llamacpp setup options:
+#### Llamacpp setup options
+Setup `require('model.providers.llamacpp').setup({})`
  - `server?.binary: string` - path to the llamacpp server binary executable
  - `server?.models: string` - path to the parent directory of the models (joined with `prompt.model`)
 
-Llamacpp prompt options:
- - `options.model?: string` - use with `require('model.providers.llamacpp').setup()` to autostart the server with this model.
- - `options.args?: string[]` - additional arguments for the server.
- - `options.url?: string` - url of the server. Defaults to http://localhost:8080.
+#### Llamacpp prompt options
+- `model: string (optional)` - The path to the LLM model file to use with server autostart. If not specified, the default model will be used.
+- `args: string[] (optional)` - An array of additional arguments to pass to the LLM server at startup.
+- `url: string (optional)` - The URL to connect to the LLM server instead of using the default one. This can be useful for connecting to a remote LLM server or a customized local one.
 
 
-#### Codellama
+### Codellama
 This is a llama.cpp based provider specialized for codellama infill / Fill in the Middle. Only 7B and 13B models support FIM, and the base models (not Instruct) seem to work better. Start the llama.cpp server example with one of the two supported models before using this provider.
 
-#### Kobold
+
+### Google PaLM
+Set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey).
+
+Check the palm prompt in [starter prompts](./lua/model/prompts/starters.lua) for a reference. Palm provider defaults to the chat model (`chat-bison-001`). The builder's return params can include `model = 'text-bison-001'` to use the text model instead.
+
+Params should be either a [generateMessage](https://developers.generativeai.google/api/rest/generativelanguage/models/generateMessage#request-body) body by default, or a [generateText](https://developers.generativeai.google/api/rest/generativelanguage/models/generateText#request-body) body if using `model = 'text-bison-001'`.
+
+```lua
+['palm text completion'] = {
+  provider = palm,
+  builder = function(input, context)
+    return {
+      model = 'text-bison-001',
+      prompt = {
+        text = input
+      },
+      temperature = 0.2
+    }
+  end
+}
+```
+
+### Together
+Set the `TOGETHER_API_KEY` environment variable to your [api key](https://api.together.xyz/settings/api-keys). Params go to the [inference endpoint](https://docs.together.ai/reference/inference).
+
+### Huggingface API
+Set the `HUGGINGFACE_API_KEY` environment variable to your [api key](https://huggingface.co/settings/tokens).
+
+Set the model field on the params returned by the builder (or the static params in `prompt.params`). Set `params.stream = false` for models which don't support it (e.g. `gpt2`). Check [huggingface api docs](https://huggingface.co/docs/api-inference/detailed_parameters) for per-task request body types.
+
+```lua
+['huggingface bigcode'] = {
+  provider = huggingface,
+  params = {
+    model = 'bigcode/starcoder'
+  },
+  builder = function(input)
+    return { inputs = input }
+  end
+}
+```
+
+### Kobold
 For older models that don't work with llama.cpp, koboldcpp might still support them. Check their [repo](https://github.com/LostRuins/koboldcpp/) for setup info.
 
-#### Adding your own
+### Adding your own
 [Providers](#provider) implement a simple interface so it's easy to add your own. Just set your provider as the `provider` field in a prompt. Your provider needs to kick off the request and call the handlers as data streams in, finishes, or errors. Check [the hf provider](./lua/model/providers/huggingface.lua) for a simpler example supporting server-sent events streaming. If you don't need streaming, just make a request and call `handler.on_finish` with the result.
 
 Basic provider example:
 ```lua
-{
+local test_provider = {
+  request_completion = function(handlers, params, options)
+    vim.notify(vim.inspect({params=params, options=options}))
+    handlers.on_partial('a response')
+    handlers.on_finish()
+  end
+}
+
+require('model').setup({
   prompts = {
-    test = {
-      provider = {
-        request_completion = function(handlers, params, options)
-          vim.notify(vim.inspect({params=params, options=options}))
-          handlers.on_partial('a response')
-          handlers.on_finish()
-        end
-      },
+    test_prompt = {
+      provider = test_provider,
       builder = function(input, context)
         return {
           input = input,
@@ -420,14 +439,12 @@ Basic provider example:
       end
     }
   }
-}
+})
 ```
 
 --- 
 
 ## Reference
-`params` are generally data that go directly into the request sent by the provider (e.g. content, temperature). `options` are used _by_ the provider to know how to operate (e.g. server url or model name if a local LLM).
-
 The following are types and the fields they contain:
 
 #### SetupOptions
@@ -439,6 +456,8 @@ Setup `require('model').setup(SetupOptions)`
 - `join_undo?: boolean` - Whether to join streaming response text as a single undo command. When true, unrelated edits during streaming will also be undone. Default is `true`.
 
 #### Prompt
+`params` are generally data that go directly into the request sent by the provider (e.g. content, temperature). `options` are used by the provider to know how to handle the request (e.g. server url or model name if a local LLM).
+
 Setup `require('model').setup({prompts = { [prompt name] = Prompt, .. }})`  
 Run `:Model [prompt name]` or `:M [prompt name]`
 - `provider: Provider` - The provider for this prompt, responsible for requesting and returning completion suggestions.
@@ -474,12 +493,13 @@ Exported as `local mode = require('model').mode`
 - `on_error: fun(data: any, label?: string): nil` - Called by the provider to pass error data and an optional label during a completion request.
 
 #### ChatPrompt
+`params` are generally data that go directly into the request sent by the provider (e.g. content, temperature). `options` are used by the provider to know how to handle the request (e.g. server url or model name if a local LLM).
 
 Setup `require('model').setup({chats = { [chat name] = ChatPrompt, .. }})`  
 Run `:Mchat [chat name]`
 - `provider: Provider` - The provider for this chat prompt.
 - `create: fun(input: string, context: Context): string | ChatContents` - Converts input and context into the first message text or ChatContents, which are written into the new chat buffer.
-- `run: fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil )` - Converts chat messages and configuration into completion request parameters. This function returns a table containing the required parameters for generating completions, or it can return a function that takes a callback to resolve the parameters.
+- `run: fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil )` - Converts chat messages and configuration into completion request params. This function returns a table containing the required params for generating completions, or it can return a function that takes a callback to resolve the params.
 - `system?: string` - Optional system instruction used to provide specific instructions for the provider.
 - `params?: table` - Static request parameters that are provided to the provider during completion generation.
 - `options?: table` - Provider options, which can be customized by the user to modify the chat prompt behavior.
@@ -504,13 +524,13 @@ Run `:Mchat [chat name]`
 - `args: string` - Any additional command arguments provided to the plugin.
 - `selection?: Selection` - An optional `Selection` object representing the selected text, if available.
 
-#### Position
-- `row: number` - The 0-indexed row of the position within the buffer.
-- `col: number or vim.v.maxcol` - The 0-indexed column of the position within the line. If `vim.v.maxcol` is provided, it indicates the end of the line.
-
 #### Selection
 - `start: Position` - The starting position of the selection within the buffer.
 - `stop: Position` - The ending position of the selection within the buffer.
+
+#### Position
+- `row: number` - The 0-indexed row of the position within the buffer.
+- `col: number or vim.v.maxcol` - The 0-indexed column of the position within the line. If `vim.v.maxcol` is provided, it indicates the end of the line.
 
 ## Examples
 

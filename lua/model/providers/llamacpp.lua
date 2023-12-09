@@ -85,11 +85,14 @@ function M.start_server(model, args, on_finish)
   end
 end
 
----@alias LlamaCppOptions { model?: string, args?: string[], url?: string }
+---@class LlamaCppOptions
+---@field model? string Model to use with server autostart
+---@field args? string[] Extra server args
+---@field url? string Override default url
 
 ---@param handlers StreamHandlers
 ---@param params? any other params see : https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md
----@param options? LlamaCppOptions set model to autostart server -- need to call llamacpp.setup({}) first
+---@param options? LlamaCppOptions
 function M.request_completion(handlers, params, options)
   ---@type LlamaCppOptions
   local opts = vim.tbl_extend('force', {
