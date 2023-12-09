@@ -101,7 +101,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       local mark = get_details()
 
       if _did_add_text_to_undo and join_undo then
-        vim.cmd.undojoin()
+        pcall(vim.cmd.undojoin)
       end
 
       -- TODO FIXME can end_row be before row? no docs on the details dict
@@ -165,7 +165,8 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       local c = mark.details.end_col
 
       if _did_add_text_to_undo and join_undo then
-        vim.cmd.undojoin()
+        pcall(vim.cmd.undojoin) -- Errors if user did undo immediately before
+                                -- e.g. during a stream
       end
 
       vim.api.nvim_buf_set_text(bufnr, r, c, r, c, lines)
