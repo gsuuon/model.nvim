@@ -252,7 +252,7 @@ openai
 Count to three
 ```
 
-Run `:Mchat` in the new buffer to get the assistant response.  You can edit any of the messages, params, options or system instruction (the first line, if it starts with `> `) as necessary throughout the conversation. You can also copy/paste to a new buffer, `:set ft=mchat` and run `:Mchat`.
+Run `:Mchat` in the new buffer (with no name argument) to get the assistant response.  You can edit any of the messages, params, options or system instruction (the first line, if it starts with `> `) as necessary throughout the conversation. You can also copy/paste to a new buffer, `:set ft=mchat` and run `:Mchat`.
 
 You can save the buffer with an `.mchat` extension to continue the chat later using the same settings shown in the header. `mchat` comes with some syntax highlighting and folds to show the various chat parts - name of the chatprompt runner, options and params in the header, and a system message.
 
