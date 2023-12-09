@@ -184,24 +184,12 @@ end
 
 M.string = {}
 
--- TODO remove this and just use vim.fn.split
+---@param text string
+---@param sep string
+---@return string[]
 function M.string.split_char(text, sep)
-  local res = {}
-
-  local _cur = ''
-
-  for i = 1, #text do
-    local char = text:sub(i, i)
-
-    if char == sep then
-      table.insert(res, _cur)
-      _cur = ''
-    else
-      _cur = _cur .. char
-    end
-  end
-
-  table.insert(res, _cur)
+  local res = vim.fn.split(text, sep, true)
+  ---@cast rest string[]
 
   return res
 end

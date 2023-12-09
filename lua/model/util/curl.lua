@@ -73,6 +73,9 @@ function M.request(opts, on_complete, on_error)
   return run_curl(opts, false, on_stdout, on_error)
 end
 
+---@param opts { url : string, method : string, body : any, headers : {[string]: string} }
+---@param on_stdout fun(text: string): nil
+---@param on_error fun(text: string): nil
 function M.stream(opts, on_stdout, on_error)
   local function on_out(out)
     if out ~= nil then
