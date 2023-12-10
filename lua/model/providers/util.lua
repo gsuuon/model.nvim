@@ -22,7 +22,7 @@ local function parse_sse_message(message_text)
   ---@cast split_lines string[]
 
   for _,line in ipairs(split_lines) do
-    local label, value = line:match('(.-): (.+)')
+    local label, value = line:match('(.-):%s?(.+)')
 
     if label ~= nil and label ~= '' then
       if label == 'data' then
