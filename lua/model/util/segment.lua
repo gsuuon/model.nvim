@@ -115,7 +115,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       id = _ext_id,
       hl_group = _hl_group,
       virt_text = t,
-      virt_text_pos = 'inline',
+      virt_text_pos = 'overlay',
       virt_lines = #virt_lines > 0 and virt_lines or nil
     })
   end
