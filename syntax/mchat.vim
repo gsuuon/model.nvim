@@ -11,7 +11,7 @@ syn sync fromstart
 
 syn match modelChatName /\%^\(---\)\@!.\+/ skipnl nextgroup=modelChatMessageSystem,modelChatParams,modelChatMessages
 syn region modelChatParams start=/^---$/ end=/^---$/ nextgroup=modelChatMessageSystem,modelChatMessages skipnl contains=@Lua keepend contained fold
-syn region modelChatMessages start=/^\(---\)\@!.\+/ end=/\%$/ contains=modelChatMessageAssistant contained
+syn region modelChatMessages start=/^\(---\)\@!.*/ end=/\%$/ contains=modelChatMessageAssistant contained
 syn match modelChatMessageSystem "^> .*$" nextgroup=modelChatMessages skipempty contained
 syn region modelChatMessageAssistant start=/^======$/ end=/^======$/ contained fold
 
