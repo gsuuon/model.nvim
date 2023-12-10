@@ -57,15 +57,17 @@ end
 function M.request_completion(handlers, params, options)
   options = options or {}
 
-  local model = options.model or 'chat-bison-001'
-  local method = options.method or 'generateMessage'
-  local extract = extract_message_response
+  local model = options.model or 'text-bison-001'
+  local method = options.method or 'generateText'
+  local extract = extract_text_response
 
-  if model == 'text-bison-001' then
+  if model == 'chat-bison-001' then
     model = params.model
-    method = 'generateText'
-    extract = extract_text_response
+    method = 'generateMessage'
+    extract = extract_message_response
   end
+
+  local key = util.env_memo('PALM_API_KEY')
 
   local remove_marquee = show_pending_marquee(handlers)
 
@@ -107,7 +109,7 @@ function M.request_completion(handlers, params, options)
         'https://generativelanguage.googleapis.com/v1beta2/models/'
         .. model .. ':'
         .. method
-        .. '?key=' .. util.env_memo('PALM_API_KEY'),
+        .. '?key=' .. key,
     body = params
   }, handle_raw, handle_error)
 end
@@ -153,11 +155,7 @@ M.default_prompt = {
   builder = function(input)
     return {
       prompt = {
-        messages = {
-          {
-            content = input
-          }
-        }
+        text = input
       }
     }
   end
