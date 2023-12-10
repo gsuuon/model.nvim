@@ -1,6 +1,6 @@
 local util = require('model.util')
 local curl = require('model.util.curl')
-local segment = require('model.util.segment')
+local juice = require('model.util.juice')
 
 local M = {}
 
@@ -10,45 +10,6 @@ end
 
 local function extract_text_response(candidate)
   return candidate.output
-end
-
-local function scroll(text, rate, set)
-  local run = true
-
-  local function scroll_(t)
-    vim.defer_fn(function ()
-      if run then
-        local tail = t:sub(#t)
-        local head = t:sub(1, #t - 1)
-        local text_ = tail .. head
-
-        set('<' .. text_ .. '>')
-
-        return scroll_(text_)
-      end
-    end, rate)
-  end
-
-  scroll_(text)
-
-  return function()
-    set('')
-    run = false
-  end
-end
-
-local function show_pending_marquee(handlers)
-  if handlers.segment then
-    local handler_seg = handlers.segment.details()
-    local pending = segment.create_segment_at(
-      handler_seg.details.end_row,
-      handler_seg.details.end_col,
-      'Comment'
-    )
-    return scroll('PaLM   ', 160, pending.set_virt)
-  end
-
-  return function() end
 end
 
 ---@param handlers StreamHandlers
@@ -69,7 +30,10 @@ function M.request_completion(handlers, params, options)
 
   local key = util.env_memo('PALM_API_KEY')
 
-  local remove_marquee = show_pending_marquee(handlers)
+  local remove_marquee = juice.handler_marquee_or_notify(
+    'PaLM  ',
+    handlers.segment
+  )
 
   local function handle_raw(raw_data)
     local response = util.json.decode(raw_data)
