@@ -10,12 +10,26 @@ local M = {}
 
 local stop_server_augroup = vim.api.nvim_create_augroup('ModelNvimLlamaCppServerStop', {})
 
+local function validate_autostart_options()
+  if not M.options then
+    return false, 'Missing llamacpp provider options. Call require("model.providers.llamacpp").setup({})'
+  elseif not M.options.binary then
+    return false, 'Llamacpp options missing server binary path'
+  elseif not M.options.models then
+    return false, 'Llamacpp options missing models path'
+  end
+
+  return true
+end
+
 ---@param model string
 ---@param args string[]
 local function resolve_system_opts(model, args)
-  assert(M.options, 'Missing llamacpp provider options. Call require("model.providers.llamacpp").setup({})')
-  assert(M.options.binary, 'Llamacpp options missing server binary path')
-  assert(M.options.models, 'Llamacpp options missing models path')
+  local valid, err = validate_autostart_options()
+
+  if not valid then
+    error(err)
+  end
 
   local path = vim.fs.normalize(M.options.binary)
   local cmd = vim.fn.exepath(path)
@@ -103,12 +117,18 @@ function M.request_completion(handlers, params, options)
     local stop_marquee = function() end
 
     if opts.model then
-      stop_marquee = juice.handler_marquee_or_notify(
-        'llama.cpp server starting',
-        handlers.segment
-      )
-      wait(M.start_server(opts.model, opts.args, resolve))
-      stop_marquee()
+      local valid, err = validate_autostart_options()
+
+      if valid then
+        stop_marquee = juice.handler_marquee_or_notify(
+          'llama.cpp server starting',
+          handlers.segment
+        )
+        wait(M.start_server(opts.model, opts.args, resolve))
+        stop_marquee()
+      else
+        error(err)
+      end
     end
 
     cancel = curl.stream(
