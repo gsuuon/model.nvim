@@ -145,7 +145,9 @@ function M.to_string(contents, name)
     -- or just let it be a normal config field
     local without_system = util.table.without(contents.config, 'system')
 
-    result = result .. '---\n' .. vim.inspect(without_system) .. '\n---\n'
+    if without_system and not vim.tbl_isempty(without_system) then
+      result = result .. '---\n' .. vim.inspect(without_system) .. '\n---\n'
+    end
 
     if contents.config.system then
       result = result .. '> ' .. contents.config.system .. '\n'
