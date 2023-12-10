@@ -6,6 +6,7 @@ local kobold = require('model.providers.kobold')
 local llamacpp = require('model.providers.llamacpp')
 local codellama = require('model.providers.codellama')
 local together = require('model.providers.together')
+local ollama = require('model.providers.ollama')
 
 -- prompt helpers
 local chat = require('model.core.chat')
@@ -146,7 +147,18 @@ local starters = {
     },
     builder = function(input)
       return {
-        prompt = '### System Prompt\nYou are an intellegient programming assistant\n\n### User Message\n' .. input  ..'\n\n### Assistant\n'
+        prompt = '### System Prompt\nYou are an intelligent programming assistant\n\n### User Message\n' .. input  ..'\n\n### Assistant\n'
+      }
+    end
+  },
+  ['ollama/starling'] = {
+    provider = ollama,
+    params = {
+      model = 'starling-lm'
+    },
+    builder = function(input)
+      return {
+        prompt = 'GPT4 Correct User: ' .. input .. '<|end_of_turn|>GPT4 Correct Assistant: '
       }
     end
   },

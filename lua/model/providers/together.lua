@@ -2,6 +2,8 @@ local util = require('model.util')
 local curl = require('model.util.curl')
 local p_util = require('model.providers.util')
 
+-- https://docs.together.ai/docs/inference-models
+
 ---@type Provider
 local M = {
   request_completion = function (handler, params)

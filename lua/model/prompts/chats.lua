@@ -1,7 +1,14 @@
 local openai = require('model.providers.openai')
 local palm = require('model.providers.palm')
-local zephyr_fmt = require('model.format.zephyr')
 local llamacpp = require('model.providers.llamacpp')
+local ollama = require('model.providers.ollama')
+
+local zephyr_fmt = require('model.format.zephyr')
+local starling_fmt = require('model.format.starling')
+
+local function input_if_selection(input, context)
+  return context.selection and input or ''
+end
 
 local chat_openai = {
   provider = openai,
@@ -9,9 +16,7 @@ local chat_openai = {
   params = {
     model = 'gpt-3.5-turbo-1106'
   },
-  create = function(input, context)
-    return context.selection and input or ''
-  end,
+  create = input_if_selection,
   run = function(messages, config)
     if config.system then
       table.insert(messages, 1, {
@@ -46,21 +51,21 @@ local chats = {
       }
     },
     system = 'You are a helpful assistant',
-    create = function(input, context)
-      return context.selection and input or ''
-    end,
-    run = function(messages, config)
-      return {
-        prompt = zephyr_fmt.content_to_prompt(messages, config)
-      }
-    end
+    create = input_if_selection,
+    run = zephyr_fmt.chat
+  },
+  starling = {
+    provider = ollama,
+    params = {
+      model = 'starling-lm'
+    },
+    create = input_if_selection,
+    run = starling_fmt.chat
   },
   palm = {
     provider = palm,
     system = 'You are a helpful assistant',
-    create = function(input, context)
-      return context.selection and input or ''
-    end,
+    create = input_if_selection,
     options = {
       method = 'generateMessage',
       model = 'chat-bison-001'
