@@ -23,7 +23,6 @@ function M.request_completion(handlers, params, options)
   local extract = extract_text_response
 
   if model == 'chat-bison-001' then
-    model = params.model
     method = 'generateMessage'
     extract = extract_message_response
   end
