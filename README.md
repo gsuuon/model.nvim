@@ -272,7 +272,6 @@ I recommend setting this only during active prompt development, and switching to
 
 - [openai](#openai-chatgpt)
 - [llama.cpp](#llamacpp)
-  - [codellama](#codellama)
 - [google palm](#google-palm)
 - [together](#together)
 - [huggingface](#huggingface-api)
@@ -360,9 +359,6 @@ Setup `require('model.providers.llamacpp').setup({})`
 - `model: string (optional)` - The path to the LLM model file to use with server autostart. If not specified, the default model will be used.
 - `args: string[] (optional)` - An array of additional arguments to pass to the LLM server at startup.
 - `url: string (optional)` - The URL to connect to the LLM server instead of using the default one. This can be useful for connecting to a remote LLM server or a customized local one.
-
-### Codellama
-This is a llama.cpp based provider specialized for codellama infill / Fill in the Middle. Only 7B and 13B models support FIM, and the base models (not Instruct) seem to work better. Start the llama.cpp server example with one of the two supported models before using this provider.
 
 ### Ollama
 This uses the [ollama](https://github.com/jmorganca/ollama/tree/main) REST server's [`/api/generate` endpoint](https://github.com/jmorganca/ollama/blob/main/docs/api.md#generate-a-completion). `raw` defaults to true, and `stream` is always true.

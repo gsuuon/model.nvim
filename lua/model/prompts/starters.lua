@@ -125,7 +125,7 @@ local starters = {
       }
     end
   },
-  codellama = codellama.default_prompt,
+  ['llamacpp/codellama-fill'] = codellama.default_prompt,
   ['together/stripedhyena'] = {
     provider = together,
     params = {
