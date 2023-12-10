@@ -8,9 +8,11 @@ describe('chat', function()
           chat = 'openai',
           contents = {
             config = {
-              model = 'gpt-3.5-turbo'
+              params = {
+                model = 'gpt-3.5-turbo'
+              },
+              system = 'You are a helpful assistant',
             },
-            system = 'You are a helpful assistant',
             messages = {
               { role = 'user', content = 'Count to three' },
               { role = 'assistant', content = '1, 2, 3.' },
@@ -22,7 +24,9 @@ describe('chat', function()
 openai
 ---
 {
-  model = "gpt-3.5-turbo"
+  params = {
+    model = "gpt-3.5-turbo"
+  }
 }
 ---
 > You are a helpful assistant
@@ -43,7 +47,9 @@ Thanks]])
           chat = 'openai',
           contents = 
             {
-              system = 'You are a helpful assistant',
+              config = {
+                system = 'You are a helpful assistant',
+              },
               messages = {
                 { role = 'user', content = 'Count to three' },
                 { role = 'assistant', content = '1, 2, 3.' }
@@ -69,6 +75,7 @@ Count to three
           chat = 'openai',
           contents = 
             {
+              config = {},
               messages = {
                 { role = 'user', content = 'Count to three' },
                 { role = 'assistant', content = '1, 2, 3.' }
@@ -115,7 +122,9 @@ openai
         {
           chat = 'openai',
           contents = {
-            system = 'You are a helpful assistant',
+            config = {
+              system = 'You are a helpful assistant',
+            },
             messages = {}
           }
         },
@@ -156,9 +165,9 @@ Thanks]],
         chat.to_string(
           {
             config = {
-              model = 'gpt-3.5-turbo'
+              model = 'gpt-3.5-turbo',
+              system = 'You are a helpful assistant',
             },
-            system = 'You are a helpful assistant',
             messages = {
               { role = 'user', content = 'Count to three' },
               { role = 'assistant', content = '1, 2, 3.' },
@@ -185,7 +194,9 @@ Count to three
 Thanks]],
         chat.to_string(
           {
-            system = 'You are a helpful assistant',
+            config = {
+              system = 'You are a helpful assistant',
+            },
             messages = {
               { role = 'user', content = 'Count to three' },
               { role = 'assistant', content = '1, 2, 3.' },
@@ -215,6 +226,7 @@ Thanks]],
               { role = 'assistant', content = '1, 2, 3.' },
               { role = 'user', content = 'Thanks' },
             },
+            config = {},
           },
           'openai'
         )
