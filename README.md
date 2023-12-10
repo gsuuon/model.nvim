@@ -8,10 +8,9 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 ### Features
 
 - 🎪 Provider agnostic. Comes with:
-  - OpenAI GPT (and compatible API's)
-  - LlamaCpp
-  - Google PaLM
-  - .. and more
+  - OpenAI ChatGPT (and compatible API's)
+  - hosted: Google PaLM, together, huggingface
+  - local: llama.cpp, ollama
 - 🎨 Programmatic prompts in lua
   - customize everything
   - async and multistep prompts
@@ -22,9 +21,8 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
   - append/replace/insert modes
 - 🦜 Chat in `mchat` filetype buffer
   - edit settings or messages at any point
+  - take conversations to different models
   - basic syntax highlights and folds
-  - can switch to different models
-  - save/load/run chat buffer as is
 
 ### Contents
 - [Setup](#-setup)
@@ -104,7 +102,7 @@ Start a new [chat](#chat-prompts)
 - `:Mchat [name] [instruction]` — Start a new chat buffer with the `name` [ChatPrompt](#chatprompt). Provide an optional instruction override - if currently in an `mchat` buffer use `-` to re-use the same instruction (e.g. `:Mchat openai -`)
 
 Run a chat buffer
-- `:Mchat` — Request the assistant response in a chat buffer.
+- `:Mchat` — Request the assistant response in a chat buffer. You can save an `mchat` buffer as `my_conversation.mchat`, reload it later and run `:Mchat` with your next message to continue where you left off. You'll need to have the same ChatPrompt configured in setup.
 
 #### Manage responses
 Responses are inserted with extmarks, so once the buffer is closed the responses become normal text and won't work with the following commands.
@@ -363,10 +361,27 @@ Setup `require('model.providers.llamacpp').setup({})`
 - `args: string[] (optional)` - An array of additional arguments to pass to the LLM server at startup.
 - `url: string (optional)` - The URL to connect to the LLM server instead of using the default one. This can be useful for connecting to a remote LLM server or a customized local one.
 
-
 ### Codellama
 This is a llama.cpp based provider specialized for codellama infill / Fill in the Middle. Only 7B and 13B models support FIM, and the base models (not Instruct) seem to work better. Start the llama.cpp server example with one of the two supported models before using this provider.
 
+### Ollama
+This uses the [ollama](https://github.com/jmorganca/ollama/tree/main) REST server's [`/api/generate` endpoint](https://github.com/jmorganca/ollama/blob/main/docs/api.md#generate-a-completion). `raw` defaults to true, and `stream` is always true.
+
+Example prompt with starling:
+
+```lua
+  ['ollama/starling'] = {
+    provider = ollama,
+    params = {
+      model = 'starling-lm'
+    },
+    builder = function(input)
+      return {
+        prompt = 'GPT4 Correct User: ' .. input .. '<|end_of_turn|>GPT4 Correct Assistant: '
+      }
+    end
+  },
+```
 
 ### Google PaLM
 Set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey).
