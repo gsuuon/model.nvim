@@ -2,7 +2,7 @@ local segment = require('model.util.segment')
 
 local M = {}
 
-function M.scroll(text, rate, set)
+function M.scroll(text, rate, set, size)
   local run = true
 
   local function scroll_(t)
@@ -12,7 +12,11 @@ function M.scroll(text, rate, set)
         local tail = t:sub(2, #t)
         local text_ = tail .. head
 
-        set('<' .. text_ .. '>')
+        if size then
+          set('<' .. text_:sub(1, size) .. '>')
+        else
+          set('<' .. text_ .. '>')
+        end
 
         return scroll_(text_)
       end
@@ -35,8 +39,9 @@ end
 --- @param text string The text to display either as a marquee or notification.
 --- @param seg? Segment segment to place the marquee after
 --- @param hl? string Optional highlight group for the marquee segment. Defaults to 'Comment'.
+--- @param size? number Limit marquee size
 --- @return function stop stop and clear the marquee
-function M.handler_marquee_or_notify(text, seg, hl)
+function M.handler_marquee_or_notify(text, seg, hl, size)
   if seg then
     local handler_seg = seg.details()
     local pending = segment.create_segment_at(
@@ -44,7 +49,7 @@ function M.handler_marquee_or_notify(text, seg, hl)
       handler_seg.details.end_col,
       hl or 'Comment'
     )
-    return M.scroll(text .. '   ', 160, pending.set_virt)
+    return M.scroll(text .. '   ', 160, pending.set_virt, size)
   else
     vim.notify(text)
   end

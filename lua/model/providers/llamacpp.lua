@@ -121,8 +121,10 @@ function M.request_completion(handlers, params, options)
 
       if valid then
         stop_marquee = juice.handler_marquee_or_notify(
-          'llama.cpp server starting',
-          handlers.segment
+          'llama.cpp: ' .. opts.model,
+          handlers.segment,
+          nil,
+          20
         )
         wait(M.start_server(opts.model, opts.args, resolve))
         stop_marquee()

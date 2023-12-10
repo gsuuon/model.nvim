@@ -7,8 +7,10 @@ return {
   request_completion = function (handlers, params)
 
     local stop_marquee = juice.handler_marquee_or_notify(
-      'ollama',
-      handlers.segment
+      'ollama: ' .. params.model,
+      handlers.segment,
+      nil,
+      20
     )
 
     return curl.stream(
