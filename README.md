@@ -272,6 +272,7 @@ I recommend setting this only during active prompt development, and switching to
 
 - [openai](#openai-chatgpt)
 - [llama.cpp](#llamacpp)
+- [ollama](#ollama)
 - [google palm](#google-palm)
 - [together](#together)
 - [huggingface](#huggingface-api)
