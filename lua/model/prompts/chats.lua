@@ -11,7 +11,7 @@ local function input_if_selection(input, context)
   return context.selection and input or ''
 end
 
-local chat_openai = {
+local openai_chat = {
   provider = openai,
   system = 'You are a helpful assistant',
   params = {
@@ -32,37 +32,16 @@ local chat_openai = {
 
 ---@type table<string, ChatPrompt>
 local chats = {
-  openai = chat_openai,
+  openai = openai_chat,
   gpt4 = vim.tbl_deep_extend(
     'force',
-    chat_openai,
+    openai_chat,
     {
       params = {
         model = 'gpt-4-1106-preview',
       }
     }
   ),
-  zephyr = {
-    provider = llamacpp,
-    options = {
-      model = 'zephyr-7b-beta.Q5_K_M.gguf',
-      args = {
-        '-c', 8192,
-        '-ngl', 35
-      }
-    },
-    system = 'You are a helpful assistant',
-    create = input_if_selection,
-    run = zephyr_fmt.chat
-  },
-  starling = {
-    provider = ollama,
-    params = {
-      model = 'starling-lm'
-    },
-    create = input_if_selection,
-    run = starling_fmt.chat
-  },
   palm = {
     provider = palm,
     system = 'You are a helpful assistant',
@@ -85,7 +64,28 @@ local chats = {
       }
     end
   },
-  codellama = {
+  ['llamacpp:zephyr'] = {
+    provider = llamacpp,
+    options = {
+      model = 'zephyr-7b-beta.Q5_K_M.gguf',
+      args = {
+        '-c', 8192,
+        '-ngl', 35
+      }
+    },
+    system = 'You are a helpful assistant',
+    create = input_if_selection,
+    run = zephyr_fmt.chat
+  },
+  ['ollama:starling'] = {
+    provider = ollama,
+    params = {
+      model = 'starling-lm'
+    },
+    create = input_if_selection,
+    run = starling_fmt.chat
+  },
+  ['together:codellama'] = {
     provider = together,
     params = {
       model = 'Phind/Phind-CodeLlama-34B-v2',
@@ -113,6 +113,19 @@ local chats = {
         prompt = prompt
       }
     end
+  },
+  ['gpt4:commit review'] = {
+    provider = openai,
+    create = function()
+      local git_diff = vim.fn.system {'git', 'diff', '--staged'}
+
+      if not git_diff:match('^diff') then
+        error('Git error:\n' .. git_diff)
+      end
+
+      return 'Review the changes in the following git diff:\n\n' .. git_diff .. '\n'
+    end,
+    run = openai_chat.run
   }
 }
 

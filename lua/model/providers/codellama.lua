@@ -5,6 +5,8 @@ local async = require('model.util.async')
 local provider_util = require('model.providers.util')
 local mode = require('model').mode
 
+-- TODO convert this to just an async prompt builder
+
 --- This is a llamacpp based provider that only supports infill with codellama 7b and 13b, which require special token handling.
 --- Note that the base models seem to perform better than Instruct models. I'm also not sure how to actually add instructions to a FIM prompt.
 local M = {}
