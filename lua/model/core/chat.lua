@@ -213,7 +213,7 @@ function M.build_contents(chat_prompt, input_context)
 end
 
 function M.create_buffer(text, smods)
-  if smods.tab then
+  if smods.tab == 1 then
     vim.cmd.tabnew()
   elseif smods.horizontal then
     vim.cmd.new()
