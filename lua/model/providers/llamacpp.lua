@@ -4,6 +4,7 @@ local async = require('model.util.async')
 local system = require('model.util.system')
 local provider_util = require('model.providers.util')
 local llama2 = require('model.format.llama2')
+local juice = require('model.util.juice')
 
 local M = {}
 
@@ -29,8 +30,6 @@ local function resolve_system_opts(model, args)
 end
 
 local function start_server(model, args, on_started)
-  util.show('llama.cpp server starting')
-
   local sys_opts = resolve_system_opts(model, args or {})
 
   local stop = system(
@@ -101,8 +100,15 @@ function M.request_completion(handlers, params, options)
   local cancel = function() end
 
   async(function(wait, resolve)
+    local stop_marquee = function() end
+
     if opts.model then
+      stop_marquee = juice.handler_marquee_or_notify(
+        'llama.cpp server starting',
+        handlers.segment
+      )
       wait(M.start_server(opts.model, opts.args, resolve))
+      stop_marquee()
     end
 
     cancel = curl.stream(

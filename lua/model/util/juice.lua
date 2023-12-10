@@ -8,8 +8,8 @@ function M.scroll(text, rate, set)
   local function scroll_(t)
     vim.defer_fn(function ()
       if run then
-        local tail = t:sub(#t)
-        local head = t:sub(1, #t - 1)
+        local head = t:sub(1, 1)
+        local tail = t:sub(2, #t)
         local text_ = tail .. head
 
         set('<' .. text_ .. '>')
@@ -39,7 +39,7 @@ function M.handler_marquee_or_notify(text, seg, hl)
       handler_seg.details.end_col,
       hl or 'Comment'
     )
-    return M.scroll(text, 160, pending.set_virt)
+    return M.scroll(text .. '   ', 160, pending.set_virt)
   else
     vim.notify(text)
   end
