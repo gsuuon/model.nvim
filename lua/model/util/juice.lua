@@ -21,9 +21,14 @@ function M.scroll(text, rate, set)
 
   scroll_(text)
 
+  local did_stop = false
+
   return function()
-    set('')
-    run = false
+    if not did_stop then
+      set('')
+      run = false
+      did_stop = true
+    end
   end
 end
 
