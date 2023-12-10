@@ -2,6 +2,7 @@ local openai = require('model.providers.openai')
 local palm = require('model.providers.palm')
 local llamacpp = require('model.providers.llamacpp')
 local ollama = require('model.providers.ollama')
+local together = require('model.providers.together')
 
 local zephyr_fmt = require('model.format.zephyr')
 local starling_fmt = require('model.format.starling')
@@ -81,6 +82,35 @@ local chats = {
             }
           end, messages)
         }
+      }
+    end
+  },
+  codellama = {
+    provider = together,
+    params = {
+      model = 'Phind/Phind-CodeLlama-34B-v2',
+      max_tokens = 1000
+    },
+    system = 'You are an intelligent programming assistant',
+    create = function(input, ctx)
+      return ctx.selection and input or ''
+    end,
+    run = function(messages, config)
+      local prompt = '### System Prompt\n' .. config.system
+
+      for _,msg in ipairs(messages) do
+        prompt =
+          prompt
+          .. '\n\n### '
+          .. (msg.role == 'user' and 'User Message' or 'Assistant')
+          .. '\n'
+          .. msg.content
+      end
+
+      prompt = prompt .. '### Assistant\n'
+
+      return {
+        prompt = prompt
       }
     end
   }
