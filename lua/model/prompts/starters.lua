@@ -172,14 +172,6 @@ local starters = {
     end,
     transform = extract.markdown_code
   },
-  ['code palm'] = {
-    provider = palm,
-    mode = mode.INSERT_OR_REPLACE,
-    builder = function(input, context)
-      return palm.adapt(standard_code(input, context))
-    end,
-    transform = extract.markdown_code
-  },
   ['code gpt4'] = {
     provider = openai,
     mode = mode.INSERT_OR_REPLACE,
