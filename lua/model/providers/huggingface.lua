@@ -1,11 +1,11 @@
-local curl = require('llm.curl')
-local util = require('llm.util')
-local provider_util = require('llm.providers.util')
+local curl = require('model.util.curl')
+local util = require('model.util')
+local provider_util = require('model.providers.util')
 
 local M = {}
 
 ---@param handlers StreamHandlers
----@param params? any Additional params for request
+---@param params? any Additional params for request. Note the parameters detailed at https://huggingface.co/docs/api-inference/detailed_parameters need to go in the `params.parameters` field.
 ---@param options? { model?: string }
 function M.request_completion(handlers, params, options)
   local model = (options or {}).model or 'bigscience/bloom'
@@ -61,7 +61,9 @@ M.default_prompt = {
     model = 'bigscience/bloom'
   },
   params = {
-    return_full_text = false
+    parameters = {
+      return_full_text = false
+    }
   },
   builder = function(input)
     return { inputs = input }

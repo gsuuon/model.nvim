@@ -1,7 +1,7 @@
-local util = require('llm.util')
+local util = require('model.util')
 
-local provider = require('llm.provider')
-local openai = require('llm.providers.openai')
+local provider = require('model.core.provider')
+local openai = require('model.providers.openai')
 
 local M = {}
 
@@ -23,7 +23,7 @@ function M.gpt_relevant_openapi_schema_path(schema, task, callback)
     }
   })
 
-  provider.complete(gpt_consistent, gpt_prompt, {}, function(gpt_response)
+  provider.complete(gpt_consistent, { input = gpt_prompt }, function(gpt_response)
     local route, err = util.json.decode(gpt_response)
 
     if route == nil then

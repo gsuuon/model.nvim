@@ -136,6 +136,34 @@ function M.table.without(tbl, key)
   return result
 end
 
+M.list = {}
+
+function M.list.equals(as, bs)
+  if not vim.tbl_islist(as) or not vim.tbl_islist(bs) then
+    return false
+  end
+
+  if #as ~= #bs then
+    return false
+  end
+
+  for i,x in ipairs(as) do
+    if bs[i] ~= x then
+      return false
+    end
+  end
+
+  return true
+end
+
+function M.list.append(as, bs)
+  for _,b in ipairs(bs) do
+    table.insert(as, b)
+  end
+
+  return as
+end
+
 M.json = {}
 
 function M.json.decode(string)
@@ -156,24 +184,12 @@ end
 
 M.string = {}
 
--- TODO remove this and just use vim.fn.split
+---@param text string
+---@param sep string
+---@return string[]
 function M.string.split_char(text, sep)
-  local res = {}
-
-  local _cur = ''
-
-  for i = 1, #text do
-    local char = text:sub(i, i)
-
-    if char == sep then
-      table.insert(res, _cur)
-      _cur = ''
-    else
-      _cur = _cur .. char
-    end
-  end
-
-  table.insert(res, _cur)
+  local res = vim.fn.split(text, sep, true)
+  ---@cast rest string[]
 
   return res
 end
@@ -199,10 +215,6 @@ function M.string.split_pattern(text, pattern)
   until start_index > #text
 
   return parts
-end
-
-function M.string.join_lines(lines)
-  return table.concat(lines, '\n')
 end
 
 --- Removes any surrounding quotes or markdown code blocks
@@ -283,6 +295,16 @@ end
 
 M.cursor = {}
 
+
+---@class Position
+---@field row number 0-indexed row
+---@field col number 0-indexed column, can be vim.v.maxcol which means after end of line
+
+---@class Selection
+---@field start Position
+---@field stop Position
+
+---@return Selection
 function M.cursor.selection()
   -- NOTE These give the byte pos of column and not char pos
   -- also < and > only get updated after leaving visual mode
@@ -304,6 +326,7 @@ function M.cursor.selection()
   }
 end
 
+---@return Position
 function M.cursor.position()
   local pos = vim.api.nvim_win_get_cursor(0)
 

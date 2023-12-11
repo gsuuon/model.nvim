@@ -1,6 +1,6 @@
-local util = require('llm.util')
-local curl = require('llm.curl')
-local async = require('llm.util.async')
+local util = require('model.util')
+local curl = require('model.util.curl')
+local async = require('model.util.async')
 
 local M = {}
 

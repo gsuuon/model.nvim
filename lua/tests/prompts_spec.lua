@@ -6,7 +6,7 @@ local u = require('tests.util')
 
 describe('prompt', function()
 
-  local provider = require('llm.provider')
+  local provider = require('model.core.provider')
   local test_provider = mock({ request_completion = function() end })
 
   it('provides builder with input and context', function()
@@ -22,7 +22,7 @@ describe('prompt', function()
       builder = function() return { paramA = true } end
     })
 
-    provider.request_completion(prompt, '', true, 'Comment')
+    provider.request_completion(prompt, '', true)
 
     assert.spy(prompt.builder).was_called_with(
       'abc',
@@ -51,7 +51,7 @@ describe('prompt', function()
       provider.request_completion({
         provider = test_provider,
         builder = function() end
-      }, '', true, 'Comment')
+      }, '', true)
     end)
 
   end)
@@ -67,7 +67,7 @@ describe('prompt', function()
           })
         end
       end
-    }, '', true, 'Comment')
+    }, '', true)
 
     assert.spy(test_provider.request_completion).was_called_with(
       match.table_types({

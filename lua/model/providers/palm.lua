@@ -1,5 +1,6 @@
-local curl = require('llm.curl')
-local util = require('llm.util')
+local util = require('model.util')
+local curl = require('model.util.curl')
+local juice = require('model.util.juice')
 
 local M = {}
 
@@ -14,20 +15,24 @@ end
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for PaLM endpoint
 ---@param options { model: string, method: string }
-function M.request_completion(handlers, params, _options)
-  local options = _options or {}
+function M.request_completion(handlers, params, options)
+  options = options or {}
 
-  local model = options.model or 'chat-bison-001'
-  local method = options.method or 'generateMessage'
-  local extract = extract_message_response
+  local model = options.model or 'text-bison-001'
+  local method = options.method or 'generateText'
+  local extract = extract_text_response
 
-  if model == 'text-bison-001' then
-    model = params.model
-    method = 'generateText'
-    extract = extract_text_response
+  if model == 'chat-bison-001' then
+    method = 'generateMessage'
+    extract = extract_message_response
   end
 
-  handlers.on_partial('<- palm ->') -- on_finish should ovewrite all partials
+  local key = util.env_memo('PALM_API_KEY')
+
+  local remove_marquee = juice.handler_marquee_or_notify(
+    'PaLM  ',
+    handlers.segment
+  )
 
   local function handle_raw(raw_data)
     local response = util.json.decode(raw_data)
@@ -38,6 +43,7 @@ function M.request_completion(handlers, params, _options)
 
     if response.error ~= nil or not response.candidates then
       handlers.on_error(response)
+      remove_marquee()
     else
       local first_candidate = response.candidates[1]
 
@@ -49,6 +55,7 @@ function M.request_completion(handlers, params, _options)
 
       -- TODO change reason to error, return nil for successful completion
       handlers.on_finish(result, 'stop')
+      remove_marquee()
     end
   end
 
@@ -65,7 +72,7 @@ function M.request_completion(handlers, params, _options)
         'https://generativelanguage.googleapis.com/v1beta2/models/'
         .. model .. ':'
         .. method
-        .. '?key=' .. util.env_memo('PALM_API_KEY'),
+        .. '?key=' .. key,
     body = params
   }, handle_raw, handle_error)
 end
@@ -111,11 +118,7 @@ M.default_prompt = {
   builder = function(input)
     return {
       prompt = {
-        messages = {
-          {
-            content = input
-          }
-        }
+        text = input
       }
     }
   end

@@ -1,4 +1,6 @@
-local util = require('llm.util')
+local util = require('model.util')
+
+-- TODO revisit this. Refactor so I can also use with chats, or remove.
 
 local M = {}
 
@@ -14,11 +16,11 @@ local function get_global_plugin()
 end
 
 local function get_buffer_user(nr)
-  return vim.b[nr or 0].llm_prompts_user or {}
+  return vim.b[nr or 0].model_prompts_user or {}
 end
 
 local function get_buffer_plugin(nr)
-  return vim.b[nr or 0].llm_prompts_plugin or {}
+  return vim.b[nr or 0].model_prompts_plugin or {}
 end
 
 local function namespace_prompt_plugin(prompt, plugin)
@@ -88,14 +90,14 @@ local function extend_buffer_var(name, value, bnr)
 end
 
 function M.set_buffer_user_prompts(prompts)
-  extend_buffer_var('llm_prompts_user', prompts)
+  extend_buffer_var('model_prompts_user', prompts)
 end
 
 ---Add plugin prompts to the buffer
 ---@param name string plugin name
 ---@param prompts table<string, Prompt> prompts
 function M.add_buffer_plugin_prompts(name, prompts)
-  extend_buffer_var('llm_prompts_plugin', {[name]= prompts})
+  extend_buffer_var('model_prompts_plugin', {[name]= prompts})
 end
 
 ---Returns the prompt given the name
@@ -133,7 +135,7 @@ end
 
 -- TODO actual tests
 local function test()
-  -- M.set_global_user_prompts(util.module.autoload('llm.prompts.starter'))
+  -- M.set_global_user_prompts(util.module.autoload('model.prompts.starter'))
   M.set_buffer_user_prompts({codego = 'code go'})
   M.set_buffer_user_prompts({boop = 'boop prompt'})
   M.add_buffer_plugin_prompts('baps', { bap = 'bap'})

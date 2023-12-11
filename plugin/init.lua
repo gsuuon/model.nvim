@@ -1,7 +1,11 @@
-if vim.g.did_setup_llm then
+if vim.g.did_setup_model then
   return
 end
 
-require('llm').setup({
-  prompts = require('llm.prompts.starters')
+vim.filetype.add({
+  extension = {
+    mchat = 'mchat',
+  }
 })
+
+require('model').setup()

@@ -1,23 +1,39 @@
-# 🧠 llm.nvim
+# 🗿 model.nvim
+[Formerly known as llm.nvim](https://github.com/gsuuon/llm.nvim/discussions/37)
 
-Use LLM's in Neovim. Build editor integrated prompts and customize your LLM workflow. This plugin comes with some starter prompts out of the box but it's designed for those who want to customize their prompts, experiment with multiple providers or use local LLM's. All prompts are in lua and can be instantly-reloaded.
+Use AI models in Neovim for completions or chat. Build prompts programatically with lua. Designed for those who want to customize their prompts, experiment with multiple providers or use local models.
 
 https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a419-eeec04cb7e99.mp4
 
 ### Features
 
-- 🎪 OpenAI GPT (and compatible API's), Google PaLM, Huggingface, LlamaCpp, Kobold
-- 🛸 Add LLM capabilities from other Neovim plugins
-- 🎨 Build your own editor integrated completions
-- 🔎 Basic local (to your git repo) vector store
-- 🌠 Streaming responses where available
+- 🎪 Provider agnostic. Comes with:
+  - OpenAI ChatGPT (and compatible API's)
+  - hosted: Google PaLM, together, huggingface
+  - local: llama.cpp, ollama
+- 🎨 Programmatic prompts in lua
+  - customize everything
+  - async and multistep prompts
+  - starter examples
+- 🌠 Streaming completions
+  - directly in buffer
+  - transform/extract text
+  - append/replace/insert modes
+- 🦜 Chat in `mchat` filetype buffer
+  - edit settings or messages at any point
+  - take conversations to different models
+  - basic syntax highlights and folds
 
 ### Contents
 - [Setup](#-setup)
 - [Usage](#-usage)
 - [Config](#configuration)
+- [Providers](#providers)
+- [Reference](#reference)
 - [Examples](#examples)
 - [Contributing](#contributing)
+
+If you have any questions feel free to ask in [discussions](https://github.com/gsuuon/model.nvim/discussions)
 
 ---
 
@@ -26,39 +42,70 @@ https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a
 ### Requirements
 - Nvim 0.8.0 or higher
 - curl
-- For the OpenAI provider (default), set the `OPENAI_API_KEY` environment variable to your [api key](https://platform.openai.com/account/api-keys)
-- For the PaLM provider, set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey)
 
-#### Optional
-For local vector store:
-- Python 3.10+
-- `pip install numpy openai tiktoken`
-
-### With [packer.nvim](https://github.com/wbthomason/packer.nvim)
-
-```lua
-require('packer').startup(function(use)
-  use 'gsuuon/llm.nvim'
-end)
-```
 ### With [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
 require('lazy').setup({
-  'gsuuon/llm.nvim'
+  {
+    'gsuuon/model.nvim',
+
+    -- Don't need these if lazy = false
+    cmd = { 'M', 'Model', 'Mchat' },
+    init = function()
+      vim.filetype.add({
+        extension = {
+          mchat = 'mchat',
+        }
+      })
+    end,
+    ft = 'mchat',
+
+    keys = {
+      {'<C-m>d', ':Mdelete<cr>', mode = 'n'},
+      {'<C-m>s', ':Mselect<cr>', mode = 'n'},
+      {'<C-m><space>', ':Mchat<cr>', mode = 'n' }
+    },
+
+    -- To override defaults add a config field and call setup()
+
+    -- config = function()
+    --   require('model').setup({
+    --     prompts = {..},
+    --     chats = {..},
+    --     ..
+    --   })
+    --
+    --   require('model.providers.llamacpp').setup({
+    --     binary = '~/path/to/server/binary',
+    --     models = '~/path/to/models/directory'
+    --   })
+    --end
+  }
 })
 ```
 
 ## 💭 Usage
 
-llm.nvim comes with some [starter prompts](./lua/llm/prompts/starters.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt (e.g. curl, ask gpt for intermediate data, then include data in a final prompt) look at the `openapi` starter prompt.
+**model.nvim** comes with some [starter prompts](./lua/model/prompts/starters.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt where we curl for openapi schema, ask gpt for relevant endpoint, then include that in a final prompt look at the `openapi` starter prompt.
 
-It can also be used from another plugin to easily add LLM capabilities, for an example look at [note.nvim](https://github.com/gsuuon/note.nvim/blob/main/lua/note/llm/prompts.lua) which adds some [buffer-local](https://github.com/gsuuon/note.nvim/blob/main/ftplugin/note.lua) prompts to note files.
+Prompts can have 5 different [modes](#segmentmode) which determine what happens to the response: append, insert, replace, buffer, insert_or_replace. The default is to append, and with no visual selection the default input is the entire buffer, so your response will be at the end of the file. Modes are configured on a per-prompt basis.
 
-If you have more questions about usage, check out the [discussions](https://github.com/gsuuon/llm.nvim/discussions).
+### Commands
 
-- `:Llm [prompt-name]` — Start a completion of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided.
+#### Run prompts
+Run a completion [prompt](#prompts)
 
+- `:Model [name]` or `:M [name]` — Start a completion of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided.
+
+Start a new [chat](#chat-prompts)
+- `:Mchat [name] [instruction]` — Start a new chat buffer with the `name` [ChatPrompt](#chatprompt). Provide an optional instruction override - if currently in an `mchat` buffer use `-` to re-use the same instruction (e.g. `:Mchat openai -`)
+
+Run a chat buffer
+- `:Mchat` — Request the assistant response in a chat buffer. You can save an `mchat` buffer as `my_conversation.mchat`, reload it later and run `:Mchat` with your next message to continue where you left off. You'll need to have the same ChatPrompt configured in setup.
+
+#### Manage responses
+Responses are inserted with extmarks, so once the buffer is closed the responses become normal text and won't work with the following commands.
 <details>
 <summary>
 Select response
@@ -68,7 +115,7 @@ https://github.com/gsuuon/llm.nvim/assets/6422188/fd5aca13-979f-4bcf-8570-f935fd
 
 </details>
 
-- `:LlmSelect` — Select the response under the cursor.  
+- `:Mselect` — Select the response under the cursor.  
 
 <details>
 <summary>
@@ -79,64 +126,18 @@ https://user-images.githubusercontent.com/6422188/233774216-4e100122-3a93-4dfb-a
 
 </details>
 
-- `:LlmDelete` — Delete the response under the cursor. If `prompt.mode == 'replace'` then replace with the original text.
+- `:Mdelete` — Delete the response under the cursor. If `prompt.mode == 'replace'` then replace with the original text.
 
 <details>
 <summary>
-🚧 WIP - Local vector store 
-</summary>
-
-### Requirements
-  - Python 3.10+
-  - `pip install numpy openai tiktoken`
-
-### Usage
-Check the module functions exposed in [store](./lua/llm/store/init.lua). This uses the OpenAI embeddings api to generate vectors and queries them by cosine similarity.
-
-To add items call into the `llm.store` lua module functions, e.g.
-  - `:lua require('llm.store').add_lua_functions()`
-  - `:lua require('llm.store').add_files('.')`
-
-Look at `store.add_lua_functions` for an example of how to use treesitter to parse files to nodes and add them to the local store.
-
-To get query results call `store.prompt.query_store` with your input text, desired count and similarity cutoff threshold (0.75 seems to be decent). It returns a list of {id: string, content: string}:
-
-```lua
-builder = function(input, context)
-  ---@type {id: string, content: string}[]
-  local store_results = require('llm.store').prompt.query_store(input, 2, 0.75)
-
-  -- add store_results to your messages
-end
-```
-
-</details>
-
-- `:LlmStore [command]`
-  - `:LlmStore init` — initialize a store.json file at the closest git root directory
-  - `:LlmStore query <query text>` — query a store.json
-
-<details>
-<summary>
-Multiple simultaneous prompts
-</summary>
-
-https://user-images.githubusercontent.com/6422188/233773433-d3b38147-540c-44ba-96ac-af2af8640e7c.mp4
-
-</details>
-
-- `:LlmMulti` — Start multiple prompt completions at the same time with the same input. Must specify prompt names. Escape spaces in names e.g. `to\ spanish`, or use tab completion. Always completes on next line and always `mode = 'append'`.
-
-<details>
-<summary>
-Cancel a long-running prompt
+Cancel response
 </summary>
 
 https://user-images.githubusercontent.com/6422188/233773436-3e9d2a15-bc87-47c2-bc5b-d62d62480297.mp4
 
 </details>
 
-- `:LlmCancel` — Cancel the active response under the cursor.
+- `:Mcancel` — Cancel the active response under the cursor.
 
 <details>
 <summary>
@@ -147,81 +148,242 @@ https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a
 
 </details>
 
-- `:LlmShow` — Flash the response under the cursor if there is one.
+- `:Mshow` — Flash the response under the cursor if there is one.
+
+### 🚧 WIP - Local vector store 
+<details>
+<summary>
+Setup and usage
+</summary>
+
+### Requirements
+  - Python 3.10+
+  - `pip install numpy openai tiktoken`
+
+### Usage
+Check the module functions exposed in [store](./lua/model/store/init.lua). This uses the OpenAI embeddings api to generate vectors and queries them by cosine similarity.
+
+To add items call into the `model.store` lua module functions, e.g.
+  - `:lua require('model.store').add_lua_functions()`
+  - `:lua require('model.store').add_files('.')`
+
+Look at `store.add_lua_functions` for an example of how to use treesitter to parse files to nodes and add them to the local store.
+
+To get query results call `store.prompt.query_store` with your input text, desired count and similarity cutoff threshold (0.75 seems to be decent). It returns a list of {id: string, content: string}:
+
+```lua
+builder = function(input, context)
+  ---@type {id: string, content: string}[]
+  local store_results = require('model.store').prompt.query_store(input, 2, 0.75)
+
+  -- add store_results to your messages
+end
+```
+
+</details>
+
+- `:Mstore [command]`
+  - `:Mstore init` — initialize a store.json file at the closest git root directory
+  - `:Mstore query <query text>` — query a store.json
 
 
 ## 🧵Configuration
+All [setup options](#setupoptions) are optional. Add new prompts to `options.prompts.[name]` and chat prompts to `options.chats.[name]`.
 
 ```lua
-require('llm').setup({
-  default_prompt? = .. , -- Prompt — modify the default prompt (`:Llm` with no argument)
-  hl_group? = '',        -- string — set the default highlight group of in-progress responses
-  prompts? = {}          -- table<string, Prompt>` — add prompt alternatives
-  join_undo? = false     -- boolean — join streaming response text as a single `u` undo. use if you intend to wait for responses to finish before editing other text, as edits during streaming will also be undone.
+require('model').setup({
+  default_prompt = {},
+  prompts = {...},
+  chats = {...},
+  hl_group = 'Comment',
+  join_undo = true,
 })
 ```
 
 ### Prompts
 
-Prompts go in the `prompts` field of the setup table and are ran by the command `:Llm [prompt name]` which will tab complete the available prompts.
+[Prompts](#prompt) go in the `prompts` field of the setup table and are ran by the command `:Model [prompt name]` or `:M [prompt name]`. The commands tab-complete with the available prompts.
 
 With lazy.nvim:
 ```lua
 {
-  'gsuuon/llm.nvim',
-  opts = function()
-    return {
+  'gsuuon/model.nvim',
+  config = function()
+    require('model').setup({
       prompts = {
         instruct = { ... },
         code = { ... },
         ask = { ... }
       }
-    }
+    })
   end
 }
 ```
 
 A prompt entry defines how to handle a completion request - it takes in the editor input (either an entire file or a visual selection) and some context, and produces the api request data merging with any defaults. It also defines how to handle the API response - for example it can replace the selection (or file) with the response or insert it at the cursor positon.
 
-Check out the [starter prompts](./lua/llm/prompts/starters.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/llm/provider.lua). If you want to use the starter prompts alongside your own, you can use `prompts = vim.tbl_extend('force', require('llm.prompts.starters'), { ... })`.
+Check out the [starter prompts](./lua/model/prompts/starters.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/model/provider.lua).
+
+
+### Chat prompts
+
+
+https://github.com/gsuuon/llm.nvim/assets/6422188/b5082daa-173a-4739-9690-a40ce2c39d15
+
+
+[Chat prompts](#chatprompt) go in `setup({ prompts = {..}, chats = { [name] = { <chat prompt> }, .. } })` next to `prompts`. Defaults to [the starter chat prompts](./lua/model/prompts/chats.lua). 
+
+Use `:Mchat [name]` to create a new mchat buffer with that chat prompt. The command will tab complete with available chat prompts. You can prefix the command with `:horizontal Mchat [name]` or `:tab Mchat [name]` to create the buffer in a horizontal split or new tab.
+
+A brand new `mchat` buffer might look like this:
+
+```
+openai
+---
+{
+  params = {
+    model = "gpt-4-1106-preview"
+  }
+}
+---
+> You are a helpful assistant
+
+Count to three
+```
+
+Run `:Mchat` in the new buffer (with no name argument) to get the assistant response.  You can edit any of the messages, params, options or system instruction (the first line, if it starts with `> `) as necessary throughout the conversation. You can also copy/paste to a new buffer, `:set ft=mchat` and run `:Mchat`.
+
+You can save the buffer with an `.mchat` extension to continue the chat later using the same settings shown in the header. `mchat` comes with some syntax highlighting and folds to show the various chat parts - name of the chatprompt runner, options and params in the header, and a system message.
+
 
 ### Library autoload
 You can use `require('util').module.autoload` instead of a naked `require` to always re-require a module on use. This makes the feedback loop for developing prompts faster:
 
 ```diff
-require('llm').setup({
+require('model').setup({
 -  prompts = require('prompt_library')
-+  prompts = require('llm.util').module.autoload('prompt_library')
++  prompts = require('model.util').module.autoload('prompt_library')
 })
 ```
 
 I recommend setting this only during active prompt development, and switching to a normal `require` otherwise.
 
-### Providers
-#### OpenAI ChatGPT (default)
-Set the environment variable `OPENAI_API_KEY` to your [api key](https://platform.openai.com/account/api-keys) before starting nvim. OpenAI prompts can take an additional option field with a table containing `{ url?, endpoint?, authorization?, curl_args? }` fields to talk to compatible API's. Check the `compat` starter prompt for an example.
+## Providers
 
-<details>
-<summary>
-Configuration
-</summary>
+- [openai](#openai-chatgpt)
+- [llama.cpp](#llamacpp)
+- [ollama](#ollama)
+- [google palm](#google-palm)
+- [together](#together)
+- [huggingface](#huggingface-api)
+- [kobold](#kobold)
+- [your own](#adding-your-own)
 
-Add default request parameters for [/chat/completions](https://platform.openai.com/docs/api-reference/chat/create) with `initialize()`:
+### OpenAI ChatGPT
+(default)
 
+Set the `OPENAI_API_KEY` environment variable to your [api key](https://platform.openai.com/account/api-keys).
+
+#### openai prompt options
+OpenAI prompts can take an additional option field to talk to compatible API's.
+
+```lua
+  compat = vim.tbl_extend('force', openai.default_prompt, {
+    options = {
+      url = 'http://127.0.0.1:8000/v1/'
+    }
+  })
 ```
-require('llm.providers.openai').initialize({
-  max_tokens = 120,
-  temperature = 0.7,
-  model = 'gpt-3.5-turbo-0301'
-})
-```
+
+- `url?: string` - (Optional) Custom URL to use for API requests. Defaults to 'https://api.openai.com/v1/'. If `url` is provided then the environment key will not be sent, you'll need to include `authorization`.
+- `endpoint?: string` - (Optional) Endpoint to use in the request URL. Defaults to 'chat/completions'.
+- `authorization?: string` - (Optional) Authorization header to include in the request. Overrides any authorization given through the environment key.
 
 </details>
 
-#### Google PaLM
+### LlamaCpp
+This provider uses the [llama.cpp server](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md).
+
+You can start the server manually or have it autostart when you run a llamacpp prompt. To autostart the server call `require('model.providers.llamacpp').setup({})` in your config function and set a `model` in the prompt options (see below). Leave `model` empty to not autostart. The server restarts if the prompt model or args change.
+
+#### Setup
+1. Build [llama.cpp](https://github.com/ggerganov/llama.cpp)
+1. Download the model you want to use, e.g. [Zephyr 7b beta](https://huggingface.co/TheBloke/zephyr-7B-beta-GGUF/tree/main)
+1. Setup the llamacpp provider if you plan to use autostart:
+    ```lua
+    config = function()
+      require('model').setup({ .. })
+
+      require('model.providers.llamacpp').setup({
+        binary = '~/path/to/server/binary',
+        models = '~/path/to/models/directory'
+      })
+    end
+    ```
+1. Use the llamacpp provider in a prompt:
+    ```lua
+    local llamacpp = require('model.providers.llamacpp')
+
+    require('model').setup({
+      prompts = {
+        zephyr = {
+          provider = llamacpp,
+          options = {
+            model = 'zephyr-7b-beta.Q5_K_M.gguf',
+            args = {
+              '-c', 8192,
+              '-ngl', 35
+            }
+          },
+          builder = function(input, context)
+            return {
+              prompt =
+                '<|system|>'
+                .. (context.args or 'You are a helpful assistant')
+                .. '\n</s>\n<|user|>\n'
+                .. input
+                .. '</s>\n<|assistant|>',
+              stops = { '</s>' }
+            }
+          end
+        }
+      }
+    })
+    ```
+
+#### LlamaCpp setup options
+Setup `require('model.providers.llamacpp').setup({})`
+ - `binary: string` - path to the llamacpp server binary executable
+ - `models: string` - path to the parent directory of the models (joined with `prompt.model`)
+
+#### LlamaCpp prompt options
+- `model: string (optional)` - The path to the LLM model file to use with server autostart. If not specified, the default model will be used.
+- `args: string[] (optional)` - An array of additional arguments to pass to the LLM server at startup.
+- `url: string (optional)` - The URL to connect to the LLM server instead of using the default one. This can be useful for connecting to a remote LLM server or a customized local one.
+
+### Ollama
+This uses the [ollama](https://github.com/jmorganca/ollama/tree/main) REST server's [`/api/generate` endpoint](https://github.com/jmorganca/ollama/blob/main/docs/api.md#generate-a-completion). `raw` defaults to true, and `stream` is always true.
+
+Example prompt with starling:
+
+```lua
+  ['ollama/starling'] = {
+    provider = ollama,
+    params = {
+      model = 'starling-lm'
+    },
+    builder = function(input)
+      return {
+        prompt = 'GPT4 Correct User: ' .. input .. '<|end_of_turn|>GPT4 Correct Assistant: '
+      }
+    end
+  },
+```
+
+### Google PaLM
 Set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey).
 
-Check the palm prompt in [starter prompts](./lua/llm/prompts/starters.lua) for a reference. Palm provider defaults to the chat model (`chat-bison-001`). The builder's return params can include `model = 'text-bison-001'` to use the text model instead.
+Check the palm prompt in [starter prompts](./lua/model/prompts/starters.lua) for a reference. Palm provider defaults to the chat model (`chat-bison-001`). The builder's return params can include `model = 'text-bison-001'` to use the text model instead.
 
 Params should be either a [generateMessage](https://developers.generativeai.google/api/rest/generativelanguage/models/generateMessage#request-body) body by default, or a [generateText](https://developers.generativeai.google/api/rest/generativelanguage/models/generateText#request-body) body if using `model = 'text-bison-001'`.
 
@@ -240,7 +402,10 @@ Params should be either a [generateMessage](https://developers.generativeai.goog
 }
 ```
 
-#### Huggingface API
+### Together
+Set the `TOGETHER_API_KEY` environment variable to your [api key](https://api.together.xyz/settings/api-keys). Params go to the [inference endpoint](https://docs.together.ai/reference/inference).
+
+### Huggingface API
 Set the `HUGGINGFACE_API_KEY` environment variable to your [api key](https://huggingface.co/settings/tokens).
 
 Set the model field on the params returned by the builder (or the static params in `prompt.params`). Set `params.stream = false` for models which don't support it (e.g. `gpt2`). Check [huggingface api docs](https://huggingface.co/docs/api-inference/detailed_parameters) for per-task request body types.
@@ -257,67 +422,26 @@ Set the model field on the params returned by the builder (or the static params 
 }
 ```
 
-#### LlamaCpp
-
-This provider uses the [llama.cpp server example](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md). You can start the server manually or autostart it when you run a prompt. To autostart the server, provide a start command binary path and args in the `options.server_start` field, eg:
-```lua
-  llamacpp = {
-    provider = llamacpp,
-    options = {
-      server_start = {
-        command = '/path/to/server',
-        args = {
-          '-m', '/path/to/model',
-          '-c', 4096,
-          '-ngl', 22
-        }
-      }
-    },
-    builder = function(input, context)
-      return {
-        prompt = llamacpp.llama_2_user_prompt({
-          user = context.args or '',
-          message = input
-        })
-      }
-    end
-  },
-```
-
-The server will be restarted if a prompt with different args is run. See [llama.cpp server docs](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md#llamacppexampleserver).
-
-
-#### Codellama
-This is a llama.cpp based provider specialized for codellama infill / Fill in the Middle. Only 7B and 13B models support FIM, and the base models (not Instruct) seem to work better. Start the llama.cpp server example with one of the two supported models before using this provider.
-
-#### Kobold
+### Kobold
 For older models that don't work with llama.cpp, koboldcpp might still support them. Check their [repo](https://github.com/LostRuins/koboldcpp/) for setup info.
 
-#### Adding your own
-Providers implement a simple interface so it's easy to add your own. Just set your provider as the `provider` field in a prompt. Your provider needs to kick off the request and call the handlers as data streams in, finishes, or errors. Check [the hf provider](./lua/llm/providers/huggingface.lua) for a simpler example supporting server-sent events streaming. If you don't need streaming, just make a request and call `handler.on_finish` with the result.
-
-```lua
----@class Provider
----@field request_completion fun(handler: StreamHandlers, params?: table, options?: table): function Request a completion stream from provider, returning a cancel callback
-
----@class StreamHandlers
----@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
----@field on_finish (fun(complete_text: string, finish_reason: string): nil) Complete response with finish reason
----@field on_error (fun(data: any, label?: string): nil) Error data and optional label
-```
+### Adding your own
+[Providers](#provider) implement a simple interface so it's easy to add your own. Just set your provider as the `provider` field in a prompt. Your provider needs to kick off the request and call the handlers as data streams in, finishes, or errors. Check [the hf provider](./lua/model/providers/huggingface.lua) for a simpler example supporting server-sent events streaming. If you don't need streaming, just make a request and call `handler.on_finish` with the result.
 
 Basic provider example:
 ```lua
-{
+local test_provider = {
+  request_completion = function(handlers, params, options)
+    vim.notify(vim.inspect({params=params, options=options}))
+    handlers.on_partial('a response')
+    handlers.on_finish()
+  end
+}
+
+require('model').setup({
   prompts = {
-    test = {
-      provider = {
-        request_completion = function(handlers, params, options)
-          vim.notify(vim.inspect({params=params, options=options}))
-          handlers.on_partial('a response')
-          handlers.on_finish()
-        end
-      },
+    test_prompt = {
+      provider = test_provider,
       builder = function(input, context)
         return {
           input = input,
@@ -326,17 +450,105 @@ Basic provider example:
       end
     }
   }
-}
+})
 ```
 
 --- 
+
+## Reference
+The following are types and the fields they contain:
+
+#### SetupOptions
+Setup `require('model').setup(SetupOptions)`
+- `default_prompt?: string` - The default prompt to use with `:Model` or `:M`. Default is the openai starter.
+- `prompts?: {string: Prompt}` - A table of custom prompts to use with `:M [name]`. Keys are the names of the prompts. Default are the starters.
+- `chats?: {string: ChatPrompt}` - A table of chat prompts to use with `:Mchat [name]`. Keys are the names of the chats.
+- `hl_group?: string` - The default highlight group for in-progress responses. Default is `'Comment'`.
+- `join_undo?: boolean` - Whether to join streaming response text as a single undo command. When true, unrelated edits during streaming will also be undone. Default is `true`.
+
+#### Prompt
+`params` are generally data that go directly into the request sent by the provider (e.g. content, temperature). `options` are used by the provider to know how to handle the request (e.g. server url or model name if a local LLM).
+
+Setup `require('model').setup({prompts = { [prompt name] = Prompt, .. }})`  
+Run `:Model [prompt name]` or `:M [prompt name]`
+- `provider: Provider` - The provider for this prompt, responsible for requesting and returning completion suggestions.
+- [`builder: ParamsBuilder`](#paramsbuilder) - Converts input (either the visual selection or entire buffer text) and [context](#context) to request parameters. Returns either a table of params or a function that takes a callback with the params.
+- `transform?: fun(string): string` - Optional function that transforms completed response text after on_finish, e.g. to extract code.
+- `mode?: SegmentMode | StreamHandlers` - Response handling mode. Defaults to 'append'. Can be one of 'append', 'replace', 'buffer', 'insert', or 'insert_or_replace'. Can be a table of [StreamHandlers](#streamhandlers) to manually handle the provider response.
+- `hl_group?: string` - Highlight group of active response.
+- `params?: table` - Static request parameters for this prompt.
+- `options?: table` - Optional options for the provider.
+
+#### Provider
+- `request_completion: fun(handler: StreamHandlers, params?: table, options?: table): function` - Requests a completion stream from the provider and returns a cancel callback. Feeds completion parts back to the prompt runner using handler methods and calls on_finish after completion is done.
+- `default_prompt? : Prompt` - Default prompt for this provider (optional).
+- `adapt?: fun(prompt: StandardPrompt): table` - Adapts a standard prompt to params for this provider (optional).
+
+#### ParamsBuilder
+(function)
+- `fun(input: string, context: Context): table | fun(resolve: fun(params: table))` - Converts input (either the visual selection or entire buffer text) and [context](#context) to request parameters. Returns either a table of params or a function that takes a callback with the params.
+
+#### SegmentMode
+(enum)
+
+Exported as `local mode = require('model').mode`
+- `APPEND = 'append'` - Append to the end of input.
+- `REPLACE = 'replace'` - Replace input.
+- `BUFFER = 'buffer'` - Create a new buffer and insert.
+- `INSERT = 'insert'` - Insert at the cursor position.
+- `INSERT_OR_REPLACE = 'insert_or_replace'` - Insert at the cursor position if no selection, or replace the selection.
+
+#### StreamHandlers
+- `on_partial: fun(partial_text: string): nil` - Called by the provider to pass partial incremental text completions during a completion request.
+- `on_finish: fun(complete_text?: string, finish_reason?: string): nil` - Called by the provider when the completion is done. Takes an optional argument for the completed text (`complete_text`) and an optional argument for the finish reason (`finish_reason`).
+- `on_error: fun(data: any, label?: string): nil` - Called by the provider to pass error data and an optional label during a completion request.
+
+#### ChatPrompt
+`params` are generally data that go directly into the request sent by the provider (e.g. content, temperature). `options` are used by the provider to know how to handle the request (e.g. server url or model name if a local LLM).
+
+Setup `require('model').setup({chats = { [chat name] = ChatPrompt, .. }})`  
+Run `:Mchat [chat name]`
+- `provider: Provider` - The provider for this chat prompt.
+- `create: fun(input: string, context: Context): string | ChatContents` - Converts input and context into the first message text or ChatContents, which are written into the new chat buffer.
+- `run: fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil )` - Converts chat messages and configuration into completion request params. This function returns a table containing the required params for generating completions, or it can return a function that takes a callback to resolve the params.
+- `system?: string` - Optional system instruction used to provide specific instructions for the provider.
+- `params?: table` - Static request parameters that are provided to the provider during completion generation.
+- `options?: table` - Provider options, which can be customized by the user to modify the chat prompt behavior.
+
+#### ChatMessage
+- `role: 'user' | 'assistant'` - Indicates whether this message was generated by the user or the assistant.
+- `content: string` - The actual content of the message.
+
+#### ChatConfig
+- `system?: string` - Optional system instruction used to provide context or specific instructions for the provider.
+- `params?: table` - Static request parameters that are provided to the provider during completion generation.
+- `options?: table` - Provider options, which can be customized by the user to modify the chat prompt behavior.
+
+#### ChatContents
+- `config: ChatConfig` - Configuration for this chat buffer, used by `chatprompt.run`. This includes information such as the system instruction, static request parameters, and provider options.
+- `messages: ChatMessage[]` - Messages in the chat buffer.
+
+#### Context
+- `before: string` - The text present before the selection or cursor.
+- `after: string` - The text present after the selection or cursor.
+- `filename: string` - The filename of the buffer containing the selected text.
+- `args: string` - Any additional command arguments provided to the plugin.
+- `selection?: Selection` - An optional `Selection` object representing the selected text, if available.
+
+#### Selection
+- `start: Position` - The starting position of the selection within the buffer.
+- `stop: Position` - The ending position of the selection within the buffer.
+
+#### Position
+- `row: number` - The 0-indexed row of the position within the buffer.
+- `col: number or vim.v.maxcol` - The 0-indexed column of the position within the line. If `vim.v.maxcol` is provided, it indicates the end of the line.
 
 ## Examples
 
 ### Prompts
 
 ```lua
-require('llm').setup({
+require('model').setup({
   prompts = {
     ['prompt name'] = ...
   }
@@ -389,7 +601,7 @@ https://user-images.githubusercontent.com/6422188/233807212-d1830514-fe3b-4d38-8
 ```lua
   ['commit message'] = {
     provider = openai,
-    mode = llm.mode.INSERT,
+    mode = mode.INSERT,
     builder = function()
       local git_diff = vim.fn.system {'git', 'diff', '--staged'}
       return {
@@ -484,10 +696,10 @@ return {
 <summary>Replace text with Spanish</summary>
 
 ```lua
-local openai = require('llm.providers.openai')
-local segment = require('llm.segment')
+local openai = require('model.providers.openai')
+local segment = require('model.util.segment')
 
-require('llm').setup({
+require('model').setup({
   prompts = {
     ['to spanish'] =
       {
@@ -519,9 +731,9 @@ require('llm').setup({
 <summary>Notifies each stream part and the complete response</summary>
 
 ```lua
-local openai = require('llm.providers.openai')
+local openai = require('model.providers.openai')
 
-require('llm').setup({
+require('model').setup({
   prompts = {
     ['show parts'] = {
       provider = openai,
@@ -554,7 +766,7 @@ You can move prompts into their own file and use `util.module.autoload` to quick
 #### `config = function()`
 
 ```lua
-local openai = require('llm.providers.openai')
+local openai = require('model.providers.openai')
 
 -- configure default model params here for the provider
 openai.initialize({
@@ -563,9 +775,9 @@ openai.initialize({
   temperature = 0.2,
 })
 
-local util = require('llm.util')
+local util = require('model.util')
 
-require('llm').setup({
+require('model').setup({
   hl_group = 'Substitute',
   prompts = util.module.autoload('prompt_library'),
   default_prompt = {
@@ -598,8 +810,8 @@ require('llm').setup({
 #### `lua/prompt_library.lua`
 
 ```lua
-local openai = require('llm.providers.openai')
-local segment = require('llm.segment')
+local openai = require('model.providers.openai')
+local segment = require('model.util.segment')
 
 return {
   code = {
@@ -679,7 +891,7 @@ return {
 </details>
 
 ## Contributing
-New starter prompts, providers and bug fixes are welcome! If you've figured out some useful prompts and want to share, check out the [discussions](https://github.com/gsuuon/llm.nvim/discussions/24).
+New starter prompts, providers and bug fixes are welcome! If you've figured out some useful prompts and want to share, check out the [discussions](https://github.com/gsuuon/model.nvim/discussions/24).
 
 ### Roadmap
 I'm hoping to eventually add the following features - I'd appreciate help with any of these.

@@ -1,5 +1,5 @@
-local util = require('llm.util')
-local system = require('llm.util.system')
+local util = require('model.util')
+local system = require('model.util.system')
 
 local M = {}
 
@@ -32,7 +32,7 @@ local function build_args(opts, stream)
 
   if opts.body ~= nil then
     table.insert(args, '--data-binary')
-    table.insert(args, vim.json.encode(opts.body))
+    table.insert(args, '@-') -- read from stdin
   end
 
   table.insert(args, opts.url)
@@ -52,7 +52,7 @@ local function run_curl(opts, stream, on_stdout, on_error)
     util.show(args, 'curl args')
   end
 
-  return system('curl', args, {}, on_stdout, on_error)
+  return system('curl', args, {}, on_stdout, on_error, nil, vim.json.encode(opts.body))
 end
 
 ---@param opts { url : string, method : string, body : any, headers : {[string]: string} }
@@ -73,6 +73,9 @@ function M.request(opts, on_complete, on_error)
   return run_curl(opts, false, on_stdout, on_error)
 end
 
+---@param opts { url : string, method : string, body : any, headers : {[string]: string} }
+---@param on_stdout fun(text: string): nil
+---@param on_error fun(text: string): nil
 function M.stream(opts, on_stdout, on_error)
   local function on_out(out)
     if out ~= nil then

@@ -1,6 +1,6 @@
-local curl = require('llm.curl')
-local util = require('llm.util')
-local provider_util = require('llm.providers.util')
+local curl = require('model.util.curl')
+local util = require('model.util')
+local provider_util = require('model.providers.util')
 
 local M = {}
 
