@@ -115,6 +115,36 @@ local chats = {
       }
     end
   },
+  ['together:mixtral'] = {
+    provider = together,
+    params = {
+      model = 'DiscoResearch/DiscoLM-mixtral-8x7b-v2',
+      temperature = 0.7,
+      top_p = 0.7,
+      top_k = 50,
+      repetition_penalty = 1,
+      stop = {
+        '<|im_end|>',
+        '<|im_start|>'
+      }
+    },
+    create = input_if_selection,
+    run = function(messages, config)
+      local first = messages[1]
+
+      if config.system then
+        first.content = config.system .. '\n' .. first.content
+      end
+
+      return {
+        prompt = table.concat(
+          vim.tbl_map(function(msg)
+            return '<|im_start|>' .. msg.role .. '\n' .. msg.content .. '<|im_end|>\n'
+          end, messages)
+        ) .. '<|im_start|>assistant'
+      }
+    end
+  },
   ['gpt4:commit review'] = {
     provider = openai,
     system = 'You are an expert programmer that gives constructive feedback. Review the changes in the user\'s git diff.',

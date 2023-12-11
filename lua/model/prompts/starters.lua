@@ -80,8 +80,8 @@ local starters = {
   ['together:stripedhyena'] = {
     provider = together,
     params = {
-      model = 'togethercomputer/StripedHyena-Nous-7B',
-      max_tokens = 512
+      model = 'togethercomputer/StripedHyena-Nous-7B', -- 32k model
+      max_tokens = 1024
     },
     builder = function(input)
       return {
@@ -93,8 +93,8 @@ local starters = {
   ['together:phind/codellama34b_v2'] = {
     provider = together,
     params = {
-      model = 'Phind/Phind-CodeLlama-34B-v2',
-      max_tokens = 512
+      model = 'Phind/Phind-CodeLlama-34B-v2', -- 16k model
+      max_tokens = 1024
     },
     builder = function(input)
       return {

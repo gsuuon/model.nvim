@@ -1,18 +1,22 @@
 # 🗿 model.nvim
-[Formerly known as llm.nvim](https://github.com/gsuuon/llm.nvim/discussions/37)
 
 Use AI models in Neovim for completions or chat. Build prompts programatically with lua. Designed for those who want to customize their prompts, experiment with multiple providers or use local models.
 
 
 https://github.com/gsuuon/model.nvim/assets/6422188/3af3e65d-d13c-4196-abe1-07d605225c10
 
+<sub>[Formerly known as llm.nvim](https://github.com/gsuuon/llm.nvim/discussions/37)</sub>
 
 ### Features
 
 - 🎪 Provider agnostic. Comes with:
-  - OpenAI ChatGPT (and compatible API's)
-  - hosted: Google PaLM, together, huggingface
-  - local: llama.cpp, ollama
+  - hosted
+    - OpenAI ChatGPT (and compatible API's)
+    - Google PaLM, together, huggingface
+  - local
+    - llama.cpp
+    - ollama
+  - easy to add your own
 - 🎨 Programmatic prompts in lua
   - customize everything
   - async and multistep prompts
@@ -27,8 +31,8 @@ https://github.com/gsuuon/model.nvim/assets/6422188/3af3e65d-d13c-4196-abe1-07d6
   - basic syntax highlights and folds
 
 ### Contents
-- [Setup](#-setup)
-- [Usage](#-usage)
+- [Setup](#setup)
+- [Usage](#usage)
 - [Config](#configuration)
 - [Providers](#providers)
 - [Reference](#reference)
@@ -39,10 +43,10 @@ If you have any questions feel free to ask in [discussions](https://github.com/g
 
 ---
 
-## 🦾 Setup
+## Setup
 
 ### Requirements
-- Nvim 0.8.0 or higher
+- Nvim 0.9.0 or higher
 - curl
 
 ### With [lazy.nvim](https://github.com/folke/lazy.nvim)
@@ -87,7 +91,11 @@ require('lazy').setup({
 })
 ```
 
-## 💭 Usage
+## Usage
+
+
+https://github.com/gsuuon/model.nvim/assets/6422188/ae00076d-3327-4d97-9cc1-41acffead327
+
 
 **model.nvim** comes with some [starter prompts](./lua/model/prompts/starters.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt where we curl for openapi schema, ask gpt for relevant endpoint, then include that in a final prompt look at the `openapi` starter prompt.
 
@@ -98,10 +106,10 @@ Prompts can have 5 different [modes](#segmentmode) which determine what happens 
 #### Run prompts
 Run a completion [prompt](#prompts)
 
-- `:Model [name]` or `:M [name]` — Start a completion of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided.
+- `:Model [name]` or `:M [name]` — Start a completion request of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided. Completions typically edit the current buffer.
 
 Start a new [chat](#chat-prompts)
-- `:Mchat [name] [instruction]` — Start a new chat buffer with the `name` [ChatPrompt](#chatprompt). Provide an optional instruction override - if currently in an `mchat` buffer use `-` to re-use the same instruction (e.g. `:Mchat openai -`)
+- `:Mchat [name] [instruction]` — Start a new chat buffer with the `name` [ChatPrompt](#chatprompt) for multi-turn conversation. Provide an optional instruction override. If you're currently in an `mchat` buffer you can use `-` to import the buffer's instruction to the new chat, e.g. `:Mchat openai -`, otherwise it will be the system instruction of the new chat prompt.
 
 Run a chat buffer
 - `:Mchat` — Request the assistant response in a chat buffer. You can save an `mchat` buffer as `my_conversation.mchat`, reload it later and run `:Mchat` with your next message to continue where you left off. You'll need to have the same ChatPrompt configured in setup.
@@ -189,7 +197,7 @@ end
   - `:Mstore query <query text>` — query a store.json
 
 
-## 🧵Configuration
+## Configuration
 All [setup options](#setupoptions) are optional. Add new prompts to `options.prompts.[name]` and chat prompts to `options.chats.[name]`.
 
 ```lua
