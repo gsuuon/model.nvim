@@ -3,7 +3,9 @@
 
 Use AI models in Neovim for completions or chat. Build prompts programatically with lua. Designed for those who want to customize their prompts, experiment with multiple providers or use local models.
 
-https://user-images.githubusercontent.com/6422188/233238173-a3dcea16-9948-4e7c-a419-eeec04cb7e99.mp4
+
+https://github.com/gsuuon/model.nvim/assets/6422188/7846e3ea-80d5-4b4d-b8bc-39289fb94cb8
+
 
 ### Features
 
