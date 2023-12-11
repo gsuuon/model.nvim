@@ -7,20 +7,22 @@ local input = require('model.core.input')
 
 local M = {}
 
-local function yank_with_line_numbers_and_filename(opts)
-  opts = opts or {}
-  local register = opts.register or '"'
+local function yank_with_line_numbers_and_filename(register)
+  register = register or '"'
 
   -- Get the visual selection range
   local start_line = vim.fn.line("'<")
   local end_line = vim.fn.line("'>")
+  ---@cast start_line number
+  ---@cast end_line number
 
   -- Capture the selected lines
   local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
 
   -- Get current buffer's file name
-  local filename = vim.api.nvim_buf_get_name(0)
+  local filename = vim.fn.expand('%')
   filename = filename ~= "" and filename or "[No Name]"
+  filename = filename .. '#L' .. start_line .. '-L' .. end_line
 
   -- Add the filename and the markdown code fence language syntax
   local file_info = "File: `" .. filename .. "`\n```"
@@ -34,19 +36,11 @@ local function yank_with_line_numbers_and_filename(opts)
     file_info = file_info .. "\n"
   end
 
-  -- Add line numbers to each line
-  for i, line in ipairs(lines) do
-    lines[i] = start_line + i - 1 .. ': ' .. line
-  end
-
   -- Join lines into a single string and close the code fence
-  local with_numbers = file_info .. table.concat(lines, "\n") .. "\n```"
+  local with_numbers = file_info .. table.concat(lines, "\n") .. "\n```\n"
 
   -- Set the content in the chosen register
   vim.fn.setreg(register, with_numbers)
-
-  -- Echo a message
-  vim.notify('Yanked lines ' .. start_line .. ' to ' .. end_line .. ' with line numbers to register ' .. register)
 
   -- Return the result as a string
   return with_numbers
@@ -412,7 +406,7 @@ local function setup_commands()
   vim.api.nvim_create_user_command(
     'Myank',
     function(cmd_params)
-      yank_with_line_numbers_and_filename({ register = cmd_params.args })
+      yank_with_line_numbers_and_filename(cmd_params.args)
     end,
     {
       range = true,
