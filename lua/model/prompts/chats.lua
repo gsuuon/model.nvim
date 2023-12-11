@@ -89,7 +89,8 @@ local chats = {
     provider = together,
     params = {
       model = 'Phind/Phind-CodeLlama-34B-v2',
-      max_tokens = 1000
+      max_tokens = 1000,
+      stop = '</s>'
     },
     system = 'You are an intelligent programming assistant',
     create = function(input, ctx)
@@ -116,14 +117,19 @@ local chats = {
   },
   ['gpt4:commit review'] = {
     provider = openai,
+    system = 'You are an expert programmer that gives constructive feedback. Review the changes in the user\'s git diff.',
+    params = {
+      model = 'gpt-4-1106-preview'
+    },
     create = function()
       local git_diff = vim.fn.system {'git', 'diff', '--staged'}
+      ---@cast git_diff string
 
       if not git_diff:match('^diff') then
         error('Git error:\n' .. git_diff)
       end
 
-      return 'Review the changes in the following git diff:\n\n' .. git_diff .. '\n'
+      return git_diff
     end,
     run = openai_chat.run
   }
