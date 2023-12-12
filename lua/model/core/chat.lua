@@ -1,5 +1,6 @@
 local segment = require('model.util.segment')
 local util = require('model.util')
+local juice = require('model.util.juice')
 
 local M = {}
 
@@ -275,10 +276,17 @@ function M.run_chat(opts)
   local starter_seperator = needs_nl(buf_lines) and '\n======\n' or '======\n'
   seg.add(starter_seperator)
 
+  local sayer = juice.sayer()
+
   ---@type StreamHandlers
   local handlers = {
-    on_partial = seg.add,
+    on_partial = function(text)
+      seg.add(text)
+      sayer.say(text)
+    end,
     on_finish = function(text, reason)
+      sayer.finish()
+
       if text then
         seg.set_text(starter_seperator .. text .. '\n======\n')
       else
@@ -286,6 +294,7 @@ function M.run_chat(opts)
       end
 
       seg.clear_hl()
+
       if reason and reason ~= 'stop' and reason ~= 'done' then
         vim.notify(reason)
       end
