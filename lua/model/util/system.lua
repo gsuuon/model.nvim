@@ -3,9 +3,9 @@ local uv = vim.loop
 -- TODO eventually switch to using vim.system(), neovim 0.10 feature
 ---@param cmd string
 ---@param args string[]
----@param opts object additional options for uv.spawn
----@param on_stdout fun(text: string): nil
----@param on_error fun(text: string): nil
+---@param opts? object additional options for uv.spawn
+---@param on_stdout? fun(text: string): nil
+---@param on_error? fun(text: string): nil
 ---@param on_exit? fun(): nil
 ---@param stdin_text? string
 ---@return function interrupt sends SIGINT to process
@@ -23,7 +23,8 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit, stdin_text)
       {
         args = args,
         stdio = { stdin, stdout, stderr }
-      }, opts
+      },
+      (opts or {})
     ),
     function(exit_code, signal)
       -- success
@@ -38,9 +39,11 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit, stdin_text)
       -- sigint / cancelled
       if signal == 2 then return end
 
-      vim.schedule(function()
-        on_error(_error_output)
-      end)
+      if on_error then
+        vim.schedule(function()
+          on_error(_error_output)
+        end)
+      end
     end
   ), 'failed to spawn ' .. cmd)
 
@@ -49,22 +52,24 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit, stdin_text)
     if text then _error_output = _error_output .. text end
   end)
 
-  uv.read_start(stdout, function(err, text)
-    assert(not err, err)
+  if on_stdout then
+    uv.read_start(stdout, function(err, text)
+      assert(not err, err)
 
-    -- naked call to on_stdout that errors crashes nvim
-    local success, handler_err_trace = xpcall(
-      vim.schedule_wrap(on_stdout),
-      function()
-        return debug.traceback('Error in system on_stdout handler', 2)
-      end,
-      text
-    )
+      -- naked call to on_stdout that errors crashes nvim
+      local success, handler_err_trace = xpcall(
+        vim.schedule_wrap(on_stdout),
+        function()
+          return debug.traceback('Error in system on_stdout handler', 2)
+        end,
+        text
+      )
 
-    if not success then
-      error(handler_err_trace, 2)
-    end
-  end)
+      if not success then
+        error(handler_err_trace, 2)
+      end
+    end)
+  end
 
   if stdin_text then
     stdin:write(stdin_text)
