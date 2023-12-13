@@ -426,9 +426,9 @@ Setup `require('model.providers.llamacpp').setup({})`
  - `models: string` - path to the parent directory of the models (joined with `prompt.model`)
 
 #### LlamaCpp prompt options
-- `model: string (optional)` - The path to the LLM model file to use with server autostart. If not specified, the default model will be used.
-- `args: string[] (optional)` - An array of additional arguments to pass to the LLM server at startup.
-- `url: string (optional)` - The URL to connect to the LLM server instead of using the default one. This can be useful for connecting to a remote LLM server or a customized local one.
+- `model: string (optional)` - The path to the model file to use with server autostart. If not specified, the server will not be started.
+- `args: string[] (optional)` - An array of additional arguments to pass to the server at startup. Use this to specify things like context size `-c` or gpu layers `-ngl` that are specific to the model.
+- `url: string (optional)` - Override the default server url. This can be useful for connecting to a remote server or a customized local one.
 
 ### Ollama
 This uses the [ollama](https://github.com/jmorganca/ollama/tree/main) REST server's [`/api/generate` endpoint](https://github.com/jmorganca/ollama/blob/main/docs/api.md#generate-a-completion). `raw` defaults to true, and `stream` is always true.
