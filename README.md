@@ -986,6 +986,3 @@ The basics are here - a simple json vectorstore based on the git repo, querying,
 
 #### Enhanced context
 Make treesitter and LSP info available in prompt context.
-
-#### Chat mode
-A split buffer for chat usage. I still just use web UI's for chat, but having RAG enhanced chats would be nice.
