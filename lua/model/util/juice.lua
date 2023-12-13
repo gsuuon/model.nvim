@@ -135,26 +135,10 @@ end
 function M.sayer()
   local completion = ''
   local said_len = 0
-  local did_intro_words = false
 
   return {
     say = function(text)
       completion = completion .. text
-
-      if not did_intro_words and said_len == 0 then -- start saying the first 3 words ASAP
-        local words = vim.fn.split(completion, ' ', true)
-        ---@cast words string[]
-
-        if #words > 1 then
-          table.remove(words, #words) -- remove the last word because it might be partial or empty
-
-          local intro_words = table.concat(words, ' ')
-          M.say(intro_words)
-
-          did_intro_words = true
-          said_len = #intro_words + 1
-        end
-      end
 
       if text:find('%.') then
         M.say(completion:sub(said_len))
