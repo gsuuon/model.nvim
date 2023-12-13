@@ -135,6 +135,7 @@ end
 function M.sayer()
   local completion = ''
   local said_len = 0
+  -- TODO say first words if after 100ms we dont have a full sentence yet
 
   return {
     say = function(text)

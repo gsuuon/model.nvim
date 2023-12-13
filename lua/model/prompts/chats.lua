@@ -70,7 +70,7 @@ local chats = {
       model = 'zephyr-7b-beta.Q5_K_M.gguf',
       args = {
         '-c', 8192,
-        '-ngl', 35
+        '-ngl', 30
       }
     },
     system = 'You are a helpful assistant',
