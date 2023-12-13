@@ -295,6 +295,7 @@ require('model').setup({
 I recommend setting this only during active prompt development, and switching to a normal `require` otherwise.
 
 ## Providers
+The available providers are in [./lua/model/providers](./lua/model/providers).
 
 - [openai](#openai-chatgpt)
 - [llama.cpp](#llamacpp)
@@ -426,9 +427,9 @@ Setup `require('model.providers.llamacpp').setup({})`
  - `models: string` - path to the parent directory of the models (joined with `prompt.model`)
 
 #### LlamaCpp prompt options
-- `model: string (optional)` - The path to the model file to use with server autostart. If not specified, the server will not be started.
-- `args: string[] (optional)` - An array of additional arguments to pass to the server at startup. Use this to specify things like context size `-c` or gpu layers `-ngl` that are specific to the model.
-- `url: string (optional)` - Override the default server url. This can be useful for connecting to a remote server or a customized local one.
+- `model?: string` - (optional) The path to the model file to use with server autostart. If not specified, the server will not be started.
+- `args?: string[]` - (optional) An array of additional arguments to pass to the server at startup. Use this to specify things like context size `-c` or gpu layers `-ngl` that are specific to the model.
+- `url?: string` - (optional) Override the default server url. This can be useful for connecting to a remote server or a customized local one.
 
 ### Ollama
 This uses the [ollama](https://github.com/jmorganca/ollama/tree/main) REST server's [`/api/generate` endpoint](https://github.com/jmorganca/ollama/blob/main/docs/api.md#generate-a-completion). `raw` defaults to true, and `stream` is always true.
@@ -436,7 +437,7 @@ This uses the [ollama](https://github.com/jmorganca/ollama/tree/main) REST serve
 Example prompt with starling:
 
 ```lua
-  ['ollama/starling'] = {
+  ['ollama:starling'] = {
     provider = ollama,
     params = {
       model = 'starling-lm'
@@ -452,12 +453,12 @@ Example prompt with starling:
 ### Google PaLM
 Set the `PALM_API_KEY` environment variable to your [api key](https://makersuite.google.com/app/apikey).
 
-Check the palm prompt in [starter prompts](./lua/model/prompts/starters.lua) for a reference. Palm provider defaults to the chat model (`chat-bison-001`). The builder's return params can include `model = 'text-bison-001'` to use the text model instead.
+The PaLM provider defaults to the text model (`text-bison-001`). The builder's return params can include `model = 'chat-bison-001'` to use the chat model instead.
 
-Params should be either a [generateMessage](https://developers.generativeai.google/api/rest/generativelanguage/models/generateMessage#request-body) body by default, or a [generateText](https://developers.generativeai.google/api/rest/generativelanguage/models/generateText#request-body) body if using `model = 'text-bison-001'`.
+Params should be either a [generateText](https://developers.generativeai.google/api/rest/generativelanguage/models/generateText#request-body) body by default, or a [generateMessage](https://developers.generativeai.google/api/rest/generativelanguage/models/generateMessage#request-body) body if using `model = 'chat-bison-001'`.
 
 ```lua
-['palm text completion'] = {
+palm = {
   provider = palm,
   builder = function(input, context)
     return {
@@ -472,7 +473,22 @@ Params should be either a [generateMessage](https://developers.generativeai.goog
 ```
 
 ### Together
-Set the `TOGETHER_API_KEY` environment variable to your [api key](https://api.together.xyz/settings/api-keys). Params go to the [inference endpoint](https://docs.together.ai/reference/inference).
+Set the `TOGETHER_API_KEY` environment variable to your [api key](https://api.together.xyz/settings/api-keys). Talks to the [together inference endpoint](https://docs.together.ai/reference/inference).
+
+```lua
+  ['together:phind/codellama34b_v2'] = {
+    provider = together,
+    params = {
+      model = 'Phind/Phind-CodeLlama-34B-v2',
+      max_tokens = 1024
+    },
+    builder = function(input)
+      return {
+        prompt = '### System Prompt\nYou are an intelligent programming assistant\n\n### User Message\n' .. input  ..'\n\n### Assistant\n'
+      }
+    end
+  },
+```
 
 ### Huggingface API
 Set the `HUGGINGFACE_API_KEY` environment variable to your [api key](https://huggingface.co/settings/tokens).
@@ -480,15 +496,15 @@ Set the `HUGGINGFACE_API_KEY` environment variable to your [api key](https://hug
 Set the model field on the params returned by the builder (or the static params in `prompt.params`). Set `params.stream = false` for models which don't support it (e.g. `gpt2`). Check [huggingface api docs](https://huggingface.co/docs/api-inference/detailed_parameters) for per-task request body types.
 
 ```lua
-['huggingface bigcode'] = {
-  provider = huggingface,
-  params = {
-    model = 'bigcode/starcoder'
+  ['hf:starcoder'] = {
+    provider = huggingface,
+    options = {
+      model = 'bigcode/starcoder'
+    },
+    builder = function(input)
+      return { inputs = input }
+    end
   },
-  builder = function(input)
-    return { inputs = input }
-  end
-}
 ```
 
 ### Kobold
