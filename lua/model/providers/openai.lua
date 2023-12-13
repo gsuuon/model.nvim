@@ -79,7 +79,9 @@ function M.request_completion(handlers, params, options)
       if response ~= nil then
         _handlers.on_error(response, 'response')
       else
-        if not item:match('%[DONE%]') then
+        if item:match('%[DONE%]') then
+          _handlers.on_finish()
+        else
           _handlers.on_error(item, 'item')
         end
       end
