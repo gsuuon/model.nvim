@@ -4,6 +4,7 @@ local system = require('model.util.system')
 local M = {}
 
 M.can_say = false
+M.custom_say = nil -- fun(text: string, on_finish: fun()) override this to use custom say function
 
 function M.scroll(text, rate, set, size)
   local run = true
@@ -74,18 +75,22 @@ local queue_say, stop_say do
     end
 
     say = function(x, on_finish)
-      assert(
-        pcall(
-          system,
-          cmd,
-          {vim.fn.trim(x)},
-          nil,
-          nil,
-          nil,
-          vim.schedule_wrap(on_finish)
-        ),
-        err
-      )
+      if M.custom_say then
+        M.custom_say(x, vim.schedule_wrap(on_finish))
+      else
+        assert(
+          pcall(
+            system,
+            cmd,
+            {vim.fn.trim(x)},
+            nil,
+            nil,
+            nil,
+            vim.schedule_wrap(on_finish)
+          ),
+          err
+        )
+      end
     end
   end
 
