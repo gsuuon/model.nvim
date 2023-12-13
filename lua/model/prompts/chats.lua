@@ -1,3 +1,5 @@
+local util = require('model.util')
+
 local openai = require('model.providers.openai')
 local palm = require('model.providers.palm')
 local llamacpp = require('model.providers.llamacpp')
@@ -42,6 +44,52 @@ local chats = {
       }
     }
   ),
+  gpt4v = {
+    provider = openai,
+    create = input_if_selection,
+    params = {
+      model = 'gpt-4-vision-preview',
+      max_tokens = 512
+    },
+    run = function(messages, config)
+      return function(resolve)
+        require('model.util.image').clipboard_b64(function(image_b64)
+          if #image_b64 > 0 then
+            local msg = messages[1]
+            local body = msg.content
+            util.show('Including image of length ' .. #image_b64)
+
+            ---@diagnostic disable-next-line assign-type-mismatch
+            msg.content = {
+              {
+                type = 'text',
+                text = body
+              },
+              {
+                type = 'image_url',
+                image_url = {
+                  url = 'data:image/bmp;base64,' .. image_b64,
+                }
+              }
+            }
+          else
+            util.warn('Nothing in clipboard for gpt4v chat')
+          end
+
+          if config.system then
+            table.insert(messages, 1, {
+              role = 'system',
+              content = config.system
+            })
+          end
+
+          resolve({
+            messages = messages
+          })
+        end)
+      end
+    end
+  },
   palm = {
     provider = palm,
     system = 'You are a helpful assistant',
