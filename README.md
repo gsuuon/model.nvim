@@ -1,11 +1,11 @@
 # 🗿 model.nvim
+<sub>[Formerly known as llm.nvim](https://github.com/gsuuon/llm.nvim/discussions/37)</sub>
 
 Use AI models in Neovim for completions or chat. Build prompts programatically with lua. Designed for those who want to customize their prompts, experiment with multiple providers or use local models.
 
 
 https://github.com/gsuuon/model.nvim/assets/6422188/3af3e65d-d13c-4196-abe1-07d605225c10
 
-<sub>[Formerly known as llm.nvim](https://github.com/gsuuon/llm.nvim/discussions/37)</sub>
 
 ### Features
 
@@ -232,7 +232,7 @@ With lazy.nvim:
 
 A prompt entry defines how to handle a completion request - it takes in the editor input (either an entire file or a visual selection) and some context, and produces the api request data merging with any defaults. It also defines how to handle the API response - for example it can replace the selection (or file) with the response or insert it at the cursor positon.
 
-Check out the [starter prompts](./lua/model/prompts/starters.lua) to see how to create prompts. Type definitions are in [provider.lua](./lua/model/provider.lua).
+Check out the [starter prompts](./lua/model/prompts/starters.lua) to see how to create prompts. Check out [the reference](#prompt) for the type definitions.
 
 
 ### Chat prompts
@@ -241,7 +241,22 @@ Check out the [starter prompts](./lua/model/prompts/starters.lua) to see how to 
 https://github.com/gsuuon/llm.nvim/assets/6422188/b5082daa-173a-4739-9690-a40ce2c39d15
 
 
-[Chat prompts](#chatprompt) go in `setup({ prompts = {..}, chats = { [name] = { <chat prompt> }, .. } })` next to `prompts`. Defaults to [the starter chat prompts](./lua/model/prompts/chats.lua). 
+[Chat prompts](#chatprompt) go in the `chats` field of the setup table.
+```lua
+{
+  'gsuuon/model.nvim',
+  config = function()
+    require('model').setup({
+      prompts = { ... },
+      chats = {
+        gpt4 = { ... },
+        mixtral = { ... }
+        starling = { ... }
+      }
+    })
+  end
+}
+```
 
 Use `:Mchat [name]` to create a new mchat buffer with that chat prompt. The command will tab complete with available chat prompts. You can prefix the command with `:horizontal Mchat [name]` or `:tab Mchat [name]` to create the buffer in a horizontal split or new tab.
 
@@ -265,6 +280,7 @@ Run `:Mchat` in the new buffer (with no name argument) to get the assistant resp
 
 You can save the buffer with an `.mchat` extension to continue the chat later using the same settings shown in the header. `mchat` comes with some syntax highlighting and folds to show the various chat parts - name of the chatprompt runner, options and params in the header, and a system message.
 
+Check out [the starter chat prompts](./lua/model/prompts/chats.lua) to see how to add your own. Check out [the reference](#chatprompt) for the type definitions.
 
 ### Library autoload
 You can use `require('util').module.autoload` instead of a naked `require` to always re-require a module on use. This makes the feedback loop for developing prompts faster:
