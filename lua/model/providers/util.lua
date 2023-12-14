@@ -42,6 +42,7 @@ function M.iter_sse_messages(fn)
   local pending_output = ''
 
   return function(raw)
+    raw = raw:gsub('\r', '') -- handle some providers using \r
     pending_output = pending_output .. '\n' .. raw
 
     pending_output = pending_output:gsub('(.-)\n\n', function(message)
