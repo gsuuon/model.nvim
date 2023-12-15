@@ -6,7 +6,7 @@ syn include @Lua syntax/lua.vim
 
 let b:current_syntax = 1
 
-set foldmethod=syntax
+setlocal foldmethod=syntax
 syn sync fromstart
 
 syn match modelChatName /\%^\(---\)\@!.\+/ skipnl nextgroup=modelChatMessageSystem,modelChatParams,modelChatMessages
