@@ -304,6 +304,7 @@ The available providers are in [./lua/model/providers](./lua/model/providers).
 - [together](#together)
 - [huggingface](#huggingface-api)
 - [kobold](#kobold)
+- [langserve](#langserve)
 - [your own](#adding-your-own)
 
 ### OpenAI ChatGPT
@@ -509,6 +510,26 @@ Set the model field on the params returned by the builder (or the static params 
 
 ### Kobold
 For older models that don't work with llama.cpp, koboldcpp might still support them. Check their [repo](https://github.com/LostRuins/koboldcpp/) for setup info.
+
+### Langserve
+
+Set the `output_parser` to correctly parse the contents returned from the `/stream` endpoint and use the `builder` to construct the input query. The below uses the [example langserve application](https://github.com/langchain-ai/langserve-launch-example) to make a joke about the input text.
+
+```lua
+  ['langserve:make-a-joke'] = {
+    provider = langserve,
+    options = {
+      base_url = 'https://langserve-launch-example-vz4y4ooboq-uc.a.run.app/',
+      output_parser = langserve.generation_chunk_parser,
+    },
+    builder = function(input, context)
+      return {
+        topic = input,
+      }
+    end
+  },
+```
+
 
 ### Adding your own
 [Providers](#provider) implement a simple interface so it's easy to add your own. Just set your provider as the `provider` field in a prompt. Your provider needs to kick off the request and call the handlers as data streams in, finishes, or errors. Check [the hf provider](./lua/model/providers/huggingface.lua) for a simpler example supporting server-sent events streaming. If you don't need streaming, just make a request and call `handler.on_finish` with the result.
