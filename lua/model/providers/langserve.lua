@@ -4,19 +4,29 @@ local provider_util = require('model.providers.util')
 
 local M = {}
 
-local function parse_llmchain_data(item)
+local function parse_generation_chunk(item)
   local data = util.json.decode(item)
 
-  if data ~= nil and data["text"] ~= nil then
+  if data ~= nil then
     return {
-      content = data["text"]
+     content = data
+    }
+  end
+end
+
+local function parse_chat_generation_chunk(item)
+  local data = util.json.decode(item)
+
+  if data ~= nil and data["content"] ~= nil then
+    return {
+      content = data["content"]
     }
   end
 end
 
 ---@param handlers StreamHandlers
----@param params? any Additional options for OpenAI endpoint
----@param options? { output_parser: FunctionItem, base_url?: string } Request endpoint and url. Defaults to 'https://api.openai.com/v1/' and 'chat/completions'. `authorization` overrides the request auth header. If url is provided the environment key will not be sent, you'll need to provide an authorization.
+---@param params? any Additional options for the endpoint
+---@param options? { output_parser: FunctionItem, base_url?: string } Output parser and url. Defaults to 'http://127.0.0.1:8000/'
 function M.request_completion(handlers, params, options)
   local _all_content = ''
   options = options or {}
@@ -55,11 +65,6 @@ function M.request_completion(handlers, params, options)
 
       if response ~= nil then
         _handlers.on_error(response, 'response')
-      else
-        -- TODO?
-        -- if not message:match('%[DONE%]') then
-        --   _handlers.on_error(message, 'message')
-        -- end
       end
     end
   end)
@@ -68,7 +73,6 @@ function M.request_completion(handlers, params, options)
     _handlers.on_error(error, 'curl')
   end
 
-  -- local body = vim.tbl_deep_extend('force', default_params, params)
   local body = {
       input = params,
   }
@@ -94,16 +98,7 @@ function M.request_completion(handlers, params, options)
   }, handle_raw, handle_error)
 end
 
---- Sets default openai provider params. Currently enforces `stream = true`.
-function M.initialize(opts)
-  default_params = vim.tbl_deep_extend('force',
-    default_params,
-    opts or {},
-    {
-      stream = true -- force streaming since data parsing will break otherwise
-    })
-end
-
-M.llmchain_output_parser = parse_llmchain_data
+M.generation_chunk_parser = parse_generation_chunk
+M.chat_generation_chunk_parser = parse_chat_generation_chunk
 
 return M
