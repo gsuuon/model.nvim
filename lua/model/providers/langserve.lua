@@ -82,7 +82,7 @@ function M.request_completion(handlers, params, options)
   local url_ = options.base_url
   if url_ then
     -- ensure we have a trailing slash if url was provided by options
-    if not url_:sub(-1) == '/' then
+    if not (url_:sub(-1) == '/') then
       url_ = url_ .. '/'
     end
   else
