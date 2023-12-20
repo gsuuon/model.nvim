@@ -22,6 +22,11 @@ local function validate_autostart_options()
   return true
 end
 
+local function joinpath(...)
+  -- can eventually be replaced by vim.fn.joinpath, presumably once neovim 0.9.5 is released.
+  return (table.concat({ ... }, '/'):gsub('//+', '/'))
+end
+
 ---@param model string
 ---@param args string[]
 local function resolve_system_opts(model, args)
@@ -35,7 +40,7 @@ local function resolve_system_opts(model, args)
   local cmd = vim.fn.exepath(path)
   assert(cmd ~= '', 'Executable not found at ' .. path)
 
-  local model_path = vim.fs.normalize(vim.fs.joinpath(M.options.models, model))
+  local model_path = vim.fs.normalize(joinpath(M.options.models, model))
 
   return {
     cmd = cmd,
