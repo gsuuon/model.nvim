@@ -312,6 +312,17 @@ The available providers are in [./lua/model/providers](./lua/model/providers).
 
 Set the `OPENAI_API_KEY` environment variable to your [api key](https://platform.openai.com/account/api-keys).
 
+#### openai parameters
+Parameters are documented [here](https://platform.openai.com/docs/api-reference/chat/create). You can override the [default parameters](lua/model/providers/openai.lua) for this provider by calling initialize:
+
+```lua
+    config = function()
+      require('model.providers.openai').initialize({
+        model = 'gpt-4-1106-preview'
+      })
+    end
+```
+
 #### openai prompt options
 OpenAI prompts can take an additional option field to talk to compatible API's.
 
