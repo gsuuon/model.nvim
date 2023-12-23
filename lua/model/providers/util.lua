@@ -72,6 +72,7 @@ end
 ---@field on_stdout fun(raw: string):nil
 ---@field on_error fun(err: string, label?: string):nil
 ---@field on_exit fun():nil
+---@field on_headers fun(headers: string):nil
 
 ---@param handlers SseHandler
 ---@return SseClient client
@@ -101,7 +102,8 @@ function M.sse_client(handlers)
 
       if is_sse then
         consume_sse_messages()
-      elseif raw:match('^data:') then
+      elseif raw:match('^data:') then -- In case the provider didn't send correct headers
+        -- TODO is this useful?
         is_sse = true
         consume_sse_messages()
       end
@@ -114,6 +116,11 @@ function M.sse_client(handlers)
         else
           handlers.on_other(pending)
         end
+      end
+    end,
+    on_headers = function(headers)
+      if headers:match('[Cc]ontent%-[Tt]ype:%s?text/event%-stream') then
+        is_sse = true
       end
     end
   }

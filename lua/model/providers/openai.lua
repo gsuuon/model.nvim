@@ -67,7 +67,14 @@ function M.request_completion(handlers, params, options)
     on_message = function(message, pending)
       local data = extract_data(message.data)
 
-      if data ~= nil then
+      if data == nil then
+        if not message.data == '[DONE]' then
+          handlers.on_error(vim.inspect({
+            data = message.data,
+            pending = pending
+          }), 'Unrecognized SSE message data')
+        end
+      else
         if data.content ~= nil then
           completion = completion .. data.content
           handlers.on_partial(data.content)
@@ -76,11 +83,6 @@ function M.request_completion(handlers, params, options)
         if data.finish_reason ~= nil then
           handlers.on_finish(completion, data.finish_reason)
         end
-      elseif not message.data:match('%[DONE%]') then
-        handlers.on_error(vim.inspect({
-          data = message.data,
-          pending = pending
-        }), 'Unrecognized SSE message data')
       end
     end,
     on_other = function(content)
@@ -106,7 +108,8 @@ function M.request_completion(handlers, params, options)
     },
     sse.on_stdout,
     sse.on_error,
-    sse.on_exit
+    sse.on_exit,
+    sse.on_headers
   )
 end
 
