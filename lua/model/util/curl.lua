@@ -45,14 +45,15 @@ end
 ---@param stream boolean
 ---@param on_stdout fun(text: string): nil
 ---@param on_error fun(text: string): nil
-local function run_curl(opts, stream, on_stdout, on_error)
+---@param on_exit? fun(): nil
+local function run_curl(opts, stream, on_stdout, on_error, on_exit)
   local args = build_args(opts, stream)
 
   if M._is_debugging then
     util.show(args, 'curl args')
   end
 
-  return system('curl', args, {}, on_stdout, on_error, nil, vim.json.encode(opts.body))
+  return system('curl', args, {}, on_stdout, on_error, on_exit, vim.json.encode(opts.body))
 end
 
 ---@param opts { url : string, method : string, body : any, headers : {[string]: string} }
@@ -76,14 +77,15 @@ end
 ---@param opts { url : string, method : string, body : any, headers : {[string]: string} }
 ---@param on_stdout fun(text: string): nil
 ---@param on_error fun(text: string): nil
-function M.stream(opts, on_stdout, on_error)
+---@param on_exit? fun(): nil
+function M.stream(opts, on_stdout, on_error, on_exit)
   local function on_out(out)
     if out ~= nil then
       on_stdout(out)
     end
   end
 
-  return run_curl(opts, true, on_out, on_error)
+  return run_curl(opts, true, on_out, on_error, on_exit)
 end
 
 return M
