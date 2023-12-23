@@ -1,6 +1,5 @@
-local curl = require('model.util.curl')
 local util = require('model.util')
-local provider_util = require('model.providers.util')
+local sse = require('model.util.sse')
 
 local M = {}
 
@@ -11,7 +10,7 @@ function M.request_completion(handlers, params, options)
   local model = (options or {}).model or 'bigscience/bloom'
 
   -- TODO handle non-streaming calls
-  return curl.stream(
+  return sse.curl_client(
     {
       url = 'https://api-inference.huggingface.co/models/' .. model,
       method = 'POST',
@@ -21,37 +20,36 @@ function M.request_completion(handlers, params, options)
         ['Content-Type'] = 'application/json'
       }
     },
-    provider_util.iter_sse_data(function(data)
-      local item = util.json.decode(data)
+    {
+      on_message = function (msg)
+        local item = util.json.decode(msg.data)
 
-      if item == nil then
-        handlers.on_error(data, 'json parse error')
-        return
-      end
-
-      if item.token == nil then
-        if item[1] ~= nil and item[1].generated_text ~= nil then
-          -- non-streaming
-          handlers.on_finish(item[1].generated_text, 'stop')
+        if item == nil then
+          handlers.on_error(msg.data, 'json parse error')
           return
         end
 
-        handlers.on_error(item, 'missing token')
-        return
+        if item.token == nil then
+          if item[1] ~= nil and item[1].generated_text ~= nil then
+            -- non-streaming
+            handlers.on_finish(item[1].generated_text, 'stop')
+            return
+          end
+
+          handlers.on_error(item, 'missing token')
+          return
+        end
+
+        local partial = item.token.text
+
+        handlers.on_partial(partial)
+
+        -- We get the completed text including input unless parameters.return_full_text is set to false
+        if item.generated_text ~= nil and #item.generated_text > 0 then
+          handlers.on_finish(item.generated_text, 'stop')
+        end
       end
-
-      local partial = item.token.text
-
-      handlers.on_partial(partial)
-
-      -- We get the completed text including input unless parameters.return_full_text is set to false
-      if item.generated_text ~= nil and #item.generated_text > 0 then
-        handlers.on_finish(item.generated_text, 'stop')
-      end
-    end),
-    function(error)
-      handlers.on_error(error)
-    end
+    }
   )
 end
 
