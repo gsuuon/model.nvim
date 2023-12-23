@@ -1,5 +1,4 @@
 # 🗿 model.nvim
-<sub>[Formerly known as llm.nvim](https://github.com/gsuuon/llm.nvim/discussions/37)</sub>
 
 Use AI models in Neovim for completions or chat. Build prompts programatically with lua. Designed for those who want to customize their prompts, experiment with multiple providers or use local models.
 
