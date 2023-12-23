@@ -2,7 +2,7 @@ local curl = require('model.util.curl')
 local util = require('model.util')
 local async = require('model.util.async')
 local system = require('model.util.system')
-local provider_util = require('model.providers.util')
+local sse = require('model.util.sse')
 local llama2 = require('model.format.llama2')
 local juice = require('model.util.juice')
 
@@ -133,7 +133,7 @@ function M.request_completion(handlers, params, options)
       end
     end
 
-    cancel = curl.stream(
+    cancel = sse.curl_client(
       {
         url = opts.url .. '/completion',
         headers = {
@@ -142,20 +142,24 @@ function M.request_completion(handlers, params, options)
         method = 'POST',
         body = vim.tbl_extend('force', { stream = true }, params),
       },
-      provider_util.iter_sse_data(function(item)
-        local data = util.json.decode(item)
+      {
+        on_message = function(msg)
+          local data = util.json.decode(msg.data)
 
-        if data == nil then
-          handlers.on_error(item, 'json parse error')
-        elseif data.stop then
-          handlers.on_finish()
-        else
-          handlers.on_partial(data.content)
-        end
-      end),
-      function(error)
-        handlers.on_error(error)
-      end)
+          if data == nil then
+            handlers.on_error(msg.data, 'json parse error')
+          elseif data.stop then
+            handlers.on_finish()
+          else
+            handlers.on_partial(data.content)
+          end
+        end,
+        on_other = function(response)
+          handlers.on_error(response, 'llama.cpp error')
+        end,
+        on_error = handlers.on_error
+      }
+    )
   end)
 
   return function() cancel() end
