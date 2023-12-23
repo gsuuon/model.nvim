@@ -43,6 +43,9 @@ return {
           handlers.on_finish()
         end
 
+        if item.error then
+          handlers.on_error(item.error, 'ollama error')
+        end
       end,
       function(err)
         stop_marquee()
