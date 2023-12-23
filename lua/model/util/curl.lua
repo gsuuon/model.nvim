@@ -3,10 +3,14 @@ local system = require('model.util.system')
 
 local M = {}
 
-local function build_args(opts, stream)
+local function build_args(opts, stream, with_headers)
   local args = {
     '-sS', -- silent (no progress) but show errors
   }
+
+  if with_headers then
+    table.insert(args, '-i')
+  end
 
   if opts.args ~= nil and vim.tbl_islist(opts.args) then
     for _,arg in ipairs(opts.args) do
@@ -46,14 +50,36 @@ end
 ---@param on_stdout fun(text: string): nil
 ---@param on_error fun(text: string): nil
 ---@param on_exit? fun(): nil
-local function run_curl(opts, stream, on_stdout, on_error, on_exit)
-  local args = build_args(opts, stream)
+---@param on_headers? fun(headers: string): nil
+local function run_curl(opts, stream, on_stdout, on_error, on_exit, on_headers)
+  local args = build_args(opts, stream, on_headers ~= nil)
 
   if M._is_debugging then
     util.show(args, 'curl args')
   end
 
-  return system('curl', args, {}, on_stdout, on_error, on_exit, vim.json.encode(opts.body))
+  local on_curl_out = on_stdout
+  if on_headers then
+    local buffered = ''
+    local got_headers = false
+
+    on_curl_out = function(out)
+      if got_headers then
+        on_stdout(out)
+      else
+        buffered = buffered .. out:gsub('\r', '')
+
+        local headers, rest = buffered:match("^(HTTP/.-)\n\n(.*)")
+        if headers then
+          got_headers = true
+          on_headers(headers)
+          on_stdout(rest)
+        end
+      end
+    end
+  end
+
+  return system('curl', args, {}, on_curl_out, on_error, on_exit, vim.json.encode(opts.body))
 end
 
 ---@param opts { url : string, method : string, body : any, headers : {[string]: string} }
@@ -64,28 +90,31 @@ function M.request(opts, on_complete, on_error)
   local output = ''
 
   local function on_stdout(out)
-    if out == nil then
-      on_complete(output)
-    else
+    if out ~= nil then
       output = output .. out
     end
   end
 
-  return run_curl(opts, false, on_stdout, on_error)
+  local function on_exit()
+    on_complete(output)
+  end
+
+  return run_curl(opts, false, on_stdout, on_error, on_exit)
 end
 
 ---@param opts { url : string, method : string, body : any, headers : {[string]: string} }
 ---@param on_stdout fun(text: string): nil
 ---@param on_error fun(text: string): nil
 ---@param on_exit? fun(): nil
-function M.stream(opts, on_stdout, on_error, on_exit)
+---@param on_headers? fun(headers: string): nil
+function M.stream(opts, on_stdout, on_error, on_exit, on_headers)
   local function on_out(out)
     if out ~= nil then
       on_stdout(out)
     end
   end
 
-  return run_curl(opts, true, on_out, on_error, on_exit)
+  return run_curl(opts, true, on_out, on_error, on_exit, on_headers)
 end
 
 return M
