@@ -169,7 +169,7 @@ local function create_prompt_handlers(prompt, seg)
     end,
 
     on_error = function(data, label)
-      util.eshow(data, 'stream error ' .. (label or ''))
+      util.eshow(data, label or 'Stream error ')
     end,
 
     segment = seg
@@ -219,7 +219,7 @@ function M.complete(prompt, input_context, callback)
         callback(complete_text)
       end,
       on_error = function(data, label)
-        util.eshow(data, 'stream error ' .. (label or ''))
+        util.eshow(data, label or 'Request error')
       end,
     },
     input_context
