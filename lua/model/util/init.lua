@@ -184,14 +184,13 @@ end
 
 M.string = {}
 
+--TODO replace with vim.split
+---@deprecated Just use vim.split
 ---@param text string
 ---@param sep string
 ---@return string[]
 function M.string.split_char(text, sep)
-  local res = vim.fn.split(text, sep, true)
-  ---@cast rest string[]
-
-  return res
+  return vim.split(text, sep)
 end
 
 function M.string.split_pattern(text, pattern)
@@ -291,6 +290,11 @@ function M.string.extract_markdown_code_blocks(md_text)
 
   add_text_block()
   return blocks
+end
+
+function M.string.joinpath(...)
+  -- can eventually be replaced by vim.fn.joinpath, presumably once neovim 0.9.5 is released.
+  return (table.concat({ ... }, '/'):gsub('//+', '/'))
 end
 
 M.cursor = {}

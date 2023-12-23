@@ -14,12 +14,12 @@ function M.iter_sse_items(raw_data, fn)
   end
 end
 
+-- https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#data
 local function parse_sse_message(message_text)
   local message = {}
   local data = {}
 
-  local split_lines = vim.fn.split(message_text, '\n')
-  ---@cast split_lines string[]
+  local split_lines = vim.split(message_text, '\n')
 
   for _,line in ipairs(split_lines) do
     local label, value = line:match('(.-):%s?(.+)')
