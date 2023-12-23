@@ -1,6 +1,5 @@
-local curl = require('model.util.curl')
 local util = require('model.util')
-local provider_util = require('model.providers.util')
+local sse = require('model.util.sse')
 
 local M = {}
 
@@ -63,36 +62,7 @@ function M.request_completion(handlers, params, options)
 
   local completion = ''
 
-  local sse = provider_util.sse_client({
-    on_message = function(message, pending)
-      local data = extract_data(message.data)
-
-      if data == nil then
-        if not message.data == '[DONE]' then
-          handlers.on_error(vim.inspect({
-            data = message.data,
-            pending = pending
-          }), 'Unrecognized SSE message data')
-        end
-      else
-        if data.content ~= nil then
-          completion = completion .. data.content
-          handlers.on_partial(data.content)
-        end
-
-        if data.finish_reason ~= nil then
-          handlers.on_finish(completion, data.finish_reason)
-        end
-      end
-    end,
-    on_other = function(content)
-      -- Non-SSE message likely means there was an error
-      handlers.on_error(content, 'OpenAI API error')
-    end,
-    on_error = handlers.on_error
-  })
-
-  return curl.stream(
+  return sse.curl_client(
     {
       headers = headers,
       method = 'POST',
@@ -104,12 +74,36 @@ function M.request_completion(handlers, params, options)
         'force',
         default_params,
         params
-      ),
+      )
     },
-    sse.on_stdout,
-    sse.on_error,
-    sse.on_exit,
-    sse.on_headers
+    {
+      on_message = function(message, pending)
+        local data = extract_data(message.data)
+
+        if data == nil then
+          if not message.data == '[DONE]' then
+            handlers.on_error(vim.inspect({
+              data = message.data,
+              pending = pending
+            }), 'Unrecognized SSE message data')
+          end
+        else
+          if data.content ~= nil then
+            completion = completion .. data.content
+            handlers.on_partial(data.content)
+          end
+
+          if data.finish_reason ~= nil then
+            handlers.on_finish(completion, data.finish_reason)
+          end
+        end
+      end,
+      on_other = function(content)
+        -- Non-SSE message likely means there was an error
+        handlers.on_error(content, 'OpenAI API error')
+      end,
+      on_error = handlers.on_error
+    }
   )
 end
 

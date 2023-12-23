@@ -1,10 +1,10 @@
 describe('server-sent events client', function()
-  local p_util = require('model.providers.util')
+  local sse = require('model.util.sse')
 
   local sse_client = function()
       local results = {}
 
-      local client = p_util.sse_client({
+      local client = sse.client({
         on_message = function(msg)
           results.messages = results.messages or {}
           table.insert(results.messages , msg)
