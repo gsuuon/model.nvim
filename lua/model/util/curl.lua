@@ -65,6 +65,9 @@ local function run_curl(opts, stream, on_stdout, on_error, on_exit, on_headers)
 
     on_curl_out = function(out)
       if got_headers then
+        if out ~= nil then
+          out = out:gsub('\r', '')
+        end
         on_stdout(out)
       else
         buffered = buffered .. out:gsub('\r', '')
