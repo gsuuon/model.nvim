@@ -4,6 +4,14 @@ local M = {}
 
 function M.noop() end
 
+function M.notify(msg, level, opts)
+  if vim.in_fast_event() then
+    vim.schedule(function() vim.notify(msg, level, opts) end)
+  else
+    vim.notify(msg, level, opts)
+  end
+end
+
 local function show(item, level, opt)
   local _body = type(item) == 'string' and item or vim.inspect(item)
   local _level = level or vim.log.levels.INFO
@@ -13,7 +21,7 @@ local function show(item, level, opt)
     type(opt) == 'string' and { title = opt } or
     opt
 
-  vim.notify(_body, _level, _opt)
+  M.notify(_body, _level, _opt)
 end
 
 function M.show(item, opt)
@@ -448,7 +456,7 @@ function M.buf.prompt(callback, initial_content, title)
     local success, result = pcall(callback, user_input, buf_content)
 
     if not success then
-      vim.notify(result, vim.log.levels.ERROR)
+      M.notify(result, vim.log.levels.ERROR)
     end
 
     vim.cmd(':bd! ' .. bufnr)
