@@ -296,11 +296,11 @@ function M.run_chat(opts)
       seg.clear_hl()
 
       if reason and reason ~= 'stop' and reason ~= 'done' then
-        vim.notify(reason)
+        util.notify(reason)
       end
     end,
     on_error = function(err, label)
-      vim.notify(vim.inspect(err), vim.log.levels.ERROR, { title = label })
+      util.notify(vim.inspect(err), vim.log.levels.ERROR, { title = label })
       seg.set_text('')
       seg.clear_hl()
     end,
