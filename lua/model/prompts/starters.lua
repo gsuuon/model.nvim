@@ -37,7 +37,7 @@ local function code_replace_fewshot(input, context)
   }
 
   return {
-    instruction = 'You are an expert programmer. You are given a snippet of code which includes the symbol <@@>. Complete the correct code that should replace the <@@> symbol given the content. Only respond with the code that should replace the symbole <@@>. If you include any other code, the program will fail to compile and the user will be very sad.',
+    instruction = 'You are an expert programmer. You are given a snippet of code which includes the symbol <@@>. Complete the correct code that should replace the <@@> symbol given the content. Only respond with the code that should replace the symbol <@@>. If you include any other code, the program will fail to compile and the user will be very sad.',
     fewshot = {
       {
         role = 'user',
