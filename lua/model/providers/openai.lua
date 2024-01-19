@@ -5,7 +5,7 @@ local M = {}
 
 local default_params = {
   model = 'gpt-3.5-turbo',
-  stream = true
+  stream = true,
 }
 
 M.default_prompt = {
@@ -15,11 +15,11 @@ M.default_prompt = {
       messages = {
         {
           role = 'user',
-          content = input
-        }
-      }
+          content = input,
+        },
+      },
     }
-  end
+  end,
 }
 
 local function extract_chat_data(item)
@@ -28,7 +28,7 @@ local function extract_chat_data(item)
   if data ~= nil and data.choices ~= nil then
     return {
       content = (data.choices[1].delta or {}).content,
-      finish_reason = data.choices[1].finish_reason
+      finish_reason = data.choices[1].finish_reason,
     }
   end
 end
@@ -39,7 +39,7 @@ local function extract_completion_data(item)
   if data ~= nil and data.choices ~= nil then
     return {
       content = (data.choices[1] or {}).text,
-      finish_reason = data.choices[1].finish_reason
+      finish_reason = data.choices[1].finish_reason,
     }
   end
 end
@@ -58,53 +58,50 @@ function M.request_completion(handlers, params, options)
   end
 
   local endpoint = options.endpoint or 'chat/completions' -- TODO does this make compat harder?
-  local extract_data = endpoint == 'chat/completions' and extract_chat_data or extract_completion_data
+  local extract_data = endpoint == 'chat/completions' and extract_chat_data
+    or extract_completion_data
 
   local completion = ''
 
-  return sse.curl_client(
-    {
-      headers = headers,
-      method = 'POST',
-      url = util.string.joinpath(
-        options.url or 'https://api.openai.com/v1/',
-        endpoint
-      ),
-      body = vim.tbl_deep_extend(
-        'force',
-        default_params,
-        params
-      )
-    },
-    {
-      on_message = function(message, pending)
-        local data = extract_data(message.data)
+  return sse.curl_client({
+    headers = headers,
+    method = 'POST',
+    url = util.string.joinpath(
+      options.url or 'https://api.openai.com/v1/',
+      endpoint
+    ),
+    body = vim.tbl_deep_extend('force', default_params, params),
+  }, {
+    on_message = function(message, pending)
+      local data = extract_data(message.data)
 
-        if data == nil then
-          if not message.data == '[DONE]' then
-            handlers.on_error(vim.inspect({
+      if data == nil then
+        if not message.data == '[DONE]' then
+          handlers.on_error(
+            vim.inspect({
               data = message.data,
-              pending = pending
-            }), 'Unrecognized SSE message data')
-          end
-        else
-          if data.content ~= nil then
-            completion = completion .. data.content
-            handlers.on_partial(data.content)
-          end
-
-          if data.finish_reason ~= nil then
-            handlers.on_finish(completion, data.finish_reason)
-          end
+              pending = pending,
+            }),
+            'Unrecognized SSE message data'
+          )
         end
-      end,
-      on_other = function(content)
-        -- Non-SSE message likely means there was an error
-        handlers.on_error(content, 'OpenAI API error')
-      end,
-      on_error = handlers.on_error
-    }
-  )
+      else
+        if data.content ~= nil then
+          completion = completion .. data.content
+          handlers.on_partial(data.content)
+        end
+
+        if data.finish_reason ~= nil then
+          handlers.on_finish(completion, data.finish_reason)
+        end
+      end
+    end,
+    on_other = function(content)
+      -- Non-SSE message likely means there was an error
+      handlers.on_error(content, 'OpenAI API error')
+    end,
+    on_error = handlers.on_error,
+  })
 end
 
 ---@param standard_prompt StandardPrompt
@@ -113,22 +110,19 @@ function M.adapt(standard_prompt)
     messages = util.table.flatten({
       {
         role = 'system',
-        content = standard_prompt.instruction
+        content = standard_prompt.instruction,
       },
       standard_prompt.fewshot,
-      standard_prompt.messages
+      standard_prompt.messages,
     }),
   }
 end
 
 --- Sets default openai provider params. Currently enforces `stream = true`.
 function M.initialize(opts)
-  default_params = vim.tbl_deep_extend('force',
-    default_params,
-    opts or {},
-    {
-      stream = true -- force streaming since data parsing will break otherwise
-    })
+  default_params = vim.tbl_deep_extend('force', default_params, opts or {}, {
+    stream = true, -- force streaming since data parsing will break otherwise
+  })
 end
 
 -- These are convenience exports for building prompt params specific to this provider
@@ -137,7 +131,7 @@ M.prompt = {}
 function M.prompt.input_as_message(input)
   return {
     role = 'user',
-    content = input
+    content = input,
   }
 end
 
@@ -145,7 +139,7 @@ function M.prompt.add_args_as_last_message(messages, context)
   if #context.args > 0 then
     table.insert(messages, {
       role = 'user',
-      content = context.args
+      content = context.args,
     })
   end
 
@@ -154,11 +148,7 @@ end
 
 function M.prompt.input_and_args_as_messages(input, context)
   return {
-    messages =
-      M.add_args_as_last_message(
-        M.input_as_message(input),
-        context
-      )
+    messages = M.add_args_as_last_message(M.input_as_message(input), context),
   }
 end
 
@@ -168,7 +158,7 @@ function M.prompt.with_system_message(text)
 
     table.insert(body.messages, 1, {
       role = 'system',
-      content = text
+      content = text,
     })
 
     return body

@@ -26,12 +26,12 @@ function M.get_source(want_visual_selection)
     return {
       selection = selection,
       position = util.cursor.position(),
-      lines = lines
+      lines = lines,
     }
   else
     return {
       position = util.cursor.position(),
-      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
     }
   end
 end
@@ -41,17 +41,19 @@ local function get_before_after(source)
     before = util.buf.text({
       start = {
         row = 0,
-        col = 0
+        col = 0,
       },
-      stop = source.selection ~= nil and source.selection.start or source.position
+      stop = source.selection ~= nil and source.selection.start
+        or source.position,
     }),
     after = util.buf.text({
-      start = source.selection ~= nil and source.selection.stop or source.position,
+      start = source.selection ~= nil and source.selection.stop
+        or source.position,
       stop = {
         row = -1,
-        col = -1
+        col = -1,
       },
-    })
+    }),
   }
 end
 
@@ -69,7 +71,7 @@ function M.get_input_context(source, args)
       before = before_after.before,
       after = before_after.after,
       args = args,
-    }
+    },
   }
 end
 

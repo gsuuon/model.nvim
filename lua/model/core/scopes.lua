@@ -47,7 +47,9 @@ local function get_prompt_names()
 
   -- FIXME these can shadow
   return vim.tbl_map(
-    function(name) return name:gsub(' ', '\\ ') end,
+    function(name)
+      return name:gsub(' ', '\\ ')
+    end,
     vim.tbl_flatten({
       vim.tbl_keys(get_buffer_user()),
       global_user,
@@ -62,7 +64,7 @@ local function match_plugin_prompt_name(prompt_name)
   if prompt and plugin then
     return {
       prompt = prompt,
-      plugin = plugin
+      plugin = plugin,
     }
   end
 end
@@ -76,7 +78,7 @@ end
 ---@param prompts table<string, Prompt> prompts
 function M.add_global_plugin_prompts(name, prompts)
   -- TODO probably want to track if something gets overwritten
-  M.plugin = vim.tbl_extend('force', M.plugin, {[name] = prompts})
+  M.plugin = vim.tbl_extend('force', M.plugin, { [name] = prompts })
 end
 
 local function extend_buffer_var(name, value, bnr)
@@ -97,49 +99,50 @@ end
 ---@param name string plugin name
 ---@param prompts table<string, Prompt> prompts
 function M.add_buffer_plugin_prompts(name, prompts)
-  extend_buffer_var('model_prompts_plugin', {[name]= prompts})
+  extend_buffer_var('model_prompts_plugin', { [name] = prompts })
 end
 
 ---Returns the prompt given the name
 ---@param name string Name of the prompt, if provided by plugin it should be prompt_name@plugin_name
 function M.get_prompt(name)
   local buffer_user = get_buffer_user()[name]
-  if buffer_user then return buffer_user end
+  if buffer_user then
+    return buffer_user
+  end
 
   local global_user = get_global_user()[name]
-  if global_user then return global_user end
+  if global_user then
+    return global_user
+  end
 
   local plug = match_plugin_prompt_name(name)
   if plug then
-    local buffer_prompt = vim.tbl_get(
-      get_buffer_plugin(),
-      plug.plugin,
-      plug.prompt
-    )
-    if buffer_prompt then return buffer_prompt end
+    local buffer_prompt =
+      vim.tbl_get(get_buffer_plugin(), plug.plugin, plug.prompt)
+    if buffer_prompt then
+      return buffer_prompt
+    end
 
-    return vim.tbl_get(
-      get_global_plugin(),
-      plug.plugin,
-      plug.prompt
-    )
+    return vim.tbl_get(get_global_plugin(), plug.plugin, plug.prompt)
   end
 end
 
 function M.complete_arglead_prompt_names(arglead)
   local prompt_names = get_prompt_names()
 
-  if #arglead == 0 then return prompt_names end
+  if #arglead == 0 then
+    return prompt_names
+  end
   return vim.fn.matchfuzzy(prompt_names, arglead)
 end
 
 -- TODO actual tests
 local function test()
   -- M.set_global_user_prompts(util.module.autoload('model.prompts.starter'))
-  M.set_buffer_user_prompts({codego = 'code go'})
-  M.set_buffer_user_prompts({boop = 'boop prompt'})
-  M.add_buffer_plugin_prompts('baps', { bap = 'bap'})
-  M.add_buffer_plugin_prompts('boops', { boop = 'boopsbooplocal'})
+  M.set_buffer_user_prompts({ codego = 'code go' })
+  M.set_buffer_user_prompts({ boop = 'boop prompt' })
+  M.add_buffer_plugin_prompts('baps', { bap = 'bap' })
+  M.add_buffer_plugin_prompts('boops', { boop = 'boopsbooplocal' })
   -- M.add_global_plugin_prompts('baps', { bapppp = 'bapppp'})
   -- M.add_global_plugin_prompts('boops', { boop = 'boopsboopglobal'})
   -- what do I do about shadowing?

@@ -6,7 +6,8 @@ local M = {}
 
 ---@param file File
 function M.ts_extract(file, extract_child)
-  local lang = vim.treesitter.get_lang(vim.filetype.match({filename = file.filepath}))
+  local lang =
+    vim.treesitter.get_lang(vim.filetype.match({ filename = file.filepath }))
   local parser = vim.treesitter.get_string_parser(file.content, lang)
   local tree = parser:parse()[1]
   local root = tree:root()
@@ -24,8 +25,8 @@ function M.ts_extract(file, extract_child)
 end
 
 local function node_get_text(node, content)
-  local _,_,start = node:start()
-  local _,_,end_ = node:end_()
+  local _, _, start = node:start()
+  local _, _, end_ = node:end_()
 
   return content:sub(start + 1, end_)
 end
@@ -34,12 +35,12 @@ function M.ts_extract_function(opts)
   local type = opts.type
   local get_name = opts.get_name
 
-  return function (child, file)
+  return function(child, file)
     if child:type() == type then
       return {
         content = node_get_text(child, file.content),
         filepath = file.filepath,
-        name = node_get_text(get_name(child), file.content)
+        name = node_get_text(get_name(child), file.content),
       }
     end
   end
@@ -53,10 +54,9 @@ function M.lang.lua.functions(file)
     file,
     M.ts_extract_function({
       type = 'function_declaration',
-      get_name =
-        function(child)
-          return child:field('name')[1]
-        end
+      get_name = function(child)
+        return child:field('name')[1]
+      end,
     })
   )
 end
@@ -67,11 +67,11 @@ function M.ingest_file(filepath)
     error('Unable to open file: ' .. filepath)
   end
 
-  local content = file:read("*a")
+  local content = file:read('*a')
 
   return {
     filepath = filepath,
-    content = content
+    content = content,
   }
 end
 

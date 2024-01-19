@@ -10,7 +10,7 @@ function M.scroll(text, rate, set, size)
   local run = true
 
   local function scroll_(t)
-    vim.defer_fn(function ()
+    vim.defer_fn(function()
       if run then
         local head = t:sub(1, 1)
         local tail = t:sub(2, #t)
@@ -61,16 +61,19 @@ function M.handler_marquee_or_notify(text, seg, hl, size)
   return function() end
 end
 
-local queue_say, stop_say do
-  local say do
+local queue_say, stop_say
+do
+  local say
+  do
     local cmd = 'say'
     local err = 'Failed to spawn "say"'
 
     if vim.loop.os_uname().sysname == 'Linux' then
       cmd = 'spd-say'
-      err = 'Failed to spawn spd-say, install with: sudo apt install speech-dispatcher'
+      err =
+        'Failed to spawn spd-say, install with: sudo apt install speech-dispatcher'
     elseif 'Windows_NT' then
-      cmd =  'say.cmd'
+      cmd = 'say.cmd'
       err = 'Failed to spawn say.cmd, install with: scoop install say'
     end
 
@@ -82,7 +85,7 @@ local queue_say, stop_say do
           pcall(
             system,
             cmd,
-            {vim.fn.trim(x)},
+            { vim.fn.trim(x) },
             nil,
             nil,
             nil,
@@ -111,7 +114,7 @@ local queue_say, stop_say do
   end
 
   queue_say = function(x)
-    say_queue[#say_queue+1] = x
+    say_queue[#say_queue + 1] = x
 
     if not saying then
       say_next()
@@ -126,7 +129,9 @@ end
 ---Use 'say' (mac, windows via scoop) or 'spd-say' to say text
 ---@type fun(text: string)
 function M.say(x)
-  if not M.can_say or not x or #x == 0 then return end
+  if not M.can_say or not x or #x == 0 then
+    return
+  end
 
   queue_say(x)
 end
@@ -148,7 +153,7 @@ function M.sayer()
     end,
     finish = function()
       M.say(completion:sub(said_len))
-    end
+    end,
   }
 end
 

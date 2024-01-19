@@ -10,10 +10,9 @@ local util = require('model.util')
 ---@field highlight fun(hl_group: string): nil
 ---@field details fun(): {row: number, col: number, details: table, bufnr: number}
 
-
 local M = {
   default_hl = 'Comment',
-  join_undo = true --- Join undos when adding and setting segment text
+  join_undo = true, --- Join undos when adding and setting segment text
 }
 
 local segments_cache = {}
@@ -30,12 +29,12 @@ local function end_delta(lines, origin_row, origin_col)
   local rows_added = #lines - 1
   local last_line_count = #lines[#lines]
 
-  local new_col =
-    rows_added > 0 and last_line_count or origin_col + last_line_count
+  local new_col = rows_added > 0 and last_line_count
+    or origin_col + last_line_count
 
   return {
     row = origin_row + rows_added,
-    col = new_col
+    col = new_col,
   }
 end
 
@@ -51,19 +50,13 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
   local _data = {}
   local _did_add_text_to_undo = false
 
-  local _ext_id = vim.api.nvim_buf_set_extmark(
-    bufnr,
-    M.ns_id(),
-    row,
-    col,
-    {
-      hl_group = hl_group,
+  local _ext_id = vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), row, col, {
+    hl_group = hl_group,
 
-      -- these need to be set or else get_details doesn't return end_*s
-      end_row = row,
-      end_col = col
-    }
-  )
+    -- these need to be set or else get_details doesn't return end_*s
+    end_row = row,
+    end_col = col,
+  })
 
   local function get_details()
     if _ext_id == nil then
@@ -86,7 +79,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       row = extmark[1],
       col = extmark[2],
       details = details,
-      bufnr = bufnr
+      bufnr = bufnr,
     }
   end
 
@@ -102,12 +95,9 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     local mark = get_details()
     virt_text = text
 
-    local virt_lines = vim.tbl_map(
-      function(line)
-        return { { line, _hl_group} }
-      end,
-      util.string.split_char(virt_text, '\n')
-    )
+    local virt_lines = vim.tbl_map(function(line)
+      return { { line, _hl_group } }
+    end, util.string.split_char(virt_text, '\n'))
 
     local t = table.remove(virt_lines, 1)
 
@@ -116,14 +106,16 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       hl_group = _hl_group,
       virt_text = t,
       virt_text_pos = 'overlay',
-      virt_lines = #virt_lines > 0 and virt_lines or nil
+      virt_lines = #virt_lines > 0 and virt_lines or nil,
     })
   end
 
   return {
 
     set_text = vim.schedule_wrap(function(text)
-      if text == nil then return end
+      if text == nil then
+        return
+      end
 
       local lines = util.string.split_char(text, '\n')
       local mark = get_details()
@@ -148,7 +140,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
         id = _ext_id,
         end_col = end_pos.col,
         end_row = end_pos.row,
-        hl_group = _hl_group
+        hl_group = _hl_group,
       })
     end),
 
@@ -161,7 +153,9 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     add = vim.schedule_wrap(function(text)
       local lines = util.string.split_char(text, '\n')
 
-      if lines == nil or #lines == 0 then return end
+      if lines == nil or #lines == 0 then
+        return
+      end
 
       local mark = get_details()
 
@@ -170,7 +164,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
 
       if _did_add_text_to_undo and join_undo then
         pcall(vim.cmd.undojoin) -- Errors if user did undo immediately before
-                                -- e.g. during a stream
+        -- e.g. during a stream
       end
 
       vim.api.nvim_buf_set_text(bufnr, r, c, r, c, lines)
@@ -181,22 +175,30 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
         id = _ext_id,
         end_col = end_pos.col,
         end_row = end_pos.row,
-        hl_group = _hl_group -- need to set hl_group every time we want to update the extmark
+        hl_group = _hl_group, -- need to set hl_group every time we want to update the extmark
       })
 
       _did_add_text_to_undo = true
     end),
 
-    highlight = vim.schedule_wrap(function(hl) -- this seems to be additive only
-      _hl_group = hl
+    highlight = vim.schedule_wrap(
+      function(hl) -- this seems to be additive only
+        _hl_group = hl
 
-      local mark = get_details()
+        local mark = get_details()
 
-      mark.details.hl_group = _hl_group
-      mark.details.id = _ext_id
+        mark.details.hl_group = _hl_group
+        mark.details.id = _ext_id
 
-      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, mark.details)
-    end),
+        vim.api.nvim_buf_set_extmark(
+          bufnr,
+          M.ns_id(),
+          mark.row,
+          mark.col,
+          mark.details
+        )
+      end
+    ),
 
     clear_hl = vim.schedule_wrap(function()
       local mark = get_details()
@@ -204,7 +206,13 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       mark.details.hl_group = nil
       mark.details.id = _ext_id
 
-      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, mark.details)
+      vim.api.nvim_buf_set_extmark(
+        bufnr,
+        M.ns_id(),
+        mark.row,
+        mark.col,
+        mark.details
+      )
     end),
 
     delete = vim.schedule_wrap(function()
@@ -226,8 +234,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
 
     details = get_details,
 
-    data = _data
-
+    data = _data,
   }
 end
 
@@ -240,19 +247,13 @@ function M.create_segment_at(row, col, hl_group, bufnr)
 
   local function get_row_length(pos)
     local line =
-      vim.api.nvim_buf_get_lines(
-        bufnr,
-        pos.row,
-        pos.row + 1,
-        false
-      )[1]
+      vim.api.nvim_buf_get_lines(bufnr, pos.row, pos.row + 1, false)[1]
 
     return line == nil and 0 or #line, line ~= nil
   end
 
   local function shift_row_if_entire_unempty_line(pos)
     if pos.col == util.COL_ENTIRE_LINE then
-
       if get_row_length(pos) > 0 then
         -- add a row and return start of new row
 
@@ -261,19 +262,19 @@ function M.create_segment_at(row, col, hl_group, bufnr)
           pos.row + 1,
           pos.row + 1,
           false,
-          {''}
+          { '' }
         )
 
         return {
           col = 0,
-          row = pos.row + 1
+          row = pos.row + 1,
         }
       else
         -- the row is empty, so we'll just use it
 
         return {
           col = 0,
-          row = pos.row
+          row = pos.row,
         }
       end
     end
@@ -285,13 +286,7 @@ function M.create_segment_at(row, col, hl_group, bufnr)
     local _, row_exists = get_row_length(pos)
 
     if not row_exists then
-      vim.api.nvim_buf_set_lines(
-        bufnr,
-        pos.row,
-        pos.row,
-        false,
-        {''}
-      )
+      vim.api.nvim_buf_set_lines(bufnr, pos.row, pos.row, false, { '' })
     end
 
     return pos
@@ -303,23 +298,26 @@ function M.create_segment_at(row, col, hl_group, bufnr)
     if pos.col > row_length then
       return {
         row = pos.row,
-        col = row_length - 1
+        col = row_length - 1,
       }
     end
 
     return pos
   end
 
-  local target_pos =
-    add_row_if_out_of_bounds(
-      shift_col_to_line_bounds(
-        shift_row_if_entire_unempty_line(
-          { row = row, col = col, }
-        )
-      )
+  local target_pos = add_row_if_out_of_bounds(
+    shift_col_to_line_bounds(
+      shift_row_if_entire_unempty_line({ row = row, col = col })
     )
+  )
 
-  local segment = create_segment_at(target_pos.row, target_pos.col, bufnr, hl_group, M.join_undo)
+  local segment = create_segment_at(
+    target_pos.row,
+    target_pos.col,
+    bufnr,
+    hl_group,
+    M.join_undo
+  )
 
   segments_cache[segment.ext_id] = segment
 
@@ -328,22 +326,23 @@ end
 
 --- Returns the most recent segment at the position
 function M.query(pos)
-  local extmark_details = vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, {details = true})
+  local extmark_details =
+    vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, { details = true })
 
   -- iterate backwards so recent markers are higher
-  for idx=#extmark_details, 1, -1 do
+  for idx = #extmark_details, 1, -1 do
     local mark = extmark_details[idx]
 
     local start = {
       row = mark[2],
-      col = mark[3]
+      col = mark[3],
     }
 
     local details = mark[4]
 
     local stop = {
       row = details.end_row,
-      col = details.end_col
+      col = details.end_col,
     }
 
     if util.position.is_bounded(pos, start, stop) then
@@ -361,7 +360,7 @@ end
 M._debug = {}
 
 function M._debug.extmarks()
-  return vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, {details = true})
+  return vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, { details = true })
 end
 
 return M

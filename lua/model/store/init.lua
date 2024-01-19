@@ -32,7 +32,12 @@ function M.load(opts, force)
 
   local store_items_count = vim.fn.pyeval("len(s['items'])")
   local store_location = vim.fn.pyeval("s['abs_path']")
-  vim.notify('Loaded ' .. store_items_count .. ' items in store.json at ' .. store_location)
+  vim.notify(
+    'Loaded '
+      .. store_items_count
+      .. ' items in store.json at '
+      .. store_location
+  )
 
   M.store_did_init = true
 end
@@ -45,27 +50,38 @@ end
 function M.query_store(prompt, count, similarity)
   if similarity == nil then
     return vim.fn.py3eval(
-      [[store.query_store(]] .. u.escape_quotes(prompt) .. [[, ]] .. count .. [[, s)]]
+      [[store.query_store(]]
+        .. u.escape_quotes(prompt)
+        .. [[, ]]
+        .. count
+        .. [[, s)]]
     )
   else
     local filter = [[lambda item, similarity: similarity > ]] .. similarity
 
     return vim.fn.py3eval(
-      [[store.query_store(]] .. u.escape_quotes(prompt) .. [[, ]] .. count .. [[, s, filter=]] .. filter ..[[)]]
+      [[store.query_store(]]
+        .. u.escape_quotes(prompt)
+        .. [[, ]]
+        .. count
+        .. [[, s, filter=]]
+        .. filter
+        .. [[)]]
     )
   end
 end
-
 
 local ts_source = require('model.store.sources.treesitter')
 
 ---@param function_item FunctionItem
 local function normalize_function_item_filepath_to_store(function_item)
-  local store_rel_path = vim.fn.pyeval('store.path_relative_to_store(r"' .. function_item.filepath .. '", s)')
+  local store_rel_path = vim.fn.pyeval(
+    'store.path_relative_to_store(r"' .. function_item.filepath .. '", s)'
+  )
 
   return {
     id = store_rel_path .. ':' .. function_item.name,
-    content = function_item.content
+    content = function_item.content,
   }
 end
 
@@ -78,7 +94,11 @@ function M.add_items(items)
 end
 
 function M.add_files(root_path)
-  vim.cmd([[py store.update_with_files_and_save(s, files_root=']].. root_path .. [[')]])
+  vim.cmd(
+    [[py store.update_with_files_and_save(s, files_root=']]
+      .. root_path
+      .. [[')]]
+  )
 end
 
 function M.add_lua_functions(glob)
@@ -87,13 +107,16 @@ function M.add_lua_functions(glob)
   end
   -- Extracts lua functions as items
   local function to_lua_functions(file)
-    return vim.tbl_map(normalize_function_item_filepath_to_store, ts_source.lang.lua.functions(file))
+    return vim.tbl_map(
+      normalize_function_item_filepath_to_store,
+      ts_source.lang.lua.functions(file)
+    )
   end
 
   ---@param glob string glob pattern to search for files, starting from current directory
   ---@param to_items function converts each filepath to a list of items
   local function glob_to_items(glob, to_items)
-    local filepaths = vim.fn.glob(glob,nil,true)
+    local filepaths = vim.fn.glob(glob, nil, true)
 
     local results = {}
 
@@ -129,6 +152,5 @@ function M.prompt.query_store(input, count, similarity)
 
   return context
 end
-
 
 return M

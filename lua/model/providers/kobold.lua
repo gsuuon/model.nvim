@@ -18,21 +18,19 @@ function M.request_completion(handlers, params, options)
       method = 'POST',
       body = params,
       headers = {
-        ['Content-Type'] = 'application/json'
-      }
+        ['Content-Type'] = 'application/json',
+      },
     },
-    provider_util.iter_sse_data(
-      function(data)
-        local item, err = util.json.decode(data)
+    provider_util.iter_sse_data(function(data)
+      local item, err = util.json.decode(data)
 
-        if item == nil then
-          util.eshow(data, 'failed to parse server-sent event')
-          error(err)
-        else
-          handlers.on_partial(item.token)
-        end
+      if item == nil then
+        util.eshow(data, 'failed to parse server-sent event')
+        error(err)
+      else
+        handlers.on_partial(item.token)
       end
-    ),
+    end),
     util.eshow
   )
 end

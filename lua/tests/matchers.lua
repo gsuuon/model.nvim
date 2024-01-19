@@ -1,11 +1,10 @@
 local table_types = function(_, arguments)
-
   local function matches_type(value, types)
     if type(value) ~= 'table' then
       return false
     end
 
-    for k,_ in pairs(types) do
+    for k, _ in pairs(types) do
       if type(types[k]) == 'table' then
         return matches_type(value[k], types[k])
       end

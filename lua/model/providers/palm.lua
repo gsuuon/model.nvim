@@ -29,10 +29,8 @@ function M.request_completion(handlers, params, options)
 
   local key = util.env_memo('PALM_API_KEY')
 
-  local remove_marquee = juice.handler_marquee_or_notify(
-    'PaLM  ',
-    handlers.segment
-  )
+  local remove_marquee =
+    juice.handler_marquee_or_notify('PaLM  ', handlers.segment)
 
   local function handle_raw(raw_data)
     local response = util.json.decode(raw_data)
@@ -65,15 +63,16 @@ function M.request_completion(handlers, params, options)
 
   return curl.stream({
     headers = {
-      ['Content-Type']= 'application/json',
+      ['Content-Type'] = 'application/json',
     },
     method = 'POST',
-    url =
-        'https://generativelanguage.googleapis.com/v1beta2/models/'
-        .. model .. ':'
-        .. method
-        .. '?key=' .. key,
-    body = params
+    url = 'https://generativelanguage.googleapis.com/v1beta2/models/'
+      .. model
+      .. ':'
+      .. method
+      .. '?key='
+      .. key,
+    body = params,
   }, handle_raw, handle_error)
 end
 
@@ -81,7 +80,7 @@ function M.adapt(standard_prompt)
   local function palm_message(msg)
     return {
       author = msg.role == 'user' and '0' or '1',
-      content = msg.content
+      content = msg.content,
     }
   end
 
@@ -105,11 +104,8 @@ function M.adapt(standard_prompt)
     prompt = {
       context = standard_prompt.instruction,
       examples = examples,
-      messages = vim.tbl_map(
-        palm_message,
-        standard_prompt.messages
-      )
-    }
+      messages = vim.tbl_map(palm_message, standard_prompt.messages),
+    },
   }
 end
 
@@ -118,10 +114,10 @@ M.default_prompt = {
   builder = function(input)
     return {
       prompt = {
-        text = input
-      }
+        text = input,
+      },
     }
-  end
+  end,
 }
 
 return M

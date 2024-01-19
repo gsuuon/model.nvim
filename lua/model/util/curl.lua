@@ -13,7 +13,7 @@ local function build_args(opts, stream, with_headers)
   end
 
   if opts.args ~= nil and vim.tbl_islist(opts.args) then
-    for _,arg in ipairs(opts.args) do
+    for _, arg in ipairs(opts.args) do
       table.insert(args, arg)
     end
   end
@@ -72,7 +72,7 @@ local function run_curl(opts, stream, on_stdout, on_error, on_exit, on_headers)
       else
         buffered = buffered .. out:gsub('\r', '')
 
-        local headers, rest = buffered:match("^(HTTP/.-)\n\n(.*)")
+        local headers, rest = buffered:match('^(HTTP/.-)\n\n(.*)')
         if headers then
           got_headers = true
           on_headers(headers)
@@ -82,7 +82,15 @@ local function run_curl(opts, stream, on_stdout, on_error, on_exit, on_headers)
     end
   end
 
-  return system('curl', args, {}, on_curl_out, on_error, on_exit, vim.json.encode(opts.body))
+  return system(
+    'curl',
+    args,
+    {},
+    on_curl_out,
+    on_error,
+    on_exit,
+    vim.json.encode(opts.body)
+  )
 end
 
 ---@param opts { url : string, method : string, body : any, headers : {[string]: string} }

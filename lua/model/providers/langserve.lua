@@ -9,7 +9,7 @@ local function parse_generation_chunk(item)
 
   if data ~= nil then
     return {
-     content = data
+      content = data,
     }
   end
 end
@@ -17,9 +17,9 @@ end
 local function parse_chat_generation_chunk(item)
   local data = util.json.decode(item)
 
-  if data ~= nil and data["content"] ~= nil then
+  if data ~= nil and data['content'] ~= nil then
     return {
-      content = data["content"]
+      content = data['content'],
     }
   end
 end
@@ -36,18 +36,18 @@ function M.request_completion(handlers, params, options)
   local extract_data = options.output_parser
 
   -- TODO should handlers being optional be a choice at the provider level or always optional for all providers?
-  local _handlers = vim.tbl_extend("force", {
+  local _handlers = vim.tbl_extend('force', {
     on_partial = util.noop,
     on_finish = util.noop,
     on_error = util.noop,
   }, handlers)
 
   local handle_raw = provider_util.iter_sse_messages(function(message)
-    if message.event == "metadata" then
+    if message.event == 'metadata' then
       return
     end
 
-    if message.event == "end" then
+    if message.event == 'end' then
       _handlers.on_finish(_all_content)
       return
     end
@@ -59,7 +59,6 @@ function M.request_completion(handlers, params, options)
         _all_content = _all_content .. data.content
         _handlers.on_partial(data.content)
       end
-
     else
       local response = util.json.decode(message)
 
@@ -74,7 +73,7 @@ function M.request_completion(handlers, params, options)
   end
 
   local body = {
-      input = params,
+    input = params,
   }
 
   local headers = { ['Content-Type'] = 'application/json' }

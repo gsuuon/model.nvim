@@ -30,7 +30,7 @@ local function split_messages(text)
   local lines = vim.fn.split(text, '\n')
   local messages = {}
 
-  local system;
+  local system
 
   local chunk_lines = {}
   local chunk_is_user = true
@@ -41,7 +41,7 @@ local function split_messages(text)
 
     table.insert(messages, {
       role = chunk_is_user and 'user' or 'assistant',
-      content = chunk_is_user and vim.trim(text_) or text_
+      content = chunk_is_user and vim.trim(text_) or text_,
     })
 
     chunk_lines = {}
@@ -55,7 +55,6 @@ local function split_messages(text)
       if system == nil then
         table.insert(chunk_lines, line)
       end
-
     elseif line == '======' then
       add_message()
     else
@@ -70,14 +69,13 @@ local function split_messages(text)
 
   return {
     system = system,
-    messages = messages
+    messages = messages,
   }
 end
 
 ---@param text string Input text of buffer
 ---@return { chat: string, config?: table, rest: string }
 local function parse_config(text)
-
   if text:match('^---$') then
     error('Chat buffer must start with chat name, not config')
   end
@@ -97,7 +95,7 @@ local function parse_config(text)
     return {
       config = {},
       rest = vim.fn.trim(name_rest),
-      chat = chat_name
+      chat = chat_name,
     }
   else
     local config = vim.fn.luaeval(params_text)
@@ -109,7 +107,7 @@ local function parse_config(text)
     return {
       config = config,
       rest = vim.fn.trim(rest),
-      chat = chat_name
+      chat = chat_name,
     }
   end
 end
@@ -128,9 +126,9 @@ function M.parse(text)
   return {
     contents = {
       messages = messages_and_system.messages,
-      config = parsed.config
+      config = parsed.config,
     },
-    chat = parsed.chat
+    chat = parsed.chat,
   }
 end
 
@@ -155,8 +153,7 @@ function M.to_string(contents, name)
     end
   end
 
-
-  for i,message in ipairs(contents.messages) do
+  for i, message in ipairs(contents.messages) do
     if i ~= 1 then
       result = result .. '\n======\n'
     end
@@ -178,10 +175,8 @@ function M.to_string(contents, name)
 end
 
 function M.build_contents(chat_prompt, input_context)
-  local first_message_or_contents = chat_prompt.create(
-    input_context.input,
-    input_context.context
-  )
+  local first_message_or_contents =
+    chat_prompt.create(input_context.input, input_context.context)
 
   local config = {
     options = chat_prompt.options,
@@ -198,9 +193,9 @@ function M.build_contents(chat_prompt, input_context)
       messages = {
         {
           role = 'user',
-          content = first_message_or_contents
-        }
-      }
+          content = first_message_or_contents,
+        },
+      },
     }
   elseif type(first_message_or_contents) == 'table' then
     chat_contents = vim.tbl_deep_extend(
@@ -209,7 +204,9 @@ function M.build_contents(chat_prompt, input_context)
       first_message_or_contents
     )
   else
-    error('ChatPrompt.create() needs to return a string for the first message or an ChatContents')
+    error(
+      'ChatPrompt.create() needs to return a string for the first message or an ChatContents'
+    )
   end
 
   return chat_contents
@@ -225,18 +222,12 @@ function M.create_buffer(text, smods)
   end
 
   vim.o.ft = 'mchat'
-  vim.cmd.syntax({'sync', 'fromstart'})
+  vim.cmd.syntax({ 'sync', 'fromstart' })
 
   local lines = vim.fn.split(text, '\n')
   ---@cast lines string[]
 
-  vim.api.nvim_buf_set_lines(
-    0,
-    0,
-    0,
-    false,
-    lines
-  )
+  vim.api.nvim_buf_set_lines(0, 0, 0, false, lines)
 end
 
 local function needs_nl(buf_lines)
@@ -248,14 +239,10 @@ end
 ---@param opts { chats?: table<string, ChatPrompt> }
 function M.run_chat(opts)
   local buf_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local parsed = M.parse(
-    table.concat(buf_lines, '\n')
-  )
+  local parsed = M.parse(table.concat(buf_lines, '\n'))
 
-  local chat_name = assert(
-    parsed.chat,
-    'Chat buffer first line must be a chat prompt name'
-  )
+  local chat_name =
+    assert(parsed.chat, 'Chat buffer first line must be a chat prompt name')
 
   ---@type ChatPrompt
   local chat_prompt = assert(
@@ -263,10 +250,8 @@ function M.run_chat(opts)
     'Chat "' .. chat_name .. '" not found'
   )
 
-  local run_params = chat_prompt.run(
-    parsed.contents.messages,
-    parsed.contents.config
-  )
+  local run_params =
+    chat_prompt.run(parsed.contents.messages, parsed.contents.config)
   if run_params == nil then
     error('Chat prompt run() returned nil')
   end
@@ -304,7 +289,7 @@ function M.run_chat(opts)
       seg.set_text('')
       seg.clear_hl()
     end,
-    segment = seg
+    segment = seg,
   }
 
   local options = parsed.contents.config.options or {}
@@ -312,11 +297,7 @@ function M.run_chat(opts)
 
   if type(run_params) == 'function' then
     run_params(function(async_params)
-      local merged_params = vim.tbl_deep_extend(
-        'force',
-        params,
-        async_params
-      )
+      local merged_params = vim.tbl_deep_extend('force', params, async_params)
 
       seg.data.cancel = chat_prompt.provider.request_completion(
         handlers,
@@ -327,11 +308,7 @@ function M.run_chat(opts)
   else
     seg.data.cancel = chat_prompt.provider.request_completion(
       handlers,
-      vim.tbl_deep_extend(
-        'force',
-        params,
-        run_params
-      ),
+      vim.tbl_deep_extend('force', params, run_params),
       options
     )
   end

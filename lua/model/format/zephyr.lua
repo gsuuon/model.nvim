@@ -5,11 +5,11 @@
 ---@return string[]
 local function contents_to_strings(messages, system)
   local result = {
-    '<|system|>\n' .. system
+    '<|system|>\n' .. system,
   }
 
-  for _,msg in ipairs(messages) do
-    table.insert(result, '\n<|' ..  msg.role .. '|>\n' .. msg.content)
+  for _, msg in ipairs(messages) do
+    table.insert(result, '\n<|' .. msg.role .. '|>\n' .. msg.content)
   end
 
   table.insert(result, '\n<|assistant|>\n')
@@ -21,10 +21,13 @@ return {
   chat = function(messages, config)
     return {
       prompt = table.concat(
-        contents_to_strings(messages, config.system or 'You are a helpful assistant'),
+        contents_to_strings(
+          messages,
+          config.system or 'You are a helpful assistant'
+        ),
         '</s>\n' -- llama.cpp seems to correctly stop generating if we just have </s> strings in prompt now
         -- may need a stop = {'</s>'} if not, or use the tokenizing runner
-      )
+      ),
     }
-  end
+  end,
 }

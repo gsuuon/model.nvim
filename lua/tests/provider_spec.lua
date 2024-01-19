@@ -4,26 +4,26 @@ local match = require('luassert.match')
 require('tests.matchers')
 
 local delay = 20 -- probably need to revisit this as this could give intermittent failures
-                 -- better to have defered fn's always call in sequence rather than scheduling all at once
+-- better to have defered fn's always call in sequence rather than scheduling all at once
 
 local type_stream_handlers = {
   on_finish = 'function',
   on_partial = 'function',
-  on_error = 'function'
+  on_error = 'function',
 }
 
 describe('provider', function()
-
   local provider = require('model.core.provider')
 
   it('calls the prompt provider completion with params and options', function()
-
     local test_provider = mock({ request_completion = function() end })
 
     provider.request_completion({
       provider = test_provider,
       options = { optA = true },
-      builder = function() return { paramA = true } end
+      builder = function()
+        return { paramA = true }
+      end,
     }, '', false)
 
     assert.spy(test_provider.request_completion).was_called_with(
@@ -34,28 +34,27 @@ describe('provider', function()
 
     provider.request_completion({
       provider = test_provider,
-      builder = function() return { paramA = true } end
+      builder = function()
+        return { paramA = true }
+      end,
     }, '', false)
 
-    assert.spy(test_provider.request_completion).was_called_with(
-      match.table_types(type_stream_handlers),
-      { paramA = true },
-      nil
-    )
+    assert
+      .spy(test_provider.request_completion)
+      .was_called_with(match.table_types(type_stream_handlers), { paramA = true }, nil)
   end)
 
   it('streams in partials and finishes with prompt transform', function()
-
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_win_set_buf(0, buf)
-    assert.are.same({''}, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+    assert.are.same({ '' }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
     local co = coroutine.running()
 
     local test_provider = {
       request_completion = function(handlers)
         local lines = { 'foo', 'bar', 'baz' }
 
-        for i,line in ipairs(lines) do
+        for i, line in ipairs(lines) do
           vim.defer_fn(function()
             handlers.on_partial(line)
             coroutine.resume(co)
@@ -75,50 +74,62 @@ describe('provider', function()
 
     provider.request_completion({
       provider = test_provider,
-      builder = function() return {} end,
+      builder = function()
+        return {}
+      end,
       transform = function(completion)
         return completion:gsub('ba', 'pa')
-      end
+      end,
     }, '', false)
 
     coroutine.yield()
-    assert.are.same({'', ''}, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+    assert.are.same({ '', '' }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
 
     coroutine.yield()
-    assert.are.same({'', 'foo'}, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+    assert.are.same(
+      { '', 'foo' },
+      vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    )
 
     coroutine.yield()
-    assert.are.same({'', 'foobar'}, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+    assert.are.same(
+      { '', 'foobar' },
+      vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    )
 
     coroutine.yield()
-    assert.are.same({'', 'foobarbaz'}, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+    assert.are.same(
+      { '', 'foobarbaz' },
+      vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    )
 
     coroutine.yield()
-    assert.are.same({'', 'foo', 'par', 'paz'}, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+    assert.are.same(
+      { '', 'foo', 'par', 'paz' },
+      vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    )
   end)
 
   it('calls custom mode stream handlers', function()
-
     local co = coroutine.running()
 
     local test_provider = {
       request_completion = function(handlers)
-
-        vim.defer_fn(function ()
+        vim.defer_fn(function()
           handlers.on_partial('partial')
           coroutine.resume(co)
         end, delay)
 
-        vim.defer_fn(function ()
+        vim.defer_fn(function()
           handlers.on_finish('finish')
           coroutine.resume(co)
         end, delay * 2)
 
-        vim.defer_fn(function ()
+        vim.defer_fn(function()
           handlers.on_error('error')
           coroutine.resume(co)
         end, delay * 3)
-      end
+      end,
     }
 
     local noop = function() end
@@ -131,8 +142,10 @@ describe('provider', function()
 
     provider.request_completion({
       provider = test_provider,
-      builder = function() return {} end,
-      mode = custom_mode
+      builder = function()
+        return {}
+      end,
+      mode = custom_mode,
     }, '', false)
 
     assert.spy(custom_mode.on_partial).was_not_called()

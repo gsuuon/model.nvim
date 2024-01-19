@@ -24,7 +24,7 @@ function M.schema_descripts(url, cb)
         table.insert(routes, {
           route = route,
           method = method,
-          description = method_node.description
+          description = method_node.description,
         })
       end
     end
@@ -32,7 +32,7 @@ function M.schema_descripts(url, cb)
     return {
       routes = routes,
       description = parsed.info.description,
-      schema = parsed
+      schema = parsed,
     }
   end, cb)
 end
@@ -59,7 +59,7 @@ function M.markdown_code(md_text)
     end, blocks)
 
     return table.concat(
-      vim.tbl_map(function (block)
+      vim.tbl_map(function(block)
         return block.code
       end, code_blocks),
       '\n'

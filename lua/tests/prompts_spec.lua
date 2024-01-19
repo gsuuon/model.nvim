@@ -5,21 +5,21 @@ require('tests.matchers')
 local u = require('tests.util')
 
 describe('prompt', function()
-
   local provider = require('model.core.provider')
   local test_provider = mock({ request_completion = function() end })
 
   it('provides builder with input and context', function()
-
     local buf = vim.api.nvim_create_buf(false, true)
 
     vim.api.nvim_win_set_buf(0, buf)
-    vim.api.nvim_buf_set_lines(buf, 0, 0, false, {'abc', 'def'})
+    vim.api.nvim_buf_set_lines(buf, 0, 0, false, { 'abc', 'def' })
     u.type_keys('ggV<esc>')
 
     local prompt = mock({
       provider = test_provider,
-      builder = function() return { paramA = true } end
+      builder = function()
+        return { paramA = true }
+      end,
     })
 
     provider.request_completion(prompt, '', true)
@@ -46,27 +46,24 @@ describe('prompt', function()
   end)
 
   it('errors if builder returns nil', function()
-
     assert.has.errors(function()
       provider.request_completion({
         provider = test_provider,
-        builder = function() end
+        builder = function() end,
       }, '', true)
     end)
-
   end)
 
   it('can return a function as builder', function()
-
     provider.request_completion({
       provider = test_provider,
       builder = function()
         return function(build)
           build({
-            paramAFunc = true
+            paramAFunc = true,
           })
         end
-      end
+      end,
     }, '', true)
 
     assert.spy(test_provider.request_completion).was_called_with(
@@ -79,5 +76,4 @@ describe('prompt', function()
       nil
     )
   end)
-
 end)

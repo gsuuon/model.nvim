@@ -6,7 +6,9 @@ function M.noop() end
 
 function M.notify(msg, level, opts)
   if vim.in_fast_event() then
-    vim.schedule(function() vim.notify(msg, level, opts) end)
+    vim.schedule(function()
+      vim.notify(msg, level, opts)
+    end)
   else
     vim.notify(msg, level, opts)
   end
@@ -16,10 +18,9 @@ local function show(item, level, opt)
   local _body = type(item) == 'string' and item or vim.inspect(item)
   local _level = level or vim.log.levels.INFO
 
-  local _opt =
-    opt == nil and {} or
-    type(opt) == 'string' and { title = opt } or
-    opt
+  local _opt = opt == nil and {}
+    or type(opt) == 'string' and { title = opt }
+    or opt
 
   M.notify(_body, _level, _opt)
 end
@@ -30,17 +31,9 @@ end
 
 function M.eshow(item, opt)
   if type(item) == 'table' and item.message ~= nil and item.stack ~= nil then
-    show(
-      item.message .. '\n' .. item.stack,
-      vim.log.levels.ERROR,
-      opt
-    )
+    show(item.message .. '\n' .. item.stack, vim.log.levels.ERROR, opt)
   else
-    show(
-      item,
-      vim.log.levels.ERROR,
-      opt
-    )
+    show(item, vim.log.levels.ERROR, opt)
   end
 end
 
@@ -79,7 +72,7 @@ function M.table.map_to_array(table, fn)
   local result = {}
   local idx = 1
 
-  for k,v in pairs(table) do
+  for k, v in pairs(table) do
     result[idx] = fn(k, v)
     idx = idx + 1
   end
@@ -155,7 +148,7 @@ function M.list.equals(as, bs)
     return false
   end
 
-  for i,x in ipairs(as) do
+  for i, x in ipairs(as) do
     if bs[i] ~= x then
       return false
     end
@@ -165,7 +158,7 @@ function M.list.equals(as, bs)
 end
 
 function M.list.append(as, bs)
-  for _,b in ipairs(bs) do
+  for _, b in ipairs(bs) do
     table.insert(as, b)
   end
 
@@ -179,8 +172,8 @@ function M.json.decode(string)
     -- obj is error message if not success
     luanil = {
       object = true,
-      array = true
-    }
+      array = true,
+    },
   })
 
   if success then
@@ -228,10 +221,12 @@ end
 function M.string.trim_quotes(text)
   local open_markers = text:match([=[^['"`]+]=])
 
-  if open_markers == nil then return text end
+  if open_markers == nil then
+    return text
+  end
 
-  local open = "^" .. open_markers
-  local close = open_markers .. "$"
+  local open = '^' .. open_markers
+  local close = open_markers .. '$'
 
   local result = text:gsub(open, ''):gsub(close, '')
 
@@ -243,25 +238,27 @@ function M.string.trim_code_block(text)
   -- TODO there's probably a simpler way to preserve the surrounding newline semantics
   -- or maybe I don't need is_multiline at all, assume single line blocks are always single backtick
   -- so ```'s always include newlines
-  local is_code_block = text:match("^```") and text:match("```$")
+  local is_code_block = text:match('^```') and text:match('```$')
 
-  if not is_code_block then return text end
+  if not is_code_block then
+    return text
+  end
 
-  local has_fence = text:match("^```[^\n]+\n")
+  local has_fence = text:match('^```[^\n]+\n')
 
   if has_fence then
-    local result = text:gsub("^```[^\n]*\n", ''):gsub("\n?```$", '')
+    local result = text:gsub('^```[^\n]*\n', ''):gsub('\n?```$', '')
     return result
   end
 
-  local is_multiline = text:match("^```\n") and text:match("\n```$")
+  local is_multiline = text:match('^```\n') and text:match('\n```$')
 
   if is_multiline then
-    local result = text:gsub("^```\n", ''):gsub("\n```$", '')
+    local result = text:gsub('^```\n', ''):gsub('\n```$', '')
     return result
   end
 
-  local result = text:gsub("^```", ''):gsub("```$", '')
+  local result = text:gsub('^```', ''):gsub('```$', '')
   return result
 end
 
@@ -269,7 +266,7 @@ end
 -- {code: string, lang: string} or {text: string}
 function M.string.extract_markdown_code_blocks(md_text)
   local blocks = {}
-  local current_block = { text = "" }
+  local current_block = { text = '' }
   local in_code_block = false
 
   local function add_text_block()
@@ -278,21 +275,21 @@ function M.string.extract_markdown_code_blocks(md_text)
     end
   end
 
-  for line in md_text:gmatch("[^\r\n]+") do
-    local code_fence = line:match("^```([%w-]*)")
+  for line in md_text:gmatch('[^\r\n]+') do
+    local code_fence = line:match('^```([%w-]*)')
     if code_fence then
       in_code_block = not in_code_block
       if in_code_block then
         add_text_block()
-        current_block = { code = "", lang = code_fence }
+        current_block = { code = '', lang = code_fence }
       else
         table.insert(blocks, current_block)
-        current_block = { text = "" }
+        current_block = { text = '' }
       end
     elseif in_code_block then
-      current_block.code = current_block.code .. line .. "\n"
+      current_block.code = current_block.code .. line .. '\n'
     else
-      current_block.text = current_block.text .. line .. "\n"
+      current_block.text = current_block.text .. line .. '\n'
     end
   end
 
@@ -318,7 +315,6 @@ end
 
 M.cursor = {}
 
-
 ---@class Position
 ---@field row number 0-indexed row
 ---@field col number 0-indexed column, can be vim.v.maxcol which means after end of line
@@ -340,12 +336,12 @@ function M.cursor.selection()
   return {
     start = {
       row = start[2] - 1,
-      col = start[3] - 1
+      col = start[3] - 1,
     },
     stop = {
       row = stop[2] - 1,
-      col = stop[3] -- stop col can be vim.v.maxcol which means entire line
-    }
+      col = stop[3], -- stop col can be vim.v.maxcol which means entire line
+    },
   }
 end
 
@@ -355,7 +351,7 @@ function M.cursor.position()
 
   return {
     row = pos[1] - 1,
-    col = pos[2]
+    col = pos[2],
   }
 end
 
@@ -422,13 +418,17 @@ function M.buf.text(selection)
 end
 
 function M.buf.set_text(selection, lines)
-  local stop_col =
-    selection.stop.col == M.COL_ENTIRE_LINE
+  local stop_col = selection.stop.col == M.COL_ENTIRE_LINE
       and #assert(
-            vim.api.nvim_buf_get_lines(0, selection.stop.row, selection.stop.row + 1, true)[1],
-            'No line at ' .. tostring(selection.stop.row)
-          )
-      or selection.stop.col
+        vim.api.nvim_buf_get_lines(
+          0,
+          selection.stop.row,
+          selection.stop.row + 1,
+          true
+        )[1],
+        'No line at ' .. tostring(selection.stop.row)
+      )
+    or selection.stop.col
 
   vim.api.nvim_buf_set_text(
     0,
@@ -453,17 +453,22 @@ function M.buf.prompt(callback, initial_content, title)
 
   vim.cmd(':b ' .. bufnr)
 
-  vim.api.nvim_set_option_value('winbar', title or 'Prompt', { scope = 'local' })
+  vim.api.nvim_set_option_value(
+    'winbar',
+    title or 'Prompt',
+    { scope = 'local' }
+  )
 
   if initial_content ~= nil then
-    if type(initial_content) == "string" then
+    if type(initial_content) == 'string' then
       initial_content = vim.fn.split(initial_content, '\n')
     end
     vim.api.nvim_buf_set_text(bufnr, 0, 0, 0, 0, initial_content)
   end
 
   vim.fn.prompt_setcallback(bufnr, function(user_input)
-    local buf_content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -3, false), '\n')
+    local buf_content =
+      table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -3, false), '\n')
     local success, result = pcall(callback, user_input, buf_content)
 
     if not success then

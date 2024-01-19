@@ -7,18 +7,14 @@ local curl = require('model.util.curl')
 local async = require('model.util.async')
 
 local function tokenize(text, url_base, cb)
-  curl.request(
-    {
-      url = url_base .. '/tokenize',
-      body = { content = text, }
-    },
-    function(x)
-      local tokens = vim.json.decode(x).tokens
+  curl.request({
+    url = url_base .. '/tokenize',
+    body = { content = text },
+  }, function(x)
+    local tokens = vim.json.decode(x).tokens
 
-      cb(tokens)
-    end,
-    util.eshow
-  )
+    cb(tokens)
+  end, util.eshow)
 end
 
 ---Tokenizes each message with LlamaCpp server separately then inserts an EOS (2) token between each item.
@@ -34,10 +30,10 @@ local function tokenize_messages(messages, system, url_base, cb)
 
   async(function(wait, resolve)
     local tokens_list = {
-      {BOS}
+      { BOS },
     }
 
-    for i,msg in ipairs(formatted_messages) do
+    for i, msg in ipairs(formatted_messages) do
       local tokens = wait(tokenize(msg, url_base, resolve))
 
       if i ~= #formatted_messages then
@@ -62,11 +58,7 @@ function M.chatprompt_tokenize_run(messages, config)
   return function(set_params)
     async(function(wait, resolve)
       if options.model then
-        wait(llamacpp.start_server(
-          options.model,
-          options.args,
-          resolve
-        ))
+        wait(llamacpp.start_server(options.model, options.args, resolve))
       end
 
       local tokens = wait(
@@ -81,7 +73,7 @@ function M.chatprompt_tokenize_run(messages, config)
       util.show(#tokens, '#tokens')
 
       set_params({
-        prompt = tokens
+        prompt = tokens,
       })
     end)
   end

@@ -16,40 +16,43 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit, stdin_text)
 
   local _error_output = ''
 
-  local handle = assert(uv.spawn(
-    cmd,
-    vim.tbl_extend(
-      'force',
-      {
+  local handle = assert(
+    uv.spawn(
+      cmd,
+      vim.tbl_extend('force', {
         args = args,
-        stdio = { stdin, stdout, stderr }
-      },
-      (opts or {})
-    ),
-    function(exit_code, signal)
-      -- success
-      if exit_code == 0 then
-        if on_exit ~= nil then
-          on_exit()
+        stdio = { stdin, stdout, stderr },
+      }, (opts or {})),
+      function(exit_code, signal)
+        -- success
+        if exit_code == 0 then
+          if on_exit ~= nil then
+            on_exit()
+          end
+
+          return
         end
 
-        return
-      end
+        -- sigint / cancelled
+        if signal == 2 then
+          return
+        end
 
-      -- sigint / cancelled
-      if signal == 2 then return end
-
-      if on_error then
-        vim.schedule(function()
-          on_error(_error_output)
-        end)
+        if on_error then
+          vim.schedule(function()
+            on_error(_error_output)
+          end)
+        end
       end
-    end
-  ), 'failed to spawn ' .. cmd)
+    ),
+    'failed to spawn ' .. cmd
+  )
 
   uv.read_start(stderr, function(err, text)
     assert(not err, err)
-    if text then _error_output = _error_output .. text end
+    if text then
+      _error_output = _error_output .. text
+    end
   end)
 
   if on_stdout then
@@ -77,7 +80,9 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit, stdin_text)
 
   stdin:shutdown()
 
-  return function() handle:kill('sigint') end
+  return function()
+    handle:kill('sigint')
+  end
 end
 
 return system

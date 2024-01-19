@@ -16,7 +16,7 @@ local M = {}
 function M.limit_before_after(context, line_count)
   return {
     before = table.concat(util.table.slice(context.before, -line_count), '\n'),
-    after = table.concat(util.table.slice(context.after, 0, line_count), '\n')
+    after = table.concat(util.table.slice(context.after, 0, line_count), '\n'),
   }
 end
 
