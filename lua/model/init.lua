@@ -128,26 +128,6 @@ local function setup_commands()
   end
 
   vim.api.nvim_create_user_command(
-    'LlmMulti',
-    function(...)
-      vim.notify(
-        'LlmMulti is going to be removed. Open a GH issue to keep it if you use it!',
-        vim.log.levels.WARN
-      )
-
-      return command_request_multi_completion_streams(...)
-    end,
-    {
-      force = true,
-      range = true,
-      nargs = '+',
-      desc = 'Request multiple prompts at the same time',
-      complete = scopes.complete_arglead_prompt_names,
-    }
-  )
-
-  create_deprecated_command(
-    'LlmCancel',
     'Mcancel',
     function()
       local seg = segment.query(util.cursor.position())
@@ -169,24 +149,7 @@ local function setup_commands()
     }
   )
 
-  create_deprecated_command(
-    'LlmDelete',
-    'Mdelete',
-    function()
-      local seg = segment.query(util.cursor.position())
-      if seg then
-        flash(6, 80, seg, 'DiffDelete', function() seg.delete() end)
-      end
-    end,
-    {
-      range = true,
-      desc = 'Delete the completion under the cursor, replacing with original text if replacement',
-      force = true
-    }
-  )
-
-  create_deprecated_command(
-    'LlmShow',
+vim.api.nvim_create_user_command(
     'Mshow',
     function()
       local seg = segment.query(util.cursor.position())
@@ -201,8 +164,7 @@ local function setup_commands()
     }
   )
 
-  create_deprecated_command(
-    'LlmSelect',
+  vim.api.nvim_create_user_command(
     'Mselect',
     function()
       local seg = segment.query(util.cursor.position())
@@ -234,8 +196,7 @@ local function setup_commands()
     }
   )
 
-  create_deprecated_command(
-    'Llm',
+  vim.api.nvim_create_user_command(
     'M',
     command_request_completion,
     {
@@ -273,8 +234,7 @@ local function setup_commands()
     end
   }
 
-  create_deprecated_command(
-    'LlmStore',
+  vim.api.nvim_create_user_command(
     'Mstore',
     function(a)
       -- local args = a.fargs
