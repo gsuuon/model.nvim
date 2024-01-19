@@ -5,7 +5,7 @@ end
 vim.filetype.add({
   extension = {
     mchat = 'mchat',
-  }
+  },
 })
 
 require('model').setup()

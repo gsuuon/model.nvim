@@ -1,9 +1,7 @@
 local u = require('tests.util')
 
 describe('cursor.selection', function()
-
   it('gets 0-indexed cursor position', function()
-
     local util = require('model.util')
 
     local buf = vim.api.nvim_create_buf(false, true)
@@ -16,14 +14,13 @@ describe('cursor.selection', function()
     assert.are.same({
       start = {
         row = 0,
-        col = 0
+        col = 0,
       },
       stop = {
         row = 0,
-        col = vim.v.maxcol
-      }
+        col = vim.v.maxcol,
+      },
     }, selection)
-
   end)
 end)
 
@@ -37,7 +34,7 @@ describe('server-sent events iterator', function()
       table.insert(got, event)
     end)
 
-    for _,output in ipairs(outputs) do
+    for _, output in ipairs(outputs) do
       parse(output)
     end
 
@@ -45,51 +42,37 @@ describe('server-sent events iterator', function()
   end
 
   it('parses single message output', function()
-
-    parse_expect_sse(
-      {
-        'data: {"a": true}\n\n',
-        'data: {"b": false}\n\n',
-      },
-      {
-        { data = '{"a": true}' },
-        { data = '{"b": false}' }
-      }
-    )
-
+    parse_expect_sse({
+      'data: {"a": true}\n\n',
+      'data: {"b": false}\n\n',
+    }, {
+      { data = '{"a": true}' },
+      { data = '{"b": false}' },
+    })
   end)
 
   it('parses multiple message outputs', function()
-
-    parse_expect_sse(
-      {
-        'data: {"a": true}\n\ndata: {"b": false}\n\n',
-        'data: {"c": true}\n\ndata: {"d": false}\n\n',
-      },
-      {
-        { data = '{"a": true}' },
-        { data = '{"b": false}' },
-        { data = '{"c": true}' },
-        { data = '{"d": false}' }
-      }
-    )
-
+    parse_expect_sse({
+      'data: {"a": true}\n\ndata: {"b": false}\n\n',
+      'data: {"c": true}\n\ndata: {"d": false}\n\n',
+    }, {
+      { data = '{"a": true}' },
+      { data = '{"b": false}' },
+      { data = '{"c": true}' },
+      { data = '{"d": false}' },
+    })
   end)
 
   it('parses partial message outputs', function()
-
-    parse_expect_sse(
-      {
-        'data: {"a": true,',
-        'data: "b": false}\n\n',
-        'data: {"c": true,',
-        'data: "d": false}\n\n',
-      },
-      {
-        { data = '{"a": true,\n"b": false}' },
-        { data = '{"c": true,\n"d": false}' }
-      }
-    )
+    parse_expect_sse({
+      'data: {"a": true,',
+      'data: "b": false}\n\n',
+      'data: {"c": true,',
+      'data: "d": false}\n\n',
+    }, {
+      { data = '{"a": true,\n"b": false}' },
+      { data = '{"c": true,\n"d": false}' },
+    })
   end)
 
   describe('data helper', function()
@@ -100,7 +83,7 @@ describe('server-sent events iterator', function()
         table.insert(got, event)
       end)
 
-      for _,output in ipairs(outputs) do
+      for _, output in ipairs(outputs) do
         parse(output)
       end
 
@@ -108,20 +91,15 @@ describe('server-sent events iterator', function()
     end
 
     it('parses out data values', function()
-
-      parse_expect_data(
-        {
-          'data: {"a": true}\n\ndata: {"b": false}\n\n',
-          'data: {"c": true}\n\ndata: {"d": false}\n\n',
-        },
-        {
-          '{"a": true}',
-          '{"b": false}',
-          '{"c": true}',
-          '{"d": false}'
-        }
-      )
-
+      parse_expect_data({
+        'data: {"a": true}\n\ndata: {"b": false}\n\n',
+        'data: {"c": true}\n\ndata: {"d": false}\n\n',
+      }, {
+        '{"a": true}',
+        '{"b": false}',
+        '{"c": true}',
+        '{"d": false}',
+      })
     end)
   end)
 end)

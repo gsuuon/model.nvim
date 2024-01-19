@@ -9,7 +9,7 @@ function M.parse_message(message_text)
 
   local split_lines = vim.split(message_text, '\n')
 
-  for _,line in ipairs(split_lines) do
+  for _, line in ipairs(split_lines) do
     local label, value = line:match('(.-):%s?(.+)')
 
     if label ~= nil and label ~= '' then
@@ -87,7 +87,7 @@ function M.client(handlers)
       if headers:match('[Cc]ontent%-[Tt]ype:%s?text/event%-stream') then
         is_sse = true
       end
-    end
+    end,
   }
 end
 

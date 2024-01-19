@@ -15,40 +15,36 @@ local openai_chat = {
   provider = openai,
   system = 'You are a helpful assistant',
   params = {
-    model = 'gpt-3.5-turbo-1106'
+    model = 'gpt-3.5-turbo-1106',
   },
   create = input_if_selection,
   run = function(messages, config)
     if config.system then
       table.insert(messages, 1, {
         role = 'system',
-        content = config.system
+        content = config.system,
       })
     end
 
     return { messages = messages }
-  end
+  end,
 }
 
 ---@type table<string, ChatPrompt>
 local chats = {
   openai = openai_chat,
-  gpt4 = vim.tbl_deep_extend(
-    'force',
-    openai_chat,
-    {
-      params = {
-        model = 'gpt-4-1106-preview',
-      }
-    }
-  ),
+  gpt4 = vim.tbl_deep_extend('force', openai_chat, {
+    params = {
+      model = 'gpt-4-1106-preview',
+    },
+  }),
   palm = {
     provider = palm,
     system = 'You are a helpful assistant',
     create = input_if_selection,
     options = {
       method = 'generateMessage',
-      model = 'chat-bison-001'
+      model = 'chat-bison-001',
     },
     run = function(messages, config)
       return {
@@ -57,40 +53,42 @@ local chats = {
           messages = vim.tbl_map(function(msg)
             return {
               content = msg.content,
-              author = msg.role
+              author = msg.role,
             }
-          end, messages)
-        }
+          end, messages),
+        },
       }
-    end
+    end,
   },
   ['llamacpp:zephyr'] = {
     provider = llamacpp,
     options = {
       model = 'zephyr-7b-beta.Q5_K_M.gguf',
       args = {
-        '-c', 8192,
-        '-ngl', 30
-      }
+        '-c',
+        8192,
+        '-ngl',
+        30,
+      },
     },
     system = 'You are a helpful assistant',
     create = input_if_selection,
-    run = zephyr_fmt.chat
+    run = zephyr_fmt.chat,
   },
   ['ollama:starling'] = {
     provider = ollama,
     params = {
-      model = 'starling-lm'
+      model = 'starling-lm',
     },
     create = input_if_selection,
-    run = starling_fmt.chat
+    run = starling_fmt.chat,
   },
   ['together:codellama'] = {
     provider = together,
     params = {
       model = 'Phind/Phind-CodeLlama-34B-v2',
       max_tokens = 1000,
-      stop = '</s>'
+      stop = '</s>',
     },
     system = 'You are an intelligent programming assistant',
     create = function(input, ctx)
@@ -99,9 +97,8 @@ local chats = {
     run = function(messages, config)
       local prompt = '### System Prompt\n' .. config.system
 
-      for _,msg in ipairs(messages) do
-        prompt =
-          prompt
+      for _, msg in ipairs(messages) do
+        prompt = prompt
           .. '\n\n### '
           .. (msg.role == 'user' and 'User Message' or 'Assistant')
           .. '\n'
@@ -111,9 +108,9 @@ local chats = {
       prompt = prompt .. '### Assistant\n'
 
       return {
-        prompt = prompt
+        prompt = prompt,
       }
-    end
+    end,
   },
   ['together:mixtral'] = {
     provider = together,
@@ -125,8 +122,8 @@ local chats = {
       repetition_penalty = 1,
       stop = {
         '<|im_end|>',
-        '<|im_start|>'
-      }
+        '<|im_start|>',
+      },
     },
     create = input_if_selection,
     run = function(messages, config)
@@ -137,22 +134,24 @@ local chats = {
       end
 
       return {
-        prompt = table.concat(
-          vim.tbl_map(function(msg)
-            return '<|im_start|>' .. msg.role .. '\n' .. msg.content .. '<|im_end|>\n'
-          end, messages)
-        ) .. '<|im_start|>assistant'
+        prompt = table.concat(vim.tbl_map(function(msg)
+          return '<|im_start|>'
+            .. msg.role
+            .. '\n'
+            .. msg.content
+            .. '<|im_end|>\n'
+        end, messages)) .. '<|im_start|>assistant',
       }
-    end
+    end,
   },
   ['gpt4:commit review'] = {
     provider = openai,
-    system = 'You are an expert programmer that gives constructive feedback. Review the changes in the user\'s git diff.',
+    system = "You are an expert programmer that gives constructive feedback. Review the changes in the user's git diff.",
     params = {
-      model = 'gpt-4-1106-preview'
+      model = 'gpt-4-1106-preview',
     },
     create = function()
-      local git_diff = vim.fn.system {'git', 'diff', '--staged'}
+      local git_diff = vim.fn.system({ 'git', 'diff', '--staged' })
       ---@cast git_diff string
 
       if not git_diff:match('^diff') then
@@ -161,8 +160,8 @@ local chats = {
 
       return git_diff
     end,
-    run = openai_chat.run
-  }
+    run = openai_chat.run,
+  },
 }
 
 return chats

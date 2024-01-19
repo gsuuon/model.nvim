@@ -19,10 +19,14 @@ local mode = require('model').mode
 local function code_replace_fewshot(input, context)
   local surrounding_text = prompts.limit_before_after(context, 30)
 
-  local content = 'The code:\n```\n' .. surrounding_text.before .. '<@@>' .. surrounding_text.after .. '\n```\n'
+  local content = 'The code:\n```\n'
+    .. surrounding_text.before
+    .. '<@@>'
+    .. surrounding_text.after
+    .. '\n```\n'
 
   if context.selection then -- we only use input if we have a visual selection
-    content = content ..  '\n\nExisting text at <@@>:\n```' .. input .. '```\n'
+    content = content .. '\n\nExisting text at <@@>:\n```' .. input .. '```\n'
   end
 
   if #context.args > 0 then
@@ -32,8 +36,8 @@ local function code_replace_fewshot(input, context)
   local messages = {
     {
       role = 'user',
-      content = content
-    }
+      content = content,
+    },
   }
 
   return {
@@ -41,12 +45,12 @@ local function code_replace_fewshot(input, context)
     fewshot = {
       {
         role = 'user',
-        content = 'The code:\n```\nfunction greet(name) { console.log("Hello " <@@>) }\n```\n\nExisting text at <@@>: `+ nme`'
+        content = 'The code:\n```\nfunction greet(name) { console.log("Hello " <@@>) }\n```\n\nExisting text at <@@>: `+ nme`',
       },
       {
         role = 'assistant',
-        content = '+ name'
-      }
+        content = '+ name',
+      },
     },
     messages = messages,
   }
@@ -62,65 +66,70 @@ local starters = {
     options = {
       model = 'zephyr-7b-beta.Q5_K_M.gguf',
       args = {
-        '-c', 8192,
-        '-ngl', 35
-      }
+        '-c',
+        8192,
+        '-ngl',
+        35,
+      },
     },
     builder = function(input, context)
       return {
-        prompt =
-          '<|system|>'
+        prompt = '<|system|>'
           .. (context.args or 'You are a helpful assistant')
           .. '\n</s>\n<|user|>\n'
           .. input
-          .. '</s>\n<|assistant|>'
+          .. '</s>\n<|assistant|>',
       }
-    end
+    end,
   },
   ['together:stripedhyena'] = {
     provider = together,
     params = {
       model = 'togethercomputer/StripedHyena-Nous-7B', -- 32k model
-      max_tokens = 1024
+      max_tokens = 1024,
     },
     builder = function(input)
       return {
         prompt = '### Instruction:\n' .. input .. '\n\n### Response:\n',
-        stop = '</s>'
+        stop = '</s>',
       }
-    end
+    end,
   },
   ['together:phind/codellama34b_v2'] = {
     provider = together,
     params = {
       model = 'Phind/Phind-CodeLlama-34B-v2', -- 16k model
-      max_tokens = 1024
+      max_tokens = 1024,
     },
     builder = function(input)
       return {
-        prompt = '### System Prompt\nYou are an intelligent programming assistant\n\n### User Message\n' .. input  ..'\n\n### Assistant\n'
+        prompt = '### System Prompt\nYou are an intelligent programming assistant\n\n### User Message\n'
+          .. input
+          .. '\n\n### Assistant\n',
       }
-    end
+    end,
   },
   ['ollama:starling'] = {
     provider = ollama,
     params = {
-      model = 'starling-lm'
+      model = 'starling-lm',
     },
     builder = function(input)
       return {
-        prompt = 'GPT4 Correct User: ' .. input .. '<|end_of_turn|>GPT4 Correct Assistant: '
+        prompt = 'GPT4 Correct User: '
+          .. input
+          .. '<|end_of_turn|>GPT4 Correct Assistant: ',
       }
-    end
+    end,
   },
   ['hf:starcoder'] = {
     provider = huggingface,
     options = {
-      model = 'bigcode/starcoder'
+      model = 'bigcode/starcoder',
     },
     builder = function(input)
       return { inputs = input }
-    end
+    end,
   },
   ['openai:gpt4-code'] = {
     provider = openai,
@@ -128,18 +137,18 @@ local starters = {
     params = {
       temperature = 0.2,
       max_tokens = 1000,
-      model = 'gpt-4'
+      model = 'gpt-4',
     },
     builder = function(input, context)
       return openai.adapt(code_replace_fewshot(input, context))
     end,
-    transform = extract.markdown_code
+    transform = extract.markdown_code,
   },
   commit = {
     provider = openai,
     mode = mode.INSERT,
     builder = function()
-      local git_diff = vim.fn.system {'git', 'diff', '--staged'}
+      local git_diff = vim.fn.system({ 'git', 'diff', '--staged' })
 
       if not git_diff:match('^diff') then
         error('Git error:\n' .. git_diff)
@@ -149,9 +158,11 @@ local starters = {
         messages = {
           {
             role = 'user',
-            content = 'Write a terse commit message according to the Conventional Commits specification. Try to stay below 80 characters total. Staged git diff: ```\n' .. git_diff .. '\n```'
-          }
-        }
+            content = 'Write a terse commit message according to the Conventional Commits specification. Try to stay below 80 characters total. Staged git diff: ```\n'
+              .. git_diff
+              .. '\n```',
+          },
+        },
       }
     end,
   },
@@ -162,7 +173,9 @@ local starters = {
     mode = mode.BUFFER,
     builder = function(input, context)
       if context.args == nil or #context.args == 0 then
-        error('Provide the schema url as a command arg (:M openapi https://myurl.json)')
+        error(
+          'Provide the schema url as a command arg (:M openapi https://myurl.json)'
+        )
       end
 
       local schema_url = context.args
@@ -172,28 +185,32 @@ local starters = {
           local schema = wait(extract.schema_descripts(schema_url, resolve))
           util.show(schema.description, 'got openapi schema')
 
-          local route = wait(consult.gpt_relevant_openapi_schema_path(schema, input, resolve))
+          local route = wait(
+            consult.gpt_relevant_openapi_schema_path(schema, input, resolve)
+          )
           util.show(route.relevant_route, 'api relevant route')
 
           return {
             messages = {
               {
                 role = 'user',
-                content =
-                  "API schema url: " .. schema_url
-                  .. "\n\nAPI description: " .. route.schema.description
-                  .. "\n\nRelevant path:\n" .. vim.json.encode(route.relevant_route)
+                content = 'API schema url: '
+                  .. schema_url
+                  .. '\n\nAPI description: '
+                  .. route.schema.description
+                  .. '\n\nRelevant path:\n'
+                  .. vim.json.encode(route.relevant_route),
               },
               {
                 role = 'user',
-                content = input
-              }
-            }
+                content = input,
+              },
+            },
           }
         end, build)
       end
-    end
-  }
+    end,
+  },
 }
 
 return starters

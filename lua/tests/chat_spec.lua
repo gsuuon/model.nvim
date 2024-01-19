@@ -9,7 +9,7 @@ describe('chat', function()
           contents = {
             config = {
               params = {
-                model = 'gpt-3.5-turbo'
+                model = 'gpt-3.5-turbo',
               },
               system = 'You are a helpful assistant',
             },
@@ -17,8 +17,8 @@ describe('chat', function()
               { role = 'user', content = 'Count to three' },
               { role = 'assistant', content = '1, 2, 3.' },
               { role = 'user', content = 'Thanks' },
-            }
-          }
+            },
+          },
         },
         chat.parse([[
 openai
@@ -45,16 +45,15 @@ Thanks]])
       assert.are.same(
         {
           chat = 'openai',
-          contents = 
-            {
-              config = {
-                system = 'You are a helpful assistant',
-              },
-              messages = {
-                { role = 'user', content = 'Count to three' },
-                { role = 'assistant', content = '1, 2, 3.' }
-              }
-            }
+          contents = {
+            config = {
+              system = 'You are a helpful assistant',
+            },
+            messages = {
+              { role = 'user', content = 'Count to three' },
+              { role = 'assistant', content = '1, 2, 3.' },
+            },
+          },
         },
         chat.parse([[
 openai
@@ -73,14 +72,13 @@ Count to three
       assert.are.same(
         {
           chat = 'openai',
-          contents = 
-            {
-              config = {},
-              messages = {
-                { role = 'user', content = 'Count to three' },
-                { role = 'assistant', content = '1, 2, 3.' }
-              },
-            }
+          contents = {
+            config = {},
+            messages = {
+              { role = 'user', content = 'Count to three' },
+              { role = 'assistant', content = '1, 2, 3.' },
+            },
+          },
         },
         chat.parse([[
 openai
@@ -98,13 +96,12 @@ Count to three
       assert.are.same(
         {
           chat = 'openai',
-          contents =
-            {
-              config = {
-                model = 'gpt-3.5-turbo'
-              },
-              messages = {}
-            }
+          contents = {
+            config = {
+              model = 'gpt-3.5-turbo',
+            },
+            messages = {},
+          },
         },
         chat.parse([[
 openai
@@ -125,8 +122,8 @@ openai
             config = {
               system = 'You are a helpful assistant',
             },
-            messages = {}
-          }
+            messages = {},
+          },
         },
         chat.parse([[openai
 > You are a helpful assistant
@@ -162,20 +159,17 @@ Count to three
 ======
 
 Thanks]],
-        chat.to_string(
-          {
-            config = {
-              model = 'gpt-3.5-turbo',
-              system = 'You are a helpful assistant',
-            },
-            messages = {
-              { role = 'user', content = 'Count to three' },
-              { role = 'assistant', content = '1, 2, 3.' },
-              { role = 'user', content = 'Thanks' },
-            },
+        chat.to_string({
+          config = {
+            model = 'gpt-3.5-turbo',
+            system = 'You are a helpful assistant',
           },
-          'openai'
-        )
+          messages = {
+            { role = 'user', content = 'Count to three' },
+            { role = 'assistant', content = '1, 2, 3.' },
+            { role = 'user', content = 'Thanks' },
+          },
+        }, 'openai')
       )
     end)
 
@@ -192,19 +186,16 @@ Count to three
 ======
 
 Thanks]],
-        chat.to_string(
-          {
-            config = {
-              system = 'You are a helpful assistant',
-            },
-            messages = {
-              { role = 'user', content = 'Count to three' },
-              { role = 'assistant', content = '1, 2, 3.' },
-              { role = 'user', content = 'Thanks' },
-            },
+        chat.to_string({
+          config = {
+            system = 'You are a helpful assistant',
           },
-          'openai'
-        )
+          messages = {
+            { role = 'user', content = 'Count to three' },
+            { role = 'assistant', content = '1, 2, 3.' },
+            { role = 'user', content = 'Thanks' },
+          },
+        }, 'openai')
       )
     end)
 
@@ -219,19 +210,15 @@ Count to three
 ======
 
 Thanks]],
-        chat.to_string(
-          {
-            messages = {
-              { role = 'user', content = 'Count to three' },
-              { role = 'assistant', content = '1, 2, 3.' },
-              { role = 'user', content = 'Thanks' },
-            },
-            config = {},
+        chat.to_string({
+          messages = {
+            { role = 'user', content = 'Count to three' },
+            { role = 'assistant', content = '1, 2, 3.' },
+            { role = 'user', content = 'Thanks' },
           },
-          'openai'
-        )
+          config = {},
+        }, 'openai')
       )
     end)
   end)
 end)
-

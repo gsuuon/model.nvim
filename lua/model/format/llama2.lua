@@ -34,12 +34,16 @@ M.chat = function(prompt)
     end
   end
 
-  return wrap_sys(prompt.system or default_system_prompt) .. table.concat(texts, '\n') .. '\n'
+  return wrap_sys(prompt.system or default_system_prompt)
+    .. table.concat(texts, '\n')
+    .. '\n'
 end
 
 ---@param prompt { system?: string, message: string }
 M.system_prompt = function(prompt) -- correct but does not give as good results as user_prompt
-  return wrap_instr(wrap_sys(prompt.system or default_system_prompt) .. prompt.message)
+  return wrap_instr(
+    wrap_sys(prompt.system or default_system_prompt) .. prompt.message
+  )
 end
 
 ---@param prompt { user: string, message: string } -- for coding problems
@@ -54,7 +58,9 @@ M.general_prompt = function(prompt) -- somehow gives better results compared to 
     message = "\n'''\n" .. prompt.message .. "\n'''\n"
   end
   -- best way to format is iffy. better: wrap_system() .. wrap_instr(), but should be: wrap_instr(wrap_system(sys_msg) .. message) by docs
-  return wrap_instr(wrap_sys(prompt.system or default_system_prompt) .. prompt.user .. message)
+  return wrap_instr(
+    wrap_sys(prompt.system or default_system_prompt) .. prompt.user .. message
+  )
 end
 
 return M

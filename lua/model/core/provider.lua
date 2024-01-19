@@ -26,7 +26,7 @@ M.mode = {
   REPLACE = 'replace', -- replace input
   BUFFER = 'buffer', -- create a new buffer and insert
   INSERT = 'insert', -- insert at the cursor position
-  INSERT_OR_REPLACE = 'insert_or_replace' -- insert at the cursor position if no selection, or replace the selection
+  INSERT_OR_REPLACE = 'insert_or_replace', -- insert at the cursor position if no selection, or replace the selection
 }
 
 ---@class StreamHandlers
@@ -101,11 +101,7 @@ local function build_params_run_prompt(prompt, handlers, input_context)
   -- TODO args to prompts is probably less useful than the prompt buffer / helper
 
   local function do_request(built_params)
-    local params = vim.tbl_extend(
-      'force',
-      (prompt.params or {}),
-      built_params
-    )
+    local params = vim.tbl_extend('force', (prompt.params or {}), built_params)
 
     return prompt.provider.request_completion(handlers, params, prompt.options)
   end
@@ -172,7 +168,7 @@ local function create_prompt_handlers(prompt, seg)
       util.eshow(data, label or 'Stream error ')
     end,
 
-    segment = seg
+    segment = seg,
   }
 end
 
@@ -180,7 +176,6 @@ end
 ---@param input_context InputContext
 ---@param source Source
 local function create_segment_handlers_run_prompt(prompt, input_context, source)
-
   local mode = (function()
     if prompt.mode == M.mode.INSERT_OR_REPLACE then
       if source.selection then
@@ -197,13 +192,9 @@ local function create_segment_handlers_run_prompt(prompt, input_context, source)
 
   seg.data.cancel = build_params_run_prompt(
     prompt,
-    create_prompt_handlers(
-      prompt,
-      seg
-    ),
+    create_prompt_handlers(prompt, seg),
     input_context
   )
-
 end
 
 -- Run a prompt and resolve the complete result. Does not do anything with the result (ignores prompt mode)
@@ -211,19 +202,15 @@ end
 ---@param input_context InputContext
 ---@param callback fun(completion: string) completion callback
 function M.complete(prompt, input_context, callback)
-  return build_params_run_prompt(
-    prompt,
-    {
-      on_partial = function() end,
-      on_finish = function(complete_text)
-        callback(complete_text)
-      end,
-      on_error = function(data, label)
-        util.eshow(data, label or 'Request error')
-      end,
-    },
-    input_context
-  )
+  return build_params_run_prompt(prompt, {
+    on_partial = function() end,
+    on_finish = function(complete_text)
+      callback(complete_text)
+    end,
+    on_error = function(data, label)
+      util.eshow(data, label or 'Request error')
+    end,
+  }, input_context)
 end
 
 ---@param prompt Prompt
@@ -260,7 +247,7 @@ function M.request_multi_completion_streams(prompts, want_visual_selection)
 
       create_segment_handlers_run_prompt(
         vim.tbl_extend('force', prompt, {
-          mode = M.mode.APPEND -- multi-mode always append only
+          mode = M.mode.APPEND, -- multi-mode always append only
         }),
         input.get_input_context(source, ''),
         source
