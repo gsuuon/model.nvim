@@ -300,9 +300,20 @@ function M.string.extract_markdown_code_blocks(md_text)
   return blocks
 end
 
+---@deprecated Use util.path.join()
 function M.string.joinpath(...)
+  return M.path.join(...)
+end
+
+M.path = {}
+
+function M.path.join(...)
   -- can eventually be replaced by vim.fn.joinpath, presumably once neovim 0.9.5 is released.
   return (table.concat({ ... }, '/'):gsub('//+', '/'))
+end
+
+function M.path.relative_norm(path)
+  return vim.fn.fnamemodify(path, ':~:.')
 end
 
 M.cursor = {}

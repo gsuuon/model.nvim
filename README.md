@@ -159,6 +159,41 @@ https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a
 
 - `:Mshow` — Flash the response under the cursor if there is one.
 
+#### Manage context
+
+There are some basic context management helpers which use the quickfix list:
+
+- `:MCadd` — Add the current file
+- `:MCremove` — Remove the current file
+- `:MCclear` — Remove all entries
+- `:MCpaste` — Paste the contents of the quickfix list files with filepaths and code fences
+  - an example:
+  ````md
+    File: `src/index.tsx`
+    ```typescriptreact
+    import App from "./App";
+
+    render( () => <App />), document.getElementById("root")!);
+    ```
+  ````
+
+File content of the quickfix list (what `:MCpaste` inserts) can be accessed programmatically via `require('model.util.qflist').get_text()`, for example:
+```lua
+local qflist = require('model.util.qflist')
+local starters = require('model.prompts.chats')
+
+config.chats = {
+  ['codellama:qfix'] = vim.tbl_deep_extend('force', starters['together:codellama'], {
+    system = 'You are an intelligent programming assistant',
+    create = function()
+      return qflist.get_text()
+    end
+  }),
+}
+```
+
+
+
 ### 🚧 WIP - Local vector store 
 <details>
 <summary>
