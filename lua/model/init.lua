@@ -7,43 +7,54 @@ local input = require('model.core.input')
 
 local M = {}
 
-local function yank_with_line_numbers_and_filename(register)
-  register = register or '"'
 
-  -- Get the visual selection range
-  local start_line = vim.fn.line("'<")
-  local end_line = vim.fn.line("'>")
-  ---@cast start_line number
-  ---@cast end_line number
-
-  -- Capture the selected lines
-  local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-
-  -- Get current buffer's file name
-  local filename = vim.fn.expand('%')
-  filename = filename ~= "" and filename or "[No Name]"
-  filename = filename .. '#L' .. start_line .. '-L' .. end_line
-
-  -- Add the filename and the markdown code fence language syntax
-  local file_info = "File: `" .. filename .. "`\n```"
-
-  -- Deduce language from filetype (assuming filename includes proper extension)
-  local filetype = vim.bo.filetype
-
-  if filetype and filetype ~= "" then
-    file_info = file_info .. filetype .. "\n"
-  else
-    file_info = file_info .. "\n"
+local function yank_with_line_numbers_and_filename(register, whole_file)
+  local function string_or(a, b)
+    if not a or a == '' then return b else return a end
   end
 
-  -- Join lines into a single string and close the code fence
-  local with_numbers = file_info .. table.concat(lines, "\n") .. "\n```\n"
+  register = register or '"'
+
+  -- Capture the selected lines
+  local lines, filename do
+    buf_name = vim.fn.expand('%')
+    if buf_name ~= '' then
+      filename = util.path.relative_norm(buf_name)
+    else
+      filename = '[No Name]'
+    end
+
+    -- Get the visual selection range
+    local start_line = vim.fn.line("'<")
+    local end_line = vim.fn.line("'>")
+    ---@cast start_line number
+    ---@cast end_line number
+
+    if whole_file then
+      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    else
+      lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+      filename = filename .. '#L' .. start_line .. '-L' .. end_line
+    end
+  end
+
+  -- Add the filename and the markdown code fence language syntax
+  local file_info = 'File: `' .. filename .. '`\n```'
+  local filetype = vim.fn.expand('%:e')
+
+  if filetype and filetype ~= '' then
+    file_info = file_info .. filetype .. '\n'
+  else
+    file_info = file_info .. '\n'
+  end
+
+  local result = file_info .. table.concat(lines, "\n") .. "\n```\n"
 
   -- Set the content in the chosen register
-  vim.fn.setreg(register, with_numbers)
+  vim.fn.setreg(register, result)
 
   -- Return the result as a string
-  return with_numbers
+  return result
 end
 
 local function command_request_completion(cmd_params)
@@ -406,13 +417,23 @@ local function setup_commands()
   vim.api.nvim_create_user_command(
     'Myank',
     function(cmd_params)
-      yank_with_line_numbers_and_filename(cmd_params.args)
+      yank_with_line_numbers_and_filename(cmd_params.args, cmd_params.range == 0)
     end,
     {
       range = true,
       nargs = '?',
     }
   )
+
+  local qflist = require('model.util.qflist')
+
+  vim.api.nvim_create_user_command('MCadd', qflist.add, {})
+  vim.api.nvim_create_user_command('MCremove', qflist.remove, {})
+  vim.api.nvim_create_user_command('MCclear', qflist.clear, {})
+  vim.api.nvim_create_user_command('MCpaste', function()
+    vim.api.nvim_put(vim.fn.split(qflist.get_text(), '\n'), 'l', true, true)
+  end, {})
+
 end
 
 ---@class SetupOptions
