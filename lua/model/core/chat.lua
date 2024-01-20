@@ -165,8 +165,6 @@ function M.to_string(contents, name)
     end
   end
 
-  local last = contents.messages[#contents.messages]
-
   if #contents.messages % 2 == 0 then
     result = result .. '\n======\n'
   end

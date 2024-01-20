@@ -1,4 +1,3 @@
-local curl = require('model.util.curl')
 local util = require('model.util')
 local async = require('model.util.async')
 local system = require('model.util.system')

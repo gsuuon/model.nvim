@@ -8,18 +8,10 @@ local input = require('model.core.input')
 local M = {}
 
 local function yank_with_line_numbers_and_filename(register, whole_file)
-  local function string_or(a, b)
-    if not a or a == '' then
-      return b
-    else
-      return a
-    end
-  end
-
   register = register or '"'
 
   -- Capture the selected lines
-  local lines, filename
+  local lines, filename, buf_name
   do
     buf_name = vim.fn.expand('%')
     if buf_name ~= '' then
@@ -86,7 +78,8 @@ local function command_request_completion(cmd_params)
   return provider.request_completion(prompt, args, want_visual_selection)
 end
 
-local function command_request_multi_completion_streams(cmd_params)
+---@diagnostic disable-next-line: unused-function, unused-local
+local function _command_request_multi_completion_streams(cmd_params)
   local prompt_names = cmd_params.fargs
 
   local found_prompts = vim.tbl_map(function(name)
@@ -103,7 +96,8 @@ local function command_request_multi_completion_streams(cmd_params)
   )
 end
 
-local function create_deprecated_command(
+---@diagnostic disable-next-line: unused-function, unused-local
+local function _create_deprecated_command(
   deprecated_name,
   new_name,
   cmd_fn,

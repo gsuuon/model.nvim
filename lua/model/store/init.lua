@@ -113,10 +113,10 @@ function M.add_lua_functions(glob)
     )
   end
 
-  ---@param glob string glob pattern to search for files, starting from current directory
+  ---@param glob_ string glob pattern to search for files, starting from current directory
   ---@param to_items function converts each filepath to a list of items
-  local function glob_to_items(glob, to_items)
-    local filepaths = vim.fn.glob(glob, nil, true)
+  local function glob_to_items(glob_, to_items)
+    local filepaths = vim.fn.glob(glob_, nil, true)
 
     local results = {}
 

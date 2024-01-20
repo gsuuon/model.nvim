@@ -1,4 +1,5 @@
 local llamacpp = require('model.providers.llamacpp')
+local zephyr = require('model.format.zephyr')
 
 -- NOTE: llamacpp may be handling text that matches stop tokens itself now? it seems to be stopping correctly with just '</s>' text between turns instead of spitting out </s>.
 
@@ -26,7 +27,7 @@ local function tokenize_messages(messages, system, url_base, cb)
   local BOS = 1
   local EOS = 2
 
-  local formatted_messages = contents_to_strings(messages, system)
+  local formatted_messages = zephyr.contents_to_strings(messages, system)
 
   async(function(wait, resolve)
     local tokens_list = {
@@ -52,7 +53,7 @@ end
 ---Tokenizes each message individually and adds a 2 (EOS) token between messages.
 ---@param messages ChatMessage[]
 ---@param config table
-function M.chatprompt_tokenize_run(messages, config)
+local function chatprompt_tokenize_run(messages, config)
   local options = config.options or {}
 
   return function(set_params)
@@ -78,3 +79,7 @@ function M.chatprompt_tokenize_run(messages, config)
     end)
   end
 end
+
+return {
+  run = chatprompt_tokenize_run
+}

@@ -137,19 +137,19 @@ function M.complete_arglead_prompt_names(arglead)
 end
 
 -- TODO actual tests
-local function test()
-  -- M.set_global_user_prompts(util.module.autoload('model.prompts.starter'))
-  M.set_buffer_user_prompts({ codego = 'code go' })
-  M.set_buffer_user_prompts({ boop = 'boop prompt' })
-  M.add_buffer_plugin_prompts('baps', { bap = 'bap' })
-  M.add_buffer_plugin_prompts('boops', { boop = 'boopsbooplocal' })
-  -- M.add_global_plugin_prompts('baps', { bapppp = 'bapppp'})
-  -- M.add_global_plugin_prompts('boops', { boop = 'boopsboopglobal'})
-  -- what do I do about shadowing?
+-- local function test()
+--   -- M.set_global_user_prompts(util.module.autoload('model.prompts.starter'))
+--   M.set_buffer_user_prompts({ codego = 'code go' })
+--   M.set_buffer_user_prompts({ boop = 'boop prompt' })
+--   M.add_buffer_plugin_prompts('baps', { bap = 'bap' })
+--   M.add_buffer_plugin_prompts('boops', { boop = 'boopsbooplocal' })
+--   -- M.add_global_plugin_prompts('baps', { bapppp = 'bapppp'})
+--   -- M.add_global_plugin_prompts('boops', { boop = 'boopsboopglobal'})
+--   -- what do I do about shadowing?
 
-  -- show(get_prompt_names())
-  -- show(M.get_prompt('bap@baps'))
-  -- show(M.complete_arglead_prompt_names('code'))
-end
+--   -- show(get_prompt_names())
+--   -- show(M.get_prompt('bap@baps'))
+--   -- show(M.complete_arglead_prompt_names('code'))
+-- end
 
 return M

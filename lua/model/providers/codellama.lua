@@ -17,7 +17,7 @@ local PRE = 32007
 local MID = 32009
 local SUF = 32008
 local BOS = 1
-local EOS = 2
+-- local EOS = 2
 
 ---@param handlers StreamHandlers
 ---@param params { context: { before: string, after: string } }  -- before and after context along with generation options: https://github.com/ggerganov/llama.cpp/tree/master/examples/server#api-endpoints
