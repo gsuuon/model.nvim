@@ -4,4 +4,8 @@ test:
 lint:
 	selene .
 
+style:
+	stylua .
 
+style-check:
+	stylua --check .

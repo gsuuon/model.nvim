@@ -11,7 +11,6 @@ on:
 
 jobs:
   test:
-    name: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -26,7 +25,6 @@ jobs:
       - name: run tests
         run: make test
   lint:
-    name: lint with stylua and selene
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +32,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: 0.19.1
-          args: --check .
+          args: --color always --check .
       - uses: NTBBloodbath/selene-action@v1.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

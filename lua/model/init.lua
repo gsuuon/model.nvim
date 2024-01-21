@@ -26,12 +26,9 @@ local function yank_with_line_numbers_and_filename(register, whole_file)
     ---@cast start_line number
     ---@cast end_line number
 
-    if whole_file then
-      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-    else
-      lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-      filename = filename .. '#L' .. start_line .. '-L' .. end_line
-    end
+    if whole_file then lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    else lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+      filename = filename .. '#L' .. start_line .. '-L' .. end_line end
   end
 
   -- Add the filename and the markdown code fence language syntax
