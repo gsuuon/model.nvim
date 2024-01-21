@@ -30,5 +30,5 @@ return {
       ),
     }
   end,
-  contents_to_strings = contents_to_strings
+  contents_to_strings = contents_to_strings,
 }
