@@ -1,0 +1,16 @@
+{
+  "telemetry": {
+    "enable": false
+  },
+  "diagnostics": {
+    "severity": {
+      "lowercase-global": "Error",
+      "undefined-global": "Error",
+      "deprecated": "Information"
+    },
+    "globals": ["describe", "it", "assert"]
+  },
+  "runtime": {
+    "version": "LuaJIT"
+  }
+}

@@ -1,4 +1,4 @@
-name: checks
+name: Checks
 
 on:
   push:
@@ -11,6 +11,7 @@ on:
 
 jobs:
   test:
+    name: Run plenary tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -25,6 +26,7 @@ jobs:
       - name: run tests
         run: make test
   lint:
+    name: Lint with selene and stylua
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,3 +40,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --display-style=quiet .
           version: 0.26.1
+  types:
+    name: Check types with luals
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gsuuon/nvim-typecheck-action@annotate
+        with:
+          path: lua/model
+          configpath: .luarc.json
+          luals-version: 3.7.4
+          annotate: true
