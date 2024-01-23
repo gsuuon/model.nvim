@@ -13,7 +13,7 @@ local function yank_with_line_numbers_and_filename(register, whole_file)
   -- Capture the selected lines
   local lines, filename, buf_name
   do
-    buf_name = vim.fn.expand('%')
+    buf_name = tap(vim.fn.expand('%'))
     if buf_name ~= '' then
       filename = util.path.relative_norm(buf_name)
     else
@@ -26,9 +26,12 @@ local function yank_with_line_numbers_and_filename(register, whole_file)
     ---@cast start_line number
     ---@cast end_line number
 
-    if whole_file then lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-    else lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-      filename = filename .. '#L' .. start_line .. '-L' .. end_line end
+    if whole_file then
+      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    else
+      lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+      filename = filename .. '#L' .. start_line .. '-L' .. end_line
+    end
   end
 
   -- Add the filename and the markdown code fence language syntax
@@ -103,10 +106,10 @@ local function _create_deprecated_command(
   vim.api.nvim_create_user_command(deprecated_name, function(...)
     vim.notify(
       "Command '"
-        .. deprecated_name
-        .. "' is deprecated. Use '"
-        .. new_name
-        .. "' instead.",
+      .. deprecated_name
+      .. "' is deprecated. Use '"
+      .. new_name
+      .. "' instead.",
       vim.log.levels.WARN
     )
     return cmd_fn(...)
@@ -182,8 +185,8 @@ local function setup_commands()
     }
 
     local visual_select_keys = util.cursor.place_with_keys(start)
-      .. 'v'
-      .. util.cursor.place_with_keys(stop)
+        .. 'v'
+        .. util.cursor.place_with_keys(stop)
 
     vim.api.nvim_feedkeys(visual_select_keys, 'n', true)
   end, {
@@ -264,7 +267,7 @@ local function setup_commands()
 
         local target = chat.build_contents(chat_prompt, input_context)
 
-        if args == '-' then -- if args is `-`, use the current system instruction
+        if args == '-' then    -- if args is `-`, use the current system instruction
           target.config.system = current.contents.config.system
         elseif args ~= '' then -- if args is not empty, use that as system instruction
           target.config.system = args
