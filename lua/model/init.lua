@@ -154,6 +154,19 @@ local function setup_commands()
     force = true,
   })
 
+  vim.api.nvim_create_user_command('Mdelete', function()
+    local seg = segment.query(util.cursor.position())
+    if seg then
+      flash(6, 80, seg, 'DiffDelete', function()
+        seg.delete()
+      end)
+    end
+  end, {
+    range = true,
+    desc = 'Delete the completion under the cursor, replacing with original text if replacement',
+    force = true,
+  })
+
   vim.api.nvim_create_user_command('Mshow', function()
     local seg = segment.query(util.cursor.position())
     if seg then
