@@ -53,7 +53,7 @@ function M.markdown_code(md_text)
 
     local code_blocks = vim.tbl_filter(function(block)
       if block.text ~= nil then
-        vim.notify(block.text)
+        util.show(block.text)
       end
       return block.code ~= nil
     end, blocks)
