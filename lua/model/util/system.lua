@@ -15,6 +15,8 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit, stdin_text)
   local stdin = assert(uv.new_pipe(false), 'Failed to open stdin pipe')
 
   local _error_output = ''
+  local _did_finish_read_stdin = false
+  local _can_exit = false
 
   local handle = assert(
     uv.spawn(
@@ -27,7 +29,13 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit, stdin_text)
         -- success
         if exit_code == 0 then
           if on_exit ~= nil then
-            on_exit()
+            vim.schedule(function()
+              if _did_finish_read_stdin then
+                on_exit()
+              else
+                _can_exit = true
+              end
+            end)
           end
 
           return
@@ -50,7 +58,14 @@ local function system(cmd, args, opts, on_stdout, on_error, on_exit, stdin_text)
 
   uv.read_start(stderr, function(err, text)
     assert(not err, err)
-    if text then
+
+    if text == nil then -- nil means EOF
+      if _can_exit and on_exit then
+        on_exit()
+      else
+        _did_finish_read_stdin = true
+      end
+    else
       _error_output = _error_output .. text
     end
   end)
