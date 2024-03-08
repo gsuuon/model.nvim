@@ -4,7 +4,10 @@ local juice = require('model.util.juice')
 
 ---@type Provider
 return {
-  request_completion = function(handlers, params)
+  request_completion = function(handlers, params, options)
+    local opts = vim.tbl_extend('force', {
+      url = 'http://localhost:11434',
+    }, options or {})
     local stop_marquee = juice.handler_marquee_or_notify(
       'ollama: ' .. params.model,
       handlers.segment,
@@ -13,7 +16,7 @@ return {
     )
 
     return curl.stream({
-      url = 'http://localhost:11434/api/generate',
+      url = opts.url .. '/api/generate',
       headers = {
         ['Content-Type'] = 'application/json',
       },
