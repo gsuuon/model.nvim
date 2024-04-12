@@ -375,6 +375,19 @@ local function setup_commands()
   end, {})
 end
 
+local function setup_treesitter_info()
+  local parser_config = require('nvim-treesitter.parsers').get_parser_configs()
+  parser_config.mchat = {
+    install_info = {
+      url = 'https://github.com/gsuuon/tree-sitter-mchat.git',
+      files = { 'src/parser.c' },
+      branch = 'main',
+      generate_requires_npm = false,
+      requires_generate_from_grammar = false,
+    },
+  }
+end
+
 ---@class SetupOptions
 ---@field default_prompt? Prompt default = openai. The default prompt (`:M` or `:Model` with no argument)
 ---@field prompts? table<string, Prompt> default = starters. Add prompts (`:M [name]`)
@@ -403,6 +416,10 @@ function M.setup(opts)
   end
 
   setup_commands()
+
+  if not pcall(setup_treesitter_info) then
+    util.eshow('[model.nvim] Failed to setup treesitter info')
+  end
 
   vim.g.did_setup_model = true
 end
