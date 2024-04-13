@@ -417,9 +417,7 @@ function M.setup(opts)
 
   setup_commands()
 
-  if not pcall(setup_treesitter_info) then
-    util.eshow('[model.nvim] Failed to setup treesitter info')
-  end
+  pcall(setup_treesitter_info)
 
   vim.g.did_setup_model = true
 end
