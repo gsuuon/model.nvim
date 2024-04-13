@@ -27,7 +27,7 @@ https://github.com/gsuuon/model.nvim/assets/6422188/3af3e65d-d13c-4196-abe1-07d6
 - 🦜 Chat in `mchat` filetype buffer
   - edit settings or messages at any point
   - take conversations to different models
-  - basic syntax highlights and folds
+  - treesitter highlights and folds
 
 ### Contents
 - [Setup](#setup)
@@ -89,6 +89,11 @@ require('lazy').setup({
   }
 })
 ```
+
+### Treesitter
+To get treesitter highlighting of [chat buffers](#chat-prompts) with markdown injections, use `:TSInstall mchat` after model.nvim has been loaded (if you're using Lazy run `:Lazy load model.nvim` first). The grammar repo is at [gsuuon/tree-sitter-mchat](https://github.com/gsuuon/tree-sitter-mchat/).
+
+![image](https://github.com/gsuuon/model.nvim/assets/6422188/6f7d9d9c-f3a7-4671-b7a4-307f727108a3)
 
 ## Usage
 
