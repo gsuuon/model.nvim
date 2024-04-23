@@ -254,10 +254,17 @@ function M.run_chat(opts)
     error('Chat prompt run() returned nil')
   end
 
-  local seg = segment.create_segment_at(#buf_lines, 0)
-
   local starter_seperator = needs_nl(buf_lines) and '\n======\n' or '======\n'
-  seg.add(starter_seperator)
+  local seg
+
+  local last_msg = parsed.contents.messages[#parsed.contents.messages]
+
+  if last_msg.role == 'user' then
+    seg = segment.create_segment_at(#buf_lines, 0)
+    seg.add(starter_seperator)
+  else
+    seg = segment.create_segment_at(#buf_lines-1, #buf_lines[#buf_lines])
+  end
 
   local sayer = juice.sayer()
 
