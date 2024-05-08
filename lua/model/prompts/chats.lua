@@ -3,6 +3,7 @@ local palm = require('model.providers.palm')
 local llamacpp = require('model.providers.llamacpp')
 local ollama = require('model.providers.ollama')
 local together = require('model.providers.together')
+local gemini = require('model.providers.gemini')
 
 local zephyr_fmt = require('model.format.zephyr')
 local starling_fmt = require('model.format.starling')
@@ -161,6 +162,42 @@ local chats = {
       return git_diff
     end,
     run = openai_chat.run,
+  },
+  ['gemini'] = {
+    provider = gemini,
+    create = input_if_selection,
+    run = function(messages, config)
+      local formattedParts = {}
+
+      if config.system then
+        table.insert(
+          formattedParts,
+          { role = 'user', parts = { { text = config.system } } }
+        )
+        table.insert(
+          formattedParts,
+          { role = 'model', parts = { { text = 'Understood.' } } }
+        )
+      end
+
+      for _, msg in ipairs(messages) do
+        if msg.role == 'user' then
+          table.insert(
+            formattedParts,
+            { role = 'user', parts = { { text = msg.content } } }
+          )
+        elseif msg.role == 'assistant' then
+          table.insert(
+            formattedParts,
+            { role = 'model', parts = { { text = msg.content } } }
+          )
+        end
+      end
+
+      return {
+        contents = formattedParts,
+      }
+    end,
   },
 }
 

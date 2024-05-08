@@ -53,9 +53,11 @@ end
 ---@param on_headers? fun(headers: string): nil
 local function run_curl(opts, stream, on_stdout, on_error, on_exit, on_headers)
   local args = build_args(opts, stream, on_headers ~= nil)
+  local input = vim.json.encode(opts.body)
 
   if M._is_debugging then
     util.show(args, 'curl args')
+    util.show(input, 'curl body')
   end
 
   local on_curl_out = on_stdout
@@ -82,15 +84,7 @@ local function run_curl(opts, stream, on_stdout, on_error, on_exit, on_headers)
     end
   end
 
-  return system(
-    'curl',
-    args,
-    {},
-    on_curl_out,
-    on_error,
-    on_exit,
-    vim.json.encode(opts.body)
-  )
+  return system('curl', args, {}, on_curl_out, on_error, on_exit, input)
 end
 
 ---@param opts { url : string, method : string, body : any, headers : {[string]: string} }

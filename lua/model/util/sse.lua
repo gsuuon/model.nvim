@@ -31,6 +31,7 @@ end
 ---@field on_message fun(msg: {data:string, [string]:string }, pending: string): nil
 ---@field on_other fun(out: string): nil
 ---@field on_error fun(out: string): nil
+---@field on_exit? fun(): nil
 
 ---Exposes handlers for curl output and translates for use with SSE handlers
 ---@class SseClient
@@ -82,6 +83,10 @@ function M.client(handlers)
           handlers.on_other(pending)
         end
       end
+
+      if handlers.on_exit then
+        handlers.on_exit()
+      end
     end,
     on_headers = function(headers)
       if headers:match('[Cc]ontent%-[Tt]ype:%s?text/event%-stream') then
@@ -91,6 +96,7 @@ function M.client(handlers)
   }
 end
 
+---Adapt SseHandler to curl.stream
 ---@param opts { url : string, method : string, body : any, headers : {[string]: string} }
 ---@param handler SseHandler
 ---@return fun ():nil cancel
