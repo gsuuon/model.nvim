@@ -54,7 +54,7 @@ function M.request_completion(handlers, params, options)
   if options.authorization then
     headers.Authorization = options.authorization
   elseif not options.url then -- only check the OpenAI env key if options.url wasn't set
-    headers.Authorization = 'Bearer ' .. util.env_memo('OPENAI_API_KEY')
+    headers.Authorization = 'Bearer ' .. util.env('OPENAI_API_KEY')
   end
 
   local endpoint = options.endpoint or 'chat/completions' -- TODO does this make compat harder?

@@ -2,6 +2,8 @@
 
 local M = {}
 
+M.secrets = {}
+
 function M.noop() end
 
 function M.notify(msg, level, opts)
@@ -42,16 +44,6 @@ function M.tap(x, opt)
   return x
 end
 
-function M.env(name)
-  local value = os.getenv(name)
-
-  if value == nil then
-    error('Missing environment variable: ' .. name)
-  else
-    return value
-  end
-end
-
 function M.memo(fn)
   local cache = {}
 
@@ -64,7 +56,23 @@ function M.memo(fn)
   end
 end
 
-M.env_memo = M.memo(M.env)
+local get_secret_once = M.memo(function(name)
+  return M.secrets[name]()
+end)
+
+function M.env(name)
+  if M.secrets[name] then
+    return get_secret_once(name)
+  else
+    local value = vim.env[name]
+
+    if value == nil then
+      error('Missing environment variable: ' .. name)
+    else
+      return value
+    end
+  end
+end
 
 M.table = {}
 

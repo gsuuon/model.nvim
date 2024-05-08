@@ -27,7 +27,7 @@ function M.request_completion(handlers, params, options)
     extract = extract_message_response
   end
 
-  local key = util.env_memo('PALM_API_KEY')
+  local key = util.env('PALM_API_KEY')
 
   local remove_marquee =
     juice.handler_marquee_or_notify('PaLM  ', handlers.segment)

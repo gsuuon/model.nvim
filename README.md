@@ -95,6 +95,20 @@ To get treesitter highlighting of [chat buffers](#chat-prompts) with markdown in
 
 ![image](https://github.com/gsuuon/model.nvim/assets/6422188/6f7d9d9c-f3a7-4671-b7a4-307f727108a3)
 
+### Secrets
+If you prefer to keep keys out of your environment, they can also be set programmatically using `:help vim.env` or using the `secrets` field of the model.nvim setup table. `config.secrets` takes a table of functions which return a string - the function is called when the key is used and the result is cached for subsequent calls:
+
+```lua
+require('model').setup({
+  secrets = {
+    PROVIDER_API_KEY = function()
+      return 'some key'
+    end
+  }
+})
+```
+
+
 ## Usage
 
 

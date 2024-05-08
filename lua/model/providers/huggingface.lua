@@ -15,7 +15,7 @@ function M.request_completion(handlers, params, options)
     method = 'POST',
     body = vim.tbl_extend('force', { stream = true }, params),
     headers = {
-      Authorization = 'Bearer ' .. util.env_memo('HUGGINGFACE_API_KEY'),
+      Authorization = 'Bearer ' .. util.env('HUGGINGFACE_API_KEY'),
       ['Content-Type'] = 'application/json',
     },
   }, {
