@@ -210,13 +210,22 @@ function M.build_contents(chat_prompt, input_context)
   return chat_contents
 end
 
+local function is_buffer_empty_and_unnamed()
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local buffer_name = vim.api.nvim_buf_get_name(0)
+  return #lines == 1 and lines[1] == "" and buffer_name == ""
+end
+
 function M.create_buffer(text, smods)
-  if smods.tab > 0 then
-    vim.cmd.tabnew()
-  elseif smods.horizontal then
-    vim.cmd.new()
-  else
-    vim.cmd.vnew()
+  if not is_buffer_empty_and_unnamed() then
+    -- only create a new buffer if we're not in an empty buffer
+    if smods.tab > 0 then
+      vim.cmd.tabnew()
+    elseif smods.horizontal then
+      vim.cmd.new()
+    else
+      vim.cmd.vnew()
+    end
   end
 
   vim.o.ft = 'mchat'
