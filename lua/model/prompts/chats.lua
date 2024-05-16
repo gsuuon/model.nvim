@@ -4,6 +4,7 @@ local llamacpp = require('model.providers.llamacpp')
 local ollama = require('model.providers.ollama')
 local together = require('model.providers.together')
 local gemini = require('model.providers.gemini')
+local anthropic = require('model.providers.anthropic')
 
 local zephyr_fmt = require('model.format.zephyr')
 local starling_fmt = require('model.format.starling')
@@ -163,7 +164,7 @@ local chats = {
     end,
     run = openai_chat.run,
   },
-  ['gemini'] = {
+  gemini = {
     provider = gemini,
     create = input_if_selection,
     run = function(messages, config)
@@ -197,6 +198,19 @@ local chats = {
       return {
         contents = formattedParts,
       }
+    end,
+  },
+  claude = {
+    provider = anthropic,
+    create = input_if_selection,
+    params = {
+      model = 'claude-3-opus-20240229',
+    },
+    run = function(messages, config)
+      return vim.tbl_deep_extend('force', config.params, {
+        messages = messages,
+        system = config.system,
+      })
     end,
   },
 }
