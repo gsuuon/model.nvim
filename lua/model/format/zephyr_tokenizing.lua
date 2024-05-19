@@ -81,5 +81,5 @@ local function chatprompt_tokenize_run(messages, config)
 end
 
 return {
-  run = chatprompt_tokenize_run
+  run = chatprompt_tokenize_run,
 }
