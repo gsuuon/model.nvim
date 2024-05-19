@@ -1,5 +1,9 @@
 local chat = require('model.core.chat')
 
+local function lines(text)
+  return vim.fn.split(text, '\n')
+end
+
 describe('chat', function()
   describe('parse', function()
     it('file with name, config, system, and messages', function()
@@ -20,7 +24,7 @@ describe('chat', function()
             },
           },
         },
-        chat.parse([[
+        chat.parse(lines([[
 openai
 ---
 {
@@ -37,7 +41,7 @@ Count to three
 1, 2, 3.
 ======
 
-Thanks]])
+Thanks]]))
       )
     end)
 
@@ -55,7 +59,7 @@ Thanks]])
             },
           },
         },
-        chat.parse([[
+        chat.parse(lines([[
 openai
 > You are a helpful assistant
 
@@ -64,7 +68,7 @@ Count to three
 ======
 1, 2, 3.
 ======
-]])
+]]))
       )
     end)
 
@@ -80,7 +84,7 @@ Count to three
             },
           },
         },
-        chat.parse([[
+        chat.parse(lines([[
 openai
 
 Count to three
@@ -88,7 +92,7 @@ Count to three
 ======
 1, 2, 3.
 ======
-]])
+]]))
       )
     end)
 
@@ -103,14 +107,14 @@ Count to three
             messages = {},
           },
         },
-        chat.parse([[
+        chat.parse(lines([[
 openai
 ---
 {
   model = "gpt-3.5-turbo"
 }
 ---
-]])
+]]))
       )
     end)
 
@@ -125,17 +129,17 @@ openai
             messages = {},
           },
         },
-        chat.parse([[openai
+        chat.parse(lines([[openai
 > You are a helpful assistant
-]])
+]]))
       )
     end)
 
     it('file with no chat name', function()
       assert.has.errors(function()
-        chat.parse([[
+        chat.parse(lines([[
 > You are a helpful assistant
-]])
+]]))
       end)
     end)
   end)
