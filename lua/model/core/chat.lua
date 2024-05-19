@@ -24,10 +24,9 @@ local M = {}
 
 --- Splits lines into array of { role: 'user' | 'assistant', content: string }
 --- If first line starts with '> ', then the rest of that line is system message
----@param text string Text of buffer. '\n======\n' denote alternations between user and assistant roles
+---@param text string[] Text of buffer. '\n======\n' denote alternations between user and assistant roles
 ---@return { messages: { role: 'user'|'assistant', content: string}[], system?: string }
 local function split_messages(text)
-  local lines = vim.fn.split(text, '\n')
   local messages = {}
 
   local system
@@ -48,7 +47,7 @@ local function split_messages(text)
     chunk_is_user = not chunk_is_user
   end
 
-  for i, line in ipairs(lines) do
+  for i, line in ipairs(text) do
     if i == 1 then
       system = line:match('^> (.+)')
 
@@ -73,32 +72,57 @@ local function split_messages(text)
   }
 end
 
----@param text string Input text of buffer
----@return { chat: string, config?: table, rest: string }
+---@param text string[] Input text of buffer
+---@return { chat: string, config?: table, rest: string[] }
 local function parse_config(text)
-  if text:match('^---$') then
+  if #text < 1 then
+    error('Chat buffer empty')
+  end
+
+  if text[1]:match('^---$') then
     error('Chat buffer must start with chat name, not config')
   end
 
-  if text:match('^>') then
+  if text[1]:match('^>') then
     error('Chat buffer must start with chat name, not system instruction')
   end
 
-  local chat_name, name_rest = text:match('^(.-)\n(.*)')
-  local params_text, rest = name_rest:match('%-%-%-\n(.-)\n%-%-%-\n(.*)')
+  local chat = text[1]
 
-  if chat_name == '' then
+  if chat == '' then
     error('Chat buffer must start with chat name, not empty line')
   end
 
-  if params_text == nil then
+  local params = {}
+  local i = 2
+  if text[2] == '---' then
+    i = 3
+    while i < #text and text[i] ~= '---' do
+      table.insert(params, text[i])
+      i = i + 1
+    end
+
+    if text[i] == '---' then
+      i = i + 1 -- skip the ending '---'
+    else
+      error('Chat buffer params block incomplete')
+    end
+  end
+
+  local rest = {}
+  while i <= #text do
+    table.insert(rest, text[i])
+    i = i + 1
+  end
+
+  if #params == 0 then
     return {
       config = {},
-      rest = vim.fn.trim(name_rest),
-      chat = chat_name,
+      rest = rest,
+      chat = chat,
     }
   else
-    local config = vim.fn.luaeval(params_text)
+    local config = vim.fn.luaeval(table.concat(params, '\n'))
 
     if type(config) ~= 'table' then
       error('Evaluated config text is not a lua table')
@@ -106,8 +130,8 @@ local function parse_config(text)
 
     return {
       config = config,
-      rest = vim.fn.trim(rest),
-      chat = chat_name,
+      rest = rest,
+      chat = chat,
     }
   end
 end
@@ -116,7 +140,7 @@ end
 --- of config between `---`. If the next line starts with `> `, it is parsed as
 --- the system instruction. The rest of the text is parsed as alternating
 --- user/assistant messages, with `\n======\n` delimiters.
----@param text string
+---@param text string[]
 ---@return { contents: ChatContents, chat: string }
 function M.parse(text)
   local parsed = parse_config(text)
@@ -213,7 +237,7 @@ end
 local function is_buffer_empty_and_unnamed()
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
   local buffer_name = vim.api.nvim_buf_get_name(0)
-  return #lines == 1 and lines[1] == "" and buffer_name == ""
+  return #lines == 1 and lines[1] == '' and buffer_name == ''
 end
 
 function M.create_buffer(text, smods)
@@ -246,7 +270,7 @@ end
 ---@param opts { chats?: table<string, ChatPrompt> }
 function M.run_chat(opts)
   local buf_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local parsed = M.parse(table.concat(buf_lines, '\n'))
+  local parsed = M.parse(buf_lines)
 
   local chat_name =
     assert(parsed.chat, 'Chat buffer first line must be a chat prompt name')
