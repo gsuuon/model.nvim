@@ -132,6 +132,9 @@ Start a new [chat](#chat-prompts)
 Run a chat buffer
 - `:Mchat` — Request the assistant response in a chat buffer. You can save an `mchat` buffer as `my_conversation.mchat`, reload it later and run `:Mchat` with your next message to continue where you left off. You'll need to have the same ChatPrompt configured in setup.
 
+##### Telescope extension
+If you use [telescope](https://github.com/nvim-telescope/telescope.nvim), mchat buffers can be browsed with `:Telescope model mchat`.
+
 #### Manage responses
 Responses are inserted with extmarks, so once the buffer is closed the responses become normal text and won't work with the following commands.
 <details>
