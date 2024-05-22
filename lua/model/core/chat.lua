@@ -296,7 +296,7 @@ function M.run_chat(opts)
     seg = segment.create_segment_at(#buf_lines, 0)
     seg.add(starter_separator)
   else
-    seg = segment.create_segment_at(#buf_lines-1, #buf_lines[#buf_lines])
+    seg = segment.create_segment_at(#buf_lines - 1, #buf_lines[#buf_lines])
   end
 
   local sayer = juice.sayer()
@@ -311,7 +311,10 @@ function M.run_chat(opts)
       sayer.finish()
 
       if text then
-        seg.set_text((last_msg.role == 'user' and (starter_separator .. text) or text) .. '\n======\n')
+        seg.set_text(
+          (last_msg.role == 'user' and (starter_separator .. text) or text)
+            .. '\n======\n'
+        )
       else
         seg.add('\n======\n')
       end
