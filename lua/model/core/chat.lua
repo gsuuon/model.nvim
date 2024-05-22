@@ -287,14 +287,14 @@ function M.run_chat(opts)
     error('Chat prompt run() returned nil')
   end
 
-  local starter_seperator = needs_nl(buf_lines) and '\n======\n' or '======\n'
+  local starter_separator = needs_nl(buf_lines) and '\n======\n' or '======\n'
   local seg
 
   local last_msg = parsed.contents.messages[#parsed.contents.messages]
 
   if last_msg.role == 'user' then
     seg = segment.create_segment_at(#buf_lines, 0)
-    seg.add(starter_seperator)
+    seg.add(starter_separator)
   else
     seg = segment.create_segment_at(#buf_lines-1, #buf_lines[#buf_lines])
   end
@@ -311,7 +311,7 @@ function M.run_chat(opts)
       sayer.finish()
 
       if text then
-        seg.set_text(starter_seperator .. text .. '\n======\n')
+        seg.set_text((last_msg.role == 'user' and (starter_separator .. text) or text) .. '\n======\n')
       else
         seg.add('\n======\n')
       end
