@@ -274,9 +274,7 @@ local function setup_commands()
       if vim.o.ft == 'mchat' then
         -- copy current messages to a new built buffer with target settings
 
-        local current = chat.parse(
-          table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), '\n')
-        )
+        local current = chat.parse(vim.api.nvim_buf_get_lines(0, 0, -1, false))
 
         local target = chat.build_contents(chat_prompt, input_context)
 
