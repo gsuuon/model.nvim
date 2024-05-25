@@ -19,7 +19,7 @@ local openai_chat = {
   provider = openai,
   system = 'You are a helpful assistant',
   params = {
-    model = 'gpt-3.5-turbo-1106',
+    model = 'gpt-3.5-turbo',
   },
   create = input_if_selection,
   run = function(messages, config)
@@ -39,7 +39,7 @@ local chats = {
   openai = openai_chat,
   gpt4 = vim.tbl_deep_extend('force', openai_chat, {
     params = {
-      model = 'gpt-4-1106-preview',
+      model = 'gpt-4o',
     },
   }),
   palm = {
@@ -152,7 +152,7 @@ local chats = {
     provider = openai,
     system = "You are an expert programmer that gives constructive feedback. Review the changes in the user's git diff.",
     params = {
-      model = 'gpt-4-1106-preview',
+      model = 'gpt-4o',
     },
     create = function()
       local git_diff = vim.fn.system({ 'git', 'diff', '--staged' })
