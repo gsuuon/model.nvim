@@ -392,7 +392,7 @@ end
 ---@field chats? table<string, ChatPrompt> default = prompts/chats. Add chat prompts (`:MChat [name]`)
 ---@field hl_group? string default = 'Comment'. Set the default highlight group of in-progress responses
 ---@field join_undo? boolean default = true. Join streaming response text as a single `u` undo. Edits during streaming will also be undone.
----@field secrets? table<string, Func<string>> Dictionary of secret generators - keyname is the environment name and the value is a function that returns the value
+---@field secrets? fun(key: string): string | table<string, fun(): string> Secret generator or dictionary of secret generators. Used by `util.env(keyname)`. Value will fallback to env variable.
 
 ---@param opts? SetupOptions
 function M.setup(opts)

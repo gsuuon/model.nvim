@@ -56,23 +56,21 @@ function M.memo(fn)
   end
 end
 
-local get_secret_once = M.memo(function(name)
-  return M.secrets[name]()
-end)
-
-function M.env(name)
-  if type(M.secrets[name]) == 'function' then
-    return get_secret_once(name)
+M.env = M.memo(function(name)
+  if type(M.secrets) == 'function' then
+    return M.secrets(name)
+  elseif type(M.secrets[name]) == 'function' then
+    return M.secrets[name]()
   else
     local value = vim.env[name]
 
     if value == nil then
-      error('Missing environment variable: ' .. name)
+      error('Missing environment variable or secret: ' .. name)
     else
       return value
     end
   end
-end
+end)
 
 M.table = {}
 
