@@ -61,7 +61,7 @@ local get_secret_once = M.memo(function(name)
 end)
 
 function M.env(name)
-  if M.secrets[name] then
+  if type(M.secrets[name]) == 'function' then
     return get_secret_once(name)
   else
     local value = vim.env[name]

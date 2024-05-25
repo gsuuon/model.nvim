@@ -9,6 +9,8 @@ local anthropic = require('model.providers.anthropic')
 local zephyr_fmt = require('model.format.zephyr')
 local starling_fmt = require('model.format.starling')
 
+local util = require('model.util')
+
 local function input_if_selection(input, context)
   return context.selection and input or ''
 end
@@ -213,6 +215,17 @@ local chats = {
       })
     end,
   },
+  groq = vim.tbl_deep_extend('force', openai_chat, {
+    params = {
+      model = 'llama3-70b-8192',
+    },
+    runOptions = function()
+      return {
+        url = 'https://api.groq.com/openai/v1/',
+        authorization = 'Bearer ' .. util.env('GROQ_API_KEY'),
+      }
+    end,
+  }),
 }
 
 return chats

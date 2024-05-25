@@ -8,6 +8,7 @@ local M = {}
 ---@field provider Provider The API provider for this prompt
 ---@field create fun(input: string, context: Context): string | ChatContents Converts input and context to the first message text or ChatContents
 ---@field run fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil ) ) Converts chat messages and config into completion request params
+---@field runOptions? fun(): table Builds additional options to merge into chat prompt options. E.g. for auth tokens that shouldn't be written to the chat config header.
 ---@field system? string System instruction
 ---@field params? table Static request parameters
 ---@field options? table Provider options
@@ -335,6 +336,10 @@ function M.run_chat(opts)
 
   local options = parsed.contents.config.options or {}
   local params = parsed.contents.config.params or {}
+
+  if type(chat_prompt.runOptions) == 'function' then
+    options = vim.tbl_deep_extend('force', options, chat_prompt.runOptions())
+  end
 
   if type(run_params) == 'function' then
     run_params(function(async_params)
