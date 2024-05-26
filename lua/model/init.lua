@@ -340,7 +340,7 @@ local function setup_commands()
 
   vim.api.nvim_create_user_command('Mcount', function()
     local count = require('model.store.util').tiktoken_count
-    local text = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), '\n')
+    local text = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 
     if vim.o.ft == 'mchat' then
       local parsed = chat.parse(text)
@@ -352,7 +352,7 @@ local function setup_commands()
 
       util.show(total)
     else
-      util.show(count(text))
+      util.show(count(table.concat(text, '\n')))
     end
   end, {})
 
