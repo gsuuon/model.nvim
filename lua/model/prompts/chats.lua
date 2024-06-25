@@ -206,7 +206,7 @@ local chats = {
     provider = anthropic,
     create = input_if_selection,
     params = {
-      model = 'claude-3-opus-20240229',
+      model = 'claude-3-5-sonnet-20240620',
     },
     run = function(messages, config)
       return vim.tbl_deep_extend('force', config.params, {
