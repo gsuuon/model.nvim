@@ -623,6 +623,8 @@ config = function()
 end,
 ```
 
+As usual, [make sure to set your API key](https://console.groq.com/docs/quickstart#set-up-your-api-key-recommended).
+
 ### Adding your own
 [Providers](#provider) implement a simple interface so it's easy to add your own. Just set your provider as the `provider` field in a prompt. Your provider needs to kick off the request and call the handlers as data streams in, finishes, or errors. Check [the hf provider](./lua/model/providers/huggingface.lua) for a simpler example supporting server-sent events streaming. If you don't need streaming, just make a request and call `handler.on_finish` with the result.
 
