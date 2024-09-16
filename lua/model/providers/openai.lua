@@ -4,7 +4,7 @@ local sse = require('model.util.sse')
 local M = {}
 
 local default_params = {
-  model = 'gpt-3.5-turbo',
+  model = 'gpt-4o-mini',
   stream = true,
 }
 
