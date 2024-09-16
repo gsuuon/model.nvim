@@ -215,6 +215,33 @@ local chats = {
       })
     end,
   },
+  claude_cache = {
+    provider = anthropic,
+    create = input_if_selection,
+    params = {
+      model = 'claude-3-5-sonnet-20240620',
+      max_tokens = 8192,
+    },
+    options = {
+      headers = {
+        ['anthropic-beta'] = 'prompt-caching-2024-07-31,max-tokens-3-5-sonnet-2024-07-15',
+      },
+    },
+    run = function(messages, config)
+      local msgs = vim.tbl_map(function(msg)
+        return {
+          role = msg.role,
+          content = anthropic.cache_if_prefixed(msg.content),
+          -- prefix a message with a line containing `>> cache` to create a checkpoint at that message
+        }
+      end, messages)
+
+      return vim.tbl_deep_extend('force', config.params or {}, {
+        messages = msgs,
+        system = config.system,
+      })
+    end,
+  },
   groq = vim.tbl_deep_extend('force', openai_chat, {
     params = {
       model = 'llama3-70b-8192',

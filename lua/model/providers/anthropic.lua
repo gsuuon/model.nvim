@@ -1,7 +1,7 @@
 local util = require('model.util')
 local sse = require('model.util.sse')
 
----@type Provider
+---@class Provider
 local M = {
   request_completion = function(handler, params, options)
     options = options or {}
@@ -27,8 +27,10 @@ local M = {
           handler.on_partial(data.delta.text)
         elseif msg.event == 'message_delta' then
           util.show(data.usage.output_tokens, 'output tokens')
+        elseif msg.event == 'message_start' then
+          util.show(data.message.usage, 'usage')
           -- else
-          --   util.show(msg, 'msg')
+          --   util.show({ msg = msg.event, data = data })
         end
       end,
       on_error = handler.on_error,
@@ -37,5 +39,26 @@ local M = {
     })
   end,
 }
+
+local function cache_content(content)
+  return {
+    {
+      type = 'text',
+      text = content,
+      cache_control = {
+        type = 'ephemeral',
+      },
+    },
+  }
+end
+
+---@param content string
+M.cache_if_prefixed = function(content)
+  if content:match('^>> cache\n') then
+    return cache_content(content:gsub('^>> cache\n', ''))
+  else
+    return content
+  end
+end
 
 return M
