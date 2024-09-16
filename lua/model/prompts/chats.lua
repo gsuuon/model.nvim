@@ -215,7 +215,7 @@ local chats = {
       })
     end,
   },
-  claude_cache = {
+  ['claude:cache'] = {
     provider = anthropic,
     create = input_if_selection,
     params = {
