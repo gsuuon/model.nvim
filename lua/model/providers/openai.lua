@@ -66,10 +66,7 @@ function M.request_completion(handlers, params, options)
   return sse.curl_client({
     headers = headers,
     method = 'POST',
-    url = util.string.joinpath(
-      options.url or 'https://api.openai.com/v1/',
-      endpoint
-    ),
+    url = util.path.join(options.url or 'https://api.openai.com/v1/', endpoint),
     body = vim.tbl_deep_extend('force', default_params, params),
   }, {
     on_message = function(message, pending)

@@ -18,7 +18,7 @@ function M.gpt_relevant_openapi_schema_path(schema, task, callback)
   local gpt_consistent = vim.tbl_extend('force', openai.default_prompt, {
     params = {
       temperature = 0.0,
-      model = 'gpt-3.5-turbo-0613',
+      model = 'gpt-4o-mini-2024-07-18',
     },
   })
 

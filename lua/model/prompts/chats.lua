@@ -19,7 +19,7 @@ local openai_chat = {
   provider = openai,
   system = 'You are a helpful assistant',
   params = {
-    model = 'gpt-3.5-turbo',
+    model = 'gpt-4o',
   },
   create = input_if_selection,
   run = function(messages, config)
