@@ -35,35 +35,7 @@ local openai_chat = {
 }
 
 ---@type table<string, ChatPrompt>
-local chats = {
-  openai = openai_chat,
-  gpt4 = vim.tbl_deep_extend('force', openai_chat, {
-    params = {
-      model = 'gpt-4o',
-    },
-  }),
-  palm = {
-    provider = palm,
-    system = 'You are a helpful assistant',
-    create = input_if_selection,
-    options = {
-      method = 'generateMessage',
-      model = 'chat-bison-001',
-    },
-    run = function(messages, config)
-      return {
-        prompt = {
-          context = config.system,
-          messages = vim.tbl_map(function(msg)
-            return {
-              content = msg.content,
-              author = msg.role,
-            }
-          end, messages),
-        },
-      }
-    end,
-  },
+local locals = {
   ['llamacpp:zephyr'] = {
     provider = llamacpp,
     options = {
@@ -87,6 +59,10 @@ local chats = {
     create = input_if_selection,
     run = starling_fmt.chat,
   },
+}
+
+---@type table<string, ChatPrompt>
+local hosted = {
   ['together:codellama'] = {
     provider = together,
     params = {
@@ -148,23 +124,44 @@ local chats = {
       }
     end,
   },
-  ['gpt4:commit review'] = {
-    provider = openai,
-    system = "You are an expert programmer that gives constructive feedback. Review the changes in the user's git diff.",
+  groq = vim.tbl_deep_extend('force', openai_chat, {
     params = {
-      model = 'gpt-4o',
+      model = 'llama3-70b-8192',
     },
-    create = function()
-      local git_diff = vim.fn.system({ 'git', 'diff', '--staged' })
-      ---@cast git_diff string
-
-      if not git_diff:match('^diff') then
-        error('Git error:\n' .. git_diff)
-      end
-
-      return git_diff
+    runOptions = function()
+      return {
+        url = 'https://api.groq.com/openai/v1/',
+        authorization = 'Bearer ' .. util.env('GROQ_API_KEY'),
+      }
     end,
-    run = openai_chat.run,
+  }),
+}
+
+---@type table<string, ChatPrompt>
+local closed = {
+  openai = openai_chat,
+  gpt4 = openai,
+  palm = {
+    provider = palm,
+    system = 'You are a helpful assistant',
+    create = input_if_selection,
+    options = {
+      method = 'generateMessage',
+      model = 'chat-bison-001',
+    },
+    run = function(messages, config)
+      return {
+        prompt = {
+          context = config.system,
+          messages = vim.tbl_map(function(msg)
+            return {
+              content = msg.content,
+              author = msg.role,
+            }
+          end, messages),
+        },
+      }
+    end,
   },
   gemini = {
     provider = gemini,
@@ -206,7 +203,7 @@ local chats = {
     provider = anthropic,
     create = input_if_selection,
     params = {
-      model = 'claude-3-5-sonnet-20240620',
+      model = 'claude-3-5-sonnet-latest',
     },
     run = function(messages, config)
       return vim.tbl_deep_extend('force', config.params, {
@@ -242,17 +239,30 @@ local chats = {
       })
     end,
   },
-  groq = vim.tbl_deep_extend('force', openai_chat, {
-    params = {
-      model = 'llama3-70b-8192',
-    },
-    runOptions = function()
-      return {
-        url = 'https://api.groq.com/openai/v1/',
-        authorization = 'Bearer ' .. util.env('GROQ_API_KEY'),
-      }
-    end,
-  }),
 }
+
+---@type table<string, ChatPrompt>
+local closed_task = {
+  ['gpt4:commit review'] = {
+    provider = openai,
+    system = "You are an expert programmer that gives constructive feedback. Review the changes in the user's git diff.",
+    params = {
+      model = 'gpt-4o',
+    },
+    create = function()
+      local git_diff = vim.fn.system({ 'git', 'diff', '--staged' })
+      ---@cast git_diff string
+
+      if not git_diff:match('^diff') then
+        error('Git error:\n' .. git_diff)
+      end
+
+      return git_diff
+    end,
+    run = openai_chat.run,
+  },
+}
+
+local chats = vim.tbl_extend('force', locals, hosted, closed, closed_task)
 
 return chats

@@ -57,10 +57,7 @@ local function code_replace_fewshot(input, context)
 end
 
 ---@type table<string, Prompt>
-local starters = {
-  gpt = openai.default_prompt,
-  palm = palm.default_prompt,
-  hf = huggingface.default_prompt,
+local locals = {
   ['llamacpp:zephyr'] = {
     provider = llamacpp,
     options = {
@@ -82,6 +79,24 @@ local starters = {
       }
     end,
   },
+  ['ollama:starling'] = {
+    provider = ollama,
+    params = {
+      model = 'starling-lm',
+    },
+    builder = function(input)
+      return {
+        prompt = 'GPT4 Correct User: '
+          .. input
+          .. '<|end_of_turn|>GPT4 Correct Assistant: ',
+      }
+    end,
+  },
+}
+
+---@type table<string, Prompt>
+local hosted = {
+  hf = huggingface.default_prompt,
   ['together:stripedhyena'] = {
     provider = together,
     params = {
@@ -109,19 +124,6 @@ local starters = {
       }
     end,
   },
-  ['ollama:starling'] = {
-    provider = ollama,
-    params = {
-      model = 'starling-lm',
-    },
-    builder = function(input)
-      return {
-        prompt = 'GPT4 Correct User: '
-          .. input
-          .. '<|end_of_turn|>GPT4 Correct Assistant: ',
-      }
-    end,
-  },
   ['hf:starcoder'] = {
     provider = huggingface,
     options = {
@@ -131,19 +133,29 @@ local starters = {
       return { inputs = input }
     end,
   },
+}
+
+---@type table<string, Prompt>
+local closed = {
+  gpt = openai.default_prompt,
+  palm = palm.default_prompt,
   ['openai:gpt4-code'] = {
     provider = openai,
     mode = mode.INSERT_OR_REPLACE,
     params = {
       temperature = 0.2,
       max_tokens = 1000,
-      model = 'gpt-4',
+      model = 'gpt-4o',
     },
     builder = function(input, context)
       return openai.adapt(code_replace_fewshot(input, context))
     end,
     transform = extract.markdown_code,
   },
+}
+
+---@type table<string, Prompt>
+local closed_task = {
   commit = {
     provider = openai,
     mode = mode.INSERT,
@@ -212,5 +224,7 @@ local starters = {
     end,
   },
 }
+
+local starters = vim.tbl_extend('force', locals, hosted, closed, closed_task)
 
 return starters
