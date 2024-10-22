@@ -56,6 +56,11 @@ function M.memo(fn)
   end
 end
 
+--- Deep extend 'from' to 'into'
+function M.merge(into, from)
+  return vim.tbl_deep_extend('force', into, from)
+end
+
 M.env = M.memo(function(name)
   if type(M.secrets) == 'function' then
     return M.secrets(name)
