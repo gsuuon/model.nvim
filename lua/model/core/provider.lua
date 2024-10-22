@@ -197,9 +197,18 @@ local function create_segment_handlers_run_prompt(prompt, input_context, source)
   )
 end
 
+---@type Context
+local empty_context = {
+  before = '',
+  after = '',
+  filename = '',
+  args = '',
+  selection = nil,
+}
+
 -- Run a prompt and resolve the complete result. Does not do anything with the result (ignores prompt mode)
 ---@param prompt Prompt
----@param input_context InputContext
+---@param input_context { input: string, context?: Context }
 ---@param callback fun(completion: string) completion callback
 function M.complete(prompt, input_context, callback)
   return build_params_run_prompt(prompt, {
@@ -210,7 +219,10 @@ function M.complete(prompt, input_context, callback)
     on_error = function(data, label)
       util.eshow(data, label or 'Request error')
     end,
-  }, input_context)
+  }, {
+    input = input_context.input,
+    context = input_context.context or empty_context,
+  })
 end
 
 ---@param prompt Prompt

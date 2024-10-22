@@ -31,7 +31,7 @@ function M.schema_descripts(url, cb)
 
     return {
       routes = routes,
-      description = parsed.info.description,
+      description = parsed.info.description or parsed.info.title,
       schema = parsed,
     }
   end, cb)
