@@ -330,9 +330,11 @@ M.cursor = {}
 ---@field row number 0-indexed row
 ---@field col number 0-indexed column, can be vim.v.maxcol which means after end of line
 
----@class Selection
+---@class Span
 ---@field start Position
 ---@field stop Position
+
+---@alias Selection Span
 
 ---@return Selection
 function M.cursor.selection()
@@ -396,6 +398,13 @@ end
 -- false if pos == start == final
 function M.position.is_bounded(pos, start, stop)
   return M.position.is_greater_eq(start, pos) and M.position.is_less(stop, pos)
+end
+
+--- Converts a 0-indexed position like {row = 0, col = 0} to '(0,0)'
+---@param pos Position
+---@return string
+function M.position_string(pos)
+  return string.format('(%s,%s)', pos.row, pos.col)
 end
 
 M.COL_ENTIRE_LINE = vim.v.maxcol or 2147483647

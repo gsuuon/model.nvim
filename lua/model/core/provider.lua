@@ -7,7 +7,7 @@ local M = {}
 ---@class Prompt
 ---@field provider Provider The API provider for this prompt
 ---@field builder ParamsBuilder Converts input and context to request params. Input is either the visual selection if there is one or the entire buffer text.
----@field transform? fun(string): string Transforms the completed response text after on_finish, e.g. to extract code
+---@field transform? fun(response: string): string Transforms the completed response text after on_finish, e.g. to extract code
 ---@field mode? SegmentMode | StreamHandlers Response handling mode. Defaults to 'append'.
 ---@field hl_group? string Highlight group of active response
 ---@field params? table Static request parameters
@@ -161,6 +161,10 @@ local function create_prompt_handlers(prompt, seg)
 
       if prompt.mode == M.mode.BUFFER then
         seg.highlight('Identifier')
+      end
+
+      if vim.trim(completion) == '' then
+        util.eshow('Empty response')
       end
     end,
 

@@ -10,8 +10,11 @@ local M = {}
 ---@class Context
 ---@field before string Text before the selection or cursor
 ---@field after string Text after the selection or cursor
+---@field before_range Span Before range
+---@field after_range Span After range
 ---@field filename string Selection buffer filename
 ---@field args string Additional command argument
+---@field position Position Position of cursor
 ---@field selection? Selection Selection if given
 
 ---@class InputContext
@@ -37,39 +40,56 @@ function M.get_source(want_visual_selection)
 end
 
 local function get_before_after(source)
+  local before_range = {
+    start = {
+      row = 0,
+      col = 0,
+    },
+    stop = source.selection ~= nil and source.selection.start
+      or source.position,
+  }
+
+  local after_range = {
+    start = source.selection ~= nil and source.selection.stop
+      or source.position,
+    stop = {
+      row = -1,
+      col = -1,
+    },
+  }
+
+  local after = util.buf.text(after_range)
+
   return {
-    before = util.buf.text({
-      start = {
-        row = 0,
-        col = 0,
-      },
-      stop = source.selection ~= nil and source.selection.start
-        or source.position,
-    }),
-    after = util.buf.text({
-      start = source.selection ~= nil and source.selection.stop
-        or source.position,
+    before = util.buf.text(before_range),
+    after = after,
+    before_range = before_range,
+    after_range = {
+      start = after_range.start,
       stop = {
-        row = -1,
-        col = -1,
+        row = after_range.start.row + #after,
+        col = #after[#after],
       },
-    }),
+    },
   }
 end
 
 ---@param source Source
 ---@param args string
----@return InputContext
 function M.get_input_context(source, args)
   local before_after = get_before_after(source)
 
+  ---@type InputContext
   return {
     input = table.concat(source.lines, '\n'),
     context = {
       selection = source.selection,
       filename = util.buf.filename(),
-      before = before_after.before,
-      after = before_after.after,
+      position = source.position,
+      before = table.concat(before_after.before, '\n'),
+      after = table.concat(before_after.after, '\n'),
+      before_range = before_after.before_range,
+      after_range = before_after.after_range,
       args = args,
     },
   }

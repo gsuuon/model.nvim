@@ -1,5 +1,6 @@
 -- providers
 local openai = require('model.providers.openai')
+local anthropic = require('model.providers.anthropic')
 local palm = require('model.providers.palm')
 local huggingface = require('model.providers.huggingface')
 local llamacpp = require('model.providers.llamacpp')
@@ -151,6 +152,34 @@ local closed = {
       return openai.adapt(code_replace_fewshot(input, context))
     end,
     transform = extract.markdown_code,
+  },
+  ['anthropic:claude-code'] = {
+    provider = anthropic,
+    mode = mode.INSERT_OR_REPLACE,
+    options = {
+      headers = {
+        ['anthropic-beta'] = 'max-tokens-3-5-sonnet-2024-07-15',
+      },
+      trim_code = true,
+    },
+    params = {
+      max_tokens = 8192,
+      model = 'claude-3-5-sonnet-latest',
+      system = 'You are an expert programmer. Provide code which should go between the before and after blocks of code. Respond only with a markdown code block. Use comments within the code if explanations are necessary.',
+    },
+    builder = function(input, context)
+      local format = require('model.format.claude')
+
+      if context.selection then
+        return format.build_replace(input, context)
+      else
+        return format.build_insert(context)
+      end
+    end,
+    -- transform = function(response)
+    --   local trim_newline_fence = response:gsub('^\n', ''):gsub('\n```$', '')
+    --   return trim_newline_fence
+    -- end,
   },
 }
 
