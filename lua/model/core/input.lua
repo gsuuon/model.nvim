@@ -60,6 +60,8 @@ local function get_before_after(source)
 
   local after = util.buf.text(after_range)
 
+  local after_last_line = after[#after]
+
   return {
     before = util.buf.text(before_range),
     after = after,
@@ -68,7 +70,7 @@ local function get_before_after(source)
       start = after_range.start,
       stop = {
         row = after_range.start.row + #after,
-        col = #after[#after],
+        col = after_last_line and #after_last_line or after_range.start,
       },
     },
   }
