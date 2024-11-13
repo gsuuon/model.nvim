@@ -170,16 +170,17 @@ local closed = {
     builder = function(input, context)
       local format = require('model.format.claude')
 
-      if context.selection then
-        return format.build_replace(input, context)
-      else
-        return format.build_insert(context)
-      end
+      return vim.tbl_extend(
+        'force',
+        context.selection and format.build_replace(input, context)
+          or format.build_insert(context),
+        {
+          -- TODO this makes it impossible to get markdown in the response content
+          -- eventually we may want to allow markdown in the code-fenced response
+          stop_sequences = { '```' },
+        }
+      )
     end,
-    -- transform = function(response)
-    --   local trim_newline_fence = response:gsub('^\n', ''):gsub('\n```$', '')
-    --   return trim_newline_fence
-    -- end,
   },
 }
 
