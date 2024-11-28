@@ -6,12 +6,12 @@ return {
       error('Need at least one message')
     end
 
-    local first_msg = messages[1] 
+    local first_msg = messages[1]
     local prompt = 'GPT4 Correct User: '
       .. (config.system and config.system .. '\n' or '')
       .. first_msg.content
       .. '<|end_of_turn|>'
-    
+
     for i, msg in ipairs(messages) do
       if i > 1 then
         prompt = prompt
