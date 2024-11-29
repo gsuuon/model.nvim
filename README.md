@@ -132,6 +132,10 @@ Start a new [chat](#chat-prompts)
 Run a chat buffer
 - `:Mchat` — Request the assistant response in a chat buffer. You can save an `mchat` buffer as `my_conversation.mchat`, reload it later and run `:Mchat` with your next message to continue where you left off. You'll need to have the same ChatPrompt configured in setup.
 
+#### Utility
+Yank a file or range with filename and diagnostics
+- `:Myank` — in normal mode, yanks the entire file and diagnostics to the default register. In visual, yanks the given lines and diagnostics within the selected region. Can provide an argument to yank to a different register. Use `:Myank` then `p` to quickly add some context into a chat.
+
 ##### Telescope extension
 If you use [telescope](https://github.com/nvim-telescope/telescope.nvim), mchat buffers can be browsed with `:Telescope model mchat`.
 

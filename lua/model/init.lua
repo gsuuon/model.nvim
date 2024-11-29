@@ -7,49 +7,75 @@ local input = require('model.core.input')
 
 local M = {}
 
-local function yank_with_line_numbers_and_filename(register, whole_file)
+local function yank_with_line_numbers_and_filename(register, range)
   register = register or '"'
 
-  -- Capture the selected lines
-  local lines, filename, buf_name
+  local file_text = ''
   do
-    buf_name = vim.fn.expand('%')
-    if buf_name ~= '' then
-      filename = util.path.relative_norm(buf_name)
-    else
-      filename = '[No Name]'
+    local lines, filename, buf_name
+    do
+      buf_name = vim.fn.expand('%')
+      if buf_name ~= '' then
+        filename = util.path.relative_norm(buf_name)
+      else
+        filename = '[No Name]'
+      end
+
+      if range == nil then
+        lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      else
+        lines =
+          vim.api.nvim_buf_get_lines(0, range.start - 1, range.stop, false)
+        filename = filename .. '#L' .. range.start .. '-L' .. range.stop
+      end
     end
 
-    -- Get the visual selection range
-    local start_line = vim.fn.line("'<")
-    local end_line = vim.fn.line("'>")
-    ---@cast start_line number
-    ---@cast end_line number
+    local file_info = 'File: `' .. filename .. '`\n```'
+    local filetype = vim.fn.expand('%:e')
 
-    if whole_file then
-      lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    if filetype and filetype ~= '' then
+      file_info = file_info .. filetype .. '\n'
     else
-      lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-      filename = filename .. '#L' .. start_line .. '-L' .. end_line
+      file_info = file_info .. '\n'
+    end
+
+    file_text = file_info .. table.concat(lines, '\n') .. '\n```\n'
+  end
+
+  local diagnostic_text = ''
+  do
+    local diagnostics
+    do
+      if range == nil then
+        diagnostics = vim.diagnostic.get(0)
+      else
+        diagnostics = vim.tbl_filter(function(d)
+          local lnum = d.lnum
+          return lnum >= range.start and lnum <= range.stop
+        end, vim.diagnostic.get(0))
+      end
+    end
+
+    if #diagnostics > 0 then
+      local lines = { '\nDiagnostics:\n```' }
+
+      for _, d in ipairs(diagnostics) do
+        local severity = vim.diagnostic.severity[d.severity]
+        table.insert(
+          lines,
+          string.format('[%s] L%d: %s', severity, d.lnum + 1, d.message)
+        )
+      end
+
+      table.insert(lines, '```')
+      diagnostic_text = table.concat(lines, '\n')
     end
   end
 
-  -- Add the filename and the markdown code fence language syntax
-  local file_info = 'File: `' .. filename .. '`\n```'
-  local filetype = vim.fn.expand('%:e')
+  local result = file_text .. diagnostic_text
 
-  if filetype and filetype ~= '' then
-    file_info = file_info .. filetype .. '\n'
-  else
-    file_info = file_info .. '\n'
-  end
-
-  local result = file_info .. table.concat(lines, '\n') .. '\n```\n'
-
-  -- Set the content in the chosen register
   vim.fn.setreg(register, result)
 
-  -- Return the result as a string
   return result
 end
 
@@ -356,8 +382,11 @@ local function setup_commands()
     end
   end, {})
 
-  vim.api.nvim_create_user_command('Myank', function(cmd_params)
-    yank_with_line_numbers_and_filename(cmd_params.args, cmd_params.range == 0)
+  vim.api.nvim_create_user_command('Myank', function(opts)
+    yank_with_line_numbers_and_filename(
+      opts.args,
+      opts.range == 2 and { start = opts.line1, stop = opts.line2 } or nil
+    )
   end, {
     range = true,
     nargs = '?',
