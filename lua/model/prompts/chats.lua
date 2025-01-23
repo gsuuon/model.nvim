@@ -140,7 +140,7 @@ local hosted = {
 ---@type table<string, ChatPrompt>
 local closed = {
   openai = openai_chat,
-  gpt4 = openai,
+  gpt4 = openai_chat,
   palm = {
     provider = palm,
     system = 'You are a helpful assistant',
