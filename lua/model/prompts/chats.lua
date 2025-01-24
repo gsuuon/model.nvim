@@ -5,6 +5,7 @@ local ollama = require('model.providers.ollama')
 local together = require('model.providers.together')
 local gemini = require('model.providers.gemini')
 local anthropic = require('model.providers.anthropic')
+local deepseek = require('model.providers.deepseek')
 
 local zephyr_fmt = require('model.format.zephyr')
 local starling_fmt = require('model.format.starling')
@@ -15,6 +16,17 @@ local function input_if_selection(input, context)
   return context.selection and input or ''
 end
 
+local function system_as_first_message(messages, config)
+  if config.system then
+    table.insert(messages, 1, {
+      role = 'system',
+      content = config.system,
+    })
+  end
+
+  return { messages = messages }
+end
+
 local openai_chat = {
   provider = openai,
   system = 'You are a helpful assistant',
@@ -22,16 +34,16 @@ local openai_chat = {
     model = 'gpt-4o',
   },
   create = input_if_selection,
-  run = function(messages, config)
-    if config.system then
-      table.insert(messages, 1, {
-        role = 'system',
-        content = config.system,
-      })
-    end
+  run = system_as_first_message,
+}
 
-    return { messages = messages }
-  end,
+local deepseek_chat = {
+  provider = deepseek,
+  params = {
+    model = 'deepseek-chat',
+  },
+  create = input_if_selection,
+  run = system_as_first_message,
 }
 
 ---@type table<string, ChatPrompt>
@@ -133,6 +145,21 @@ local hosted = {
         url = 'https://api.groq.com/openai/v1/',
         authorization = 'Bearer ' .. util.env('GROQ_API_KEY'),
       }
+    end,
+  }),
+
+  ['deepseek:chat'] = deepseek_chat,
+  ['deepseek:reasoner'] = util.merge(deepseek_chat, {
+    params = {
+      model = 'deepseek-reasoner',
+    },
+    options = {
+      show_reasoning = true,
+    },
+    run = function(messages, config)
+      return deepseek.strip_asst_messages_of_reasoning(
+        system_as_first_message(messages, config)
+      )
     end,
   }),
 }
