@@ -4,5 +4,9 @@
 ((user_message) @injection.content
   (#set! injection.language "markdown"))
 
-((assistant_message) @injection.content
+((assistant_message
+   (content) @injection.content)
+  (#set! injection.language "markdown"))
+
+((reasoning) @injection.content
   (#set! injection.language "markdown"))
