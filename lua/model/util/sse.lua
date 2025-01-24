@@ -29,8 +29,8 @@ end
 ---Handles Server-Sent Event messages as well as non-SSE responses
 ---@class SseHandler
 ---@field on_message fun(msg: {data:string, [string]:string }, pending: string): nil
----@field on_other fun(out: string): nil
----@field on_error fun(out: string): nil
+---@field on_other fun(out: string): nil any pending messages on exit (may be errors)
+---@field on_error fun(out: string): nil streaming error (curl errors)
 ---@field on_exit? fun(): nil
 
 ---Exposes handlers for curl output and translates for use with SSE handlers
