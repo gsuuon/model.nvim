@@ -31,7 +31,7 @@ local function strip_reasoning(text)
 end
 
 ---@param handler StreamHandlers
-local function reason_in_code_block(handler)
+local function reason_shown(handler)
   local is_reasoning = false
 
   return {
@@ -71,25 +71,45 @@ local function reason_hidden(handler)
   }
 end
 
+local function set_prefix_field_on_last_message(params)
+  params.messages[#params.messages].prefix = true
+end
+
+local function ends_with_assistant_message(params)
+  return params.messages ~= nil
+    and #params.messages > 0
+    and params.messages[#params.messages].role == 'assistant'
+end
+
 --- Deepseek provider
+--- Adds reasoning content into responses and strips them from inputs in conversations.
+--- Switches to the beta if the last message is an assistant message (prefix completion)
+--- https://api-docs.deepseek.com/guides/chat_prefix_completion
+---
 --- options:
 --- {
 ---   show_reasoning: boolean
 ---   url: string
 ---   authorization: string
----   beta: boolean
 --- }
 ---@class Provider
 local M = {
   request_completion = function(handler, params, options)
-    local handle = options.show_reasoning and reason_in_code_block(handler)
+    local handle = options.show_reasoning and reason_shown(handler)
       or reason_hidden(handler)
+
+    local is_prefix_completion = ends_with_assistant_message(params)
 
     local url = options.url
       or (
-        options.beta and 'https://api.deepseek.com/beta/chat/completions'
+        is_prefix_completion
+          and 'https://api.deepseek.com/beta/chat/completions'
         or 'https://api.deepseek.com/chat/completions'
       )
+
+    if is_prefix_completion then
+      set_prefix_field_on_last_message(params)
+    end
 
     return sse.curl_client({
       url = url,
