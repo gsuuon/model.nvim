@@ -31,6 +31,10 @@ describe('prompt', function()
         after = 'table',
         args = 'string',
         filename = 'string',
+        position = {
+          col = 'number',
+          row = 'number',
+        },
         selection = {
           start = {
             col = 'number',
