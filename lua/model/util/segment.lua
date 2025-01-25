@@ -203,6 +203,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     clear_hl = vim.schedule_wrap(function()
       local mark = get_details()
 
+      _hl_group = nil
       mark.details.hl_group = nil
       mark.details.id = _ext_id
 

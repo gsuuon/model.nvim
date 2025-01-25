@@ -300,6 +300,8 @@ function M.run_chat(opts)
     seg = segment.create_segment_at(#buf_lines - 1, #buf_lines[#buf_lines])
   end
 
+  seg.clear_hl()
+
   local sayer = juice.sayer()
 
   ---@type StreamHandlers
