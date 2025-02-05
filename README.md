@@ -150,7 +150,7 @@ https://github.com/gsuuon/llm.nvim/assets/6422188/fd5aca13-979f-4bcf-8570-f935fd
 
 </details>
 
-- `:Mselect` — Select the response under the cursor.  
+- `:Mselect` — Select the response under the cursor.
 
 <details>
 <summary>
@@ -220,7 +220,7 @@ config.chats = {
 
 
 
-### 🚧 WIP - Local vector store 
+### 🚧 WIP - Local vector store
 <details>
 <summary>
 Setup and usage
@@ -365,6 +365,7 @@ The available providers are in [./lua/model/providers](./lua/model/providers).
 - [huggingface](#huggingface-api)
 - [kobold](#kobold)
 - [langserve](#langserve)
+- [groq](#groq-cloud)
 - [your own](#adding-your-own)
 
 ### OpenAI ChatGPT
@@ -600,7 +601,33 @@ Set the `output_parser` to correctly parse the contents returned from the `/stre
     end
   },
 ```
+### Groq Cloud
 
+See [Groq Cloud's model list](https://console.groq.com/docs/models) to get the supported models (modalities other than text are also supported). Here is a minimal example configuration using the `llama3-8b-8192` model:
+
+```lua
+config = function()
+    local groq = require("model.providers.groq_cloud")
+    local groq_fmt = require("model.format.groq_cloud")
+
+    require("model").setup({
+        chats = {
+            ["groq:llama3-8b-8192"] = {
+                provider = groq,
+                options = {
+                    model = "llama3-8b-8192",
+                },
+                create = function(input, context)
+                    return context.selection and input or ""
+                end,
+                run = groq_fmt.chat,
+            },
+        },
+    })
+end,
+```
+
+As usual, [make sure to set your API key](https://console.groq.com/docs/quickstart#set-up-your-api-key-recommended).
 
 ### Adding your own
 [Providers](#provider) implement a simple interface so it's easy to add your own. Just set your provider as the `provider` field in a prompt. Your provider needs to kick off the request and call the handlers as data streams in, finishes, or errors. Check [the hf provider](./lua/model/providers/huggingface.lua) for a simpler example supporting server-sent events streaming. If you don't need streaming, just make a request and call `handler.on_finish` with the result.
@@ -630,7 +657,7 @@ require('model').setup({
 })
 ```
 
---- 
+---
 
 ## Reference
 The following are types and the fields they contain:
@@ -646,7 +673,7 @@ Setup `require('model').setup(SetupOptions)`
 #### Prompt
 `params` are generally data that go directly into the request sent by the provider (e.g. content, temperature). `options` are used by the provider to know how to handle the request (e.g. server url or model name if a local LLM).
 
-Setup `require('model').setup({prompts = { [prompt name] = Prompt, .. }})`  
+Setup `require('model').setup({prompts = { [prompt name] = Prompt, .. }})`
 Run `:Model [prompt name]` or `:M [prompt name]`
 - `provider: Provider` - The provider for this prompt, responsible for requesting and returning completion suggestions.
 - [`builder: ParamsBuilder`](#paramsbuilder) - Converts input (either the visual selection or entire buffer text) and [context](#context) to request parameters. Returns either a table of params or a function that takes a callback with the params.
@@ -683,7 +710,7 @@ Exported as `local mode = require('model').mode`
 #### ChatPrompt
 `params` are generally data that go directly into the request sent by the provider (e.g. content, temperature). `options` are used by the provider to know how to handle the request (e.g. server url or model name if a local LLM).
 
-Setup `require('model').setup({chats = { [chat name] = ChatPrompt, .. }})`  
+Setup `require('model').setup({chats = { [chat name] = ChatPrompt, .. }})`
 Run `:Mchat [chat name]`
 - `provider: Provider` - The provider for this chat prompt.
 - `create: fun(input: string, context: Context): string | ChatContents` - Converts input and context into the first message text or ChatContents, which are written into the new chat buffer.
