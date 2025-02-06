@@ -8,7 +8,7 @@ local input = require('model.core.input')
 local M = {}
 
 local function yank_with_line_numbers_and_filename(register, range)
-  register = register or '"'
+  register = (register and register ~= "") and register or M.opts.default_register or '"'
 
   local file_text = ''
   do
@@ -422,11 +422,13 @@ end
 ---@field hl_group? string default = 'Comment'. Set the default highlight group of in-progress responses
 ---@field join_undo? boolean default = true. Join streaming response text as a single `u` undo. Edits during streaming will also be undone.
 ---@field secrets? fun(key: string): string | table<string, fun(): string> Secret generator or dictionary of secret generators. Used by `util.env(keyname)`. Value will fallback to env variable.
+---@field default_register? string default = '"'. Set the default clipboard register for Myank
 
 ---@param opts? SetupOptions
 function M.setup(opts)
   M.opts = vim.tbl_extend('force', {
     default_prompt = require('model.providers.openai').default_prompt,
+    default_register = '"',
     prompts = require('model.prompts.starters'),
     chats = require('model.prompts.chats'),
   }, opts or {})
