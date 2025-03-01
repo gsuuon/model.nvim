@@ -35,28 +35,68 @@ local function split_messages(text)
   local chunk_lines = {}
   local chunk_is_user = true
 
+  local blocks = {}
+  local block = {}
+
   --- Insert message and reset/toggle chunk state. User text is trimmed.
   local function add_message()
-    local text_ = table.concat(chunk_lines, '\n')
-
     table.insert(messages, {
       role = chunk_is_user and 'user' or 'assistant',
-      content = chunk_is_user and vim.trim(text_) or text_,
+      content = blocks,
     })
 
-    chunk_lines = {}
+    blocks = {}
     chunk_is_user = not chunk_is_user
   end
 
-  for i, line in ipairs(text) do
-    if i == 1 then
-      system = line:match('^> (.+)')
+  local function add_block()
+    if block.type == nil then
+      block.type = 'text'
+    end
 
-      if system == nil then
-        table.insert(chunk_lines, line)
-      end
-    elseif line == '======' then
+    local text_ = table.concat(chunk_lines, '\n')
+    text_ = vim.trim(text_)
+
+    if block.type == 'text' then
+      block.text = text_
+    elseif block.type == 'thinking' then
+      block.thinking = text_
+    elseif block.type == 'redacted_thinking' then
+      block.data = text_
+    end
+
+    table.insert(blocks, block)
+
+    block = {}
+    chunk_lines = {}
+  end
+
+  for i, line in ipairs(text) do
+    local is_system = i == 1 and line:match('^> (.+)') ~= nil
+    local is_thinking = not chunk_is_user and line:match('<thinking') ~= nil
+    local is_end_thinking = not chunk_is_user
+      and line:match('^</thinking') ~= nil
+    local is_redacted_thinking = not chunk_is_user
+      and line:match('<redacted_thinking') ~= nil
+    local is_end_redacted_thinking = not chunk_is_user
+      and line:match('^</redacted_thinking') ~= nil
+    local is_end_message = line == '======'
+
+    if is_system then
+      system = line:match('^> (.+)')
+    elseif is_end_message then
+      add_block()
       add_message()
+    elseif is_thinking then
+      block.type = 'thinking'
+    elseif is_end_thinking then
+      local signature = line:match('</thinking%s+signature="([^"]*)"')
+      block.signature = signature
+      add_block()
+    elseif is_redacted_thinking then
+      block.type = 'redacted_thinking'
+    elseif is_end_redacted_thinking then
+      add_block()
     else
       table.insert(chunk_lines, line)
     end
@@ -64,6 +104,7 @@ local function split_messages(text)
 
   -- add text after last `======` if not empty
   if table.concat(chunk_lines, '') ~= '' then
+    add_block()
     add_message()
   end
 
@@ -137,6 +178,33 @@ local function parse_config(text)
   end
 end
 
+local function message_content_to_string(content)
+  if type(content) == 'string' then
+    return content
+  end
+
+  local result = {}
+  for i, block in ipairs(content) do
+    if block.type == 'text' then
+      result[i] = block.text
+    elseif block.type == 'thinking' then
+      result[i] = '<thinking>\n'
+        .. block.thinking
+        .. '\n</thinking signature="'
+        .. block.signature
+        .. '">'
+    elseif block.type == 'redacted_thinking' then
+      result[i] = '<redacted_thinking>\n'
+        .. block.data
+        .. '\n</redacted_thinking>'
+    end
+  end
+
+  result = table.concat(result, '\n\n')
+
+  return result
+end
+
 --- Parse a chat file. Must start with a chat name, can follow with a lua table
 --- of config between `---`. If the next line starts with `> `, it is parsed as
 --- the system instruction. The rest of the text is parsed as alternating
@@ -184,9 +252,12 @@ function M.to_string(contents, name)
     end
 
     if message.role == 'user' then
-      result = result .. '\n' .. message.content .. '\n'
+      result = result
+        .. '\n'
+        .. message_content_to_string(message.content)
+        .. '\n'
     else
-      result = result .. message.content
+      result = result .. message_content_to_string(message.content)
     end
   end
 
