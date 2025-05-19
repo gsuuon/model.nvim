@@ -49,9 +49,12 @@ local function yank_with_line_numbers_and_filename(register, range)
       if range == nil then
         diagnostics = vim.diagnostic.get(0)
       else
+        local start_zero_idx = range.start - 1
+        local stop_zero_idx = range.stop - 1
+
         diagnostics = vim.tbl_filter(function(d)
           local lnum = d.lnum
-          return lnum >= range.start and lnum <= range.stop
+          return lnum >= start_zero_idx and lnum <= stop_zero_idx
         end, vim.diagnostic.get(0))
       end
     end
