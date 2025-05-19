@@ -134,7 +134,7 @@ Run a chat buffer
 
 #### Utility
 Yank a file or range with filename and diagnostics
-- `:Myank` — in normal mode, yanks the entire file and diagnostics to the default register. In visual, yanks the given lines and diagnostics within the selected region. Can provide an argument to yank to a different register. Use `:Myank` then `p` to quickly add some context into a chat.
+- `:Myank` — in normal mode, yanks the entire file and diagnostics to the default register. In visual, yanks the given lines and diagnostics within the selected region. You can provide an argument to yank to a different register, e.g. `:Myank *<CR>`. Use `:Myank` then `p` to quickly add some context into a chat.
 
 ##### Telescope extension
 If you use [telescope](https://github.com/nvim-telescope/telescope.nvim), mchat buffers can be browsed with `:Telescope model mchat`.
