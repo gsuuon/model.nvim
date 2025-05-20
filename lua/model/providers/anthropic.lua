@@ -52,8 +52,26 @@ local M = {
       on_message = function(msg)
         local data = util.json.decode(msg.data)
 
-        if msg.event == 'content_block_delta' then
-          consume(data.delta.text)
+        if msg.event == 'content_block_start' then
+          if data.content_block.type == 'thinking' then
+            consume('<thinking>\n')
+          elseif data.content_block.type == 'redacted_thinking' then
+            consume(
+              '<redacted_thinking>\n'
+                .. data.content_block.data
+                .. '\n</redacted_thinking>\n'
+            )
+          end
+        elseif msg.event == 'content_block_delta' then
+          if data.delta.type == 'thinking_delta' then
+            consume(data.delta.thinking)
+          elseif data.delta.type == 'signature_delta' then
+            consume(
+              '\n</thinking signature="' .. data.delta.signature .. '">\n\n'
+            )
+          else
+            consume(data.delta.text)
+          end
         elseif msg.event == 'message_delta' then
           util.show(data.usage.output_tokens, 'output tokens')
         elseif msg.event == 'message_stop' then
