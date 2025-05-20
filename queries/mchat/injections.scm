@@ -8,5 +8,5 @@
    (content) @injection.content)
   (#set! injection.language "markdown"))
 
-((data_section_body) @injection.content
+((reasoning) @injection.content
   (#set! injection.language "markdown"))
