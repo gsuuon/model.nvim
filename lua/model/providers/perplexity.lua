@@ -27,6 +27,7 @@ local function extract_chat_data(item)
 
   if data ~= nil and data.choices ~= nil then
     return {
+      citations = data.citations,
       content = (data.choices[1].delta or {}).content,
       finish_reason = data.choices[1].finish_reason,
     }
@@ -45,6 +46,9 @@ function M.request_completion(handlers, params, options)
   elseif not options.url then -- only check the Perplexity env key if options.url wasn't set
     headers.Authorization = 'Bearer ' .. util.env('PERPLEXITY_API_KEY')
   end
+
+  local citations_delimit_start = '\n\n<<<<<< citations\n'
+  local citations_delimit_stop = '>>>>>>\n'
 
   local endpoint = options.endpoint or 'chat/completions' -- TODO does this make compat harder?
   local completion = ''
@@ -75,6 +79,11 @@ function M.request_completion(handlers, params, options)
         end
 
         if data.finish_reason ~= nil then
+          completion = completion .. citations_delimit_start
+          for index, citation in ipairs(data.citations) do
+            completion = completion .. index .. '. <' .. citation .. '>\n'
+          end
+          completion = completion .. citations_delimit_stop
           handlers.on_finish(completion, data.finish_reason)
         end
       end
