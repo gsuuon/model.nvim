@@ -34,6 +34,9 @@ local function extract_chat_data(item)
   end
 end
 
+local citations_delimit_start = '\n\n<<<<<< citations\n'
+local citations_delimit_stop = '>>>>>>\n'
+
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for Perplexity endpoint
 ---@param options? { url?: string, endpoint?: string, authorization?: string } Request endpoint and url. Defaults to 'https://api.openai.com/v1/' and 'chat/completions'. `authorization` overrides the request auth header. If url is provided the environment key will not be sent, you'll need to provide an authorization.
@@ -46,9 +49,6 @@ function M.request_completion(handlers, params, options)
   elseif not options.url then -- only check the Perplexity env key if options.url wasn't set
     headers.Authorization = 'Bearer ' .. util.env('PERPLEXITY_API_KEY')
   end
-
-  local citations_delimit_start = '\n\n<<<<<< citations\n'
-  local citations_delimit_stop = '>>>>>>\n'
 
   local endpoint = options.endpoint or 'chat/completions' -- TODO does this make compat harder?
   local completion = ''
@@ -155,6 +155,34 @@ function M.prompt.with_system_message(text)
 
     return body
   end
+end
+
+local function strip_citations(text)
+  -- Find the start and end positions of the citations block
+  local start_pos, end_pos =
+    text:find(citations_delimit_start .. '.-' .. citations_delimit_stop)
+
+  -- If the citations block is found, remove it from the text
+  if start_pos and end_pos then
+    return text:sub(1, start_pos - 1) .. text:sub(end_pos + 1)
+  end
+
+  -- If no citations block is found, return the original text
+  return text
+end
+
+function M.strip_asst_messages_of_citations(body)
+  return vim.tbl_deep_extend('force', body, {
+    messages = vim.tbl_map(function(msg)
+      if msg.role == 'assistant' then
+        return vim.tbl_deep_extend('force', msg, {
+          content = strip_citations(msg.content)
+        })
+      else
+        return msg
+      end
+    end, body.messages),
+  })
 end
 
 return M

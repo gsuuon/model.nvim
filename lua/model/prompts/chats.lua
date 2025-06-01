@@ -53,7 +53,11 @@ local perplexity_chat = {
     model = 'sonar',
   },
   create = input_if_selection,
-  run = system_as_first_message,
+  run = function(messages, config)
+    return perplexity.strip_asst_messages_of_citations(
+      system_as_first_message(messages, config)
+    )
+  end,
 }
 
 ---@type table<string, ChatPrompt>
