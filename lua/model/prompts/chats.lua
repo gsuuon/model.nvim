@@ -6,6 +6,7 @@ local together = require('model.providers.together')
 local gemini = require('model.providers.gemini')
 local anthropic = require('model.providers.anthropic')
 local deepseek = require('model.providers.deepseek')
+local perplexity = require('model.providers.perplexity')
 
 local zephyr_fmt = require('model.format.zephyr')
 local starling_fmt = require('model.format.starling')
@@ -44,6 +45,19 @@ local deepseek_chat = {
   },
   create = input_if_selection,
   run = system_as_first_message,
+}
+
+local perplexity_chat = {
+  provider = perplexity,
+  params = {
+    model = 'sonar',
+  },
+  create = input_if_selection,
+  run = function(messages, config)
+    return perplexity.strip_asst_messages_of_citations(
+      system_as_first_message(messages, config)
+    )
+  end,
 }
 
 ---@type table<string, ChatPrompt>
@@ -168,6 +182,7 @@ local hosted = {
 local closed = {
   openai = openai_chat,
   gpt4 = openai_chat,
+  perplexity = perplexity_chat,
   palm = {
     provider = palm,
     system = 'You are a helpful assistant',
