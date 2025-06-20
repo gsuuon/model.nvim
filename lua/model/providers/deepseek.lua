@@ -95,6 +95,7 @@ end
 ---@class Provider
 local M = {
   request_completion = function(handler, params, options)
+    local options = options or {}
     local handle = options.show_reasoning and reason_shown(handler)
       or reason_hidden(handler)
 
