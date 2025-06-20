@@ -12,10 +12,13 @@ local function add()
   )
 
   if not already_added then
-    vim.fn.setqflist(
-      { { filename = filename, text = 'model.nvim context' } },
-      'a'
-    )
+    vim.fn.setqflist({
+      {
+        filename = filename,
+        text = 'model.nvim context',
+        bufnr = vim.fn.bufnr(),
+      },
+    }, 'a')
   end
 end
 
@@ -47,8 +50,9 @@ local function get_text()
     end
 
     return string.format(
-      'File: `%s`\n```%s\n%s\n```\n\n',
-      util.path.relative_norm(filename),
+      '%s\n```%s\n%s\n```\n\n',
+      filename == '' and ''
+        or string.format('File: `%s`', util.path.relative_norm(filename)),
       filetype,
       table.concat(file_content, '\n')
     )
