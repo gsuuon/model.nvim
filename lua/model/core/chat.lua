@@ -297,7 +297,9 @@ function M.run_chat(opts)
 
   if last_msg.role == 'user' then
     seg = segment.create_segment_at(#buf_lines, 0)
-    seg.add(starter_separator)
+    if not vim.endswith(vim.trim(table.concat(buf_lines, '\n')), '======') then
+      seg.add(starter_separator)
+    end
   else
     seg = segment.create_segment_at(#buf_lines - 1, #buf_lines[#buf_lines])
   end
@@ -326,8 +328,13 @@ function M.run_chat(opts)
 
       seg.clear_hl()
 
-      if reason and reason ~= 'stop' and reason ~= 'done' then
-        util.notify(reason)
+      if
+        reason
+        and reason ~= 'stop'
+        and reason ~= 'done'
+        and reason ~= 'tool_calls'
+      then
+        util.notify('Finish reason: ' .. reason)
       end
     end,
     on_error = function(err, label)

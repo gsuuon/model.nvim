@@ -30,7 +30,7 @@ local function yank_with_line_numbers_and_filename(register, range)
       end
     end
 
-    local file_info = 'File: `' .. filename .. '`\n```'
+    local file_info = 'File: `' .. filename .. '`\n````'
     local filetype = vim.fn.expand('%:e')
 
     if filetype and filetype ~= '' then
@@ -39,7 +39,7 @@ local function yank_with_line_numbers_and_filename(register, range)
       file_info = file_info .. '\n'
     end
 
-    file_text = file_info .. table.concat(lines, '\n') .. '\n```\n'
+    file_text = file_info .. table.concat(lines, '\n') .. '\n````\n'
   end
 
   local diagnostic_text = ''
@@ -60,7 +60,7 @@ local function yank_with_line_numbers_and_filename(register, range)
     end
 
     if #diagnostics > 0 then
-      local lines = { '\nDiagnostics:\n```' }
+      local lines = { '\nDiagnostics:\n````' }
 
       for _, d in ipairs(diagnostics) do
         local severity = vim.diagnostic.severity[d.severity]
@@ -70,7 +70,7 @@ local function yank_with_line_numbers_and_filename(register, range)
         )
       end
 
-      table.insert(lines, '```')
+      table.insert(lines, '````')
       diagnostic_text = table.concat(lines, '\n')
     end
   end
@@ -432,6 +432,7 @@ function M.setup(opts)
     default_prompt = require('model.providers.openai').default_prompt,
     prompts = require('model.prompts.starters'),
     chats = require('model.prompts.chats'),
+    tools = require('model.tools'),
   }, opts or {})
 
   if M.opts.prompts then

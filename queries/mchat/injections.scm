@@ -1,11 +1,12 @@
 ((params_block) @injection.content
   (#set! injection.language "lua"))
 
-((user_message) @injection.content
+(user_message
+   (content) @injection.content
   (#set! injection.language "markdown"))
 
-((assistant_message
-   (content) @injection.content)
+(assistant_message
+   (content) @injection.content
   (#set! injection.language "markdown"))
 
 ((data_section_body) @injection.content

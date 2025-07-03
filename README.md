@@ -1,39 +1,24 @@
 # 🗿 model.nvim
 
-Use AI models in Neovim for completions or chat. Build prompts programatically with lua. Designed for those who want to customize their prompts, experiment with multiple providers or use local models.
-
+A toolkit for interacting with AI from Neovim.
 
 https://github.com/gsuuon/model.nvim/assets/6422188/3af3e65d-d13c-4196-abe1-07d605225c10
 
-
 ### Features
+- Various providers
+- Programmatic prompts
+- Completions in buffer
+- Chat file format
+- Tool use
 
-- 🎪 Provider agnostic. Comes with:
-  - hosted
-    - OpenAI ChatGPT (and compatible API's)
-    - Google PaLM, together, huggingface
-  - local
-    - llama.cpp
-    - ollama
-  - easy to add your own
-- 🎨 Programmatic prompts in lua
-  - customize everything
-  - async and multistep prompts
-  - starter examples
-- 🌠 Streaming completions
-  - directly in buffer
-  - transform/extract text
-  - append/replace/insert modes
-- 🦜 Chat in `mchat` filetype buffer
-  - edit settings or messages at any point
-  - take conversations to different models
-  - treesitter highlights and folds
+No floats or preview windows, just normal buffers and temporary extmarks. Nice if you prefer a buffer-centric workflow, or want to work with AI conversations like normal files.
 
 ### Contents
 - [Setup](#setup)
 - [Usage](#usage)
 - [Config](#configuration)
 - [Providers](#providers)
+- [Tools](#tools)
 - [Reference](#reference)
 - [Examples](#examples)
 - [Contributing](#contributing)
@@ -114,16 +99,18 @@ require('model').setup({
 
 https://github.com/gsuuon/model.nvim/assets/6422188/ae00076d-3327-4d97-9cc1-41acffead327
 
+There are 2 modes of use:
+ - completions, which alter your current buffer
+ - chat, where you have multiturn conversations
 
+### Prompts
 **model.nvim** comes with some [starter prompts](./lua/model/prompts/starters.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt where we curl for openapi schema, ask gpt for relevant endpoint, then include that in a final prompt look at the `openapi` starter prompt.
 
 Prompts can have 5 different [modes](#segmentmode) which determine what happens to the response: append, insert, replace, buffer, insert_or_replace. The default is to append, and with no visual selection the default input is the entire buffer, so your response will be at the end of the file. Modes are configured on a per-prompt basis.
 
 ### Commands
 
-#### Run prompts
 Run a completion [prompt](#prompts)
-
 - `:Model [name]` or `:M [name]` — Start a completion request of either the visual selection or the current buffer. Uses the default prompt if no prompt name is provided. Completions typically edit the current buffer.
 
 Start a new [chat](#chat-prompts)
@@ -132,12 +119,45 @@ Start a new [chat](#chat-prompts)
 Run a chat buffer
 - `:Mchat` — Request the assistant response in a chat buffer. You can save an `mchat` buffer as `my_conversation.mchat`, reload it later and run `:Mchat` with your next message to continue where you left off. You'll need to have the same ChatPrompt configured in setup.
 
-#### Utility
-Yank a file or range with filename and diagnostics
+#### Utilities
+Yank a file or range with diagnostics and filename
 - `:Myank` — in normal mode, yanks the entire file and diagnostics to the default register. In visual, yanks the given lines and diagnostics within the selected region. You can provide an argument to yank to a different register, e.g. `:Myank *<CR>`. Use `:Myank` then `p` to quickly add some context into a chat.
 
 ##### Telescope extension
 If you use [telescope](https://github.com/nvim-telescope/telescope.nvim), mchat buffers can be browsed with `:Telescope model mchat`.
+
+#### Context
+There are some basic context management helpers which use the quickfix list:
+
+- `:MCadd` — Add the current file
+- `:MCremove` — Remove the current file
+- `:MCclear` — Remove all entries
+- `:MCpaste` — Paste the contents of the quickfix list files with filepaths and code fences, eg:
+````md
+File: `src/index.tsx`
+```typescriptreact
+import App from "./App";
+
+render( () => <App />), document.getElementById("root")!);
+```
+````
+
+Since `:MCpaste` works with the quickfix list, anything that populates that can be used to build up context.
+
+File content of the quickfix list (what `:MCpaste` inserts) can be accessed programmatically via `require('model.util.qflist').get_text()`, for example:
+```lua
+local qflist = require('model.util.qflist')
+local starters = require('model.prompts.chats')
+
+config.chats = {
+  ['codellama:qfix'] = vim.tbl_deep_extend('force', starters['together:codellama'], {
+    system = 'You are an intelligent programming assistant',
+    create = function()
+      return qflist.get_text()
+    end
+  }),
+}
+```
 
 #### Manage responses
 Responses are inserted with extmarks, so once the buffer is closed the responses become normal text and won't work with the following commands.
@@ -184,39 +204,6 @@ https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a
 </details>
 
 - `:Mshow` — Flash the response under the cursor if there is one.
-
-#### Manage context
-
-There are some basic context management helpers which use the quickfix list:
-
-- `:MCadd` — Add the current file
-- `:MCremove` — Remove the current file
-- `:MCclear` — Remove all entries
-- `:MCpaste` — Paste the contents of the quickfix list files with filepaths and code fences
-  - an example:
-  ````md
-    File: `src/index.tsx`
-    ```typescriptreact
-    import App from "./App";
-
-    render( () => <App />), document.getElementById("root")!);
-    ```
-  ````
-
-File content of the quickfix list (what `:MCpaste` inserts) can be accessed programmatically via `require('model.util.qflist').get_text()`, for example:
-```lua
-local qflist = require('model.util.qflist')
-local starters = require('model.prompts.chats')
-
-config.chats = {
-  ['codellama:qfix'] = vim.tbl_deep_extend('force', starters['together:codellama'], {
-    system = 'You are an intelligent programming assistant',
-    create = function()
-      return qflist.get_text()
-    end
-  }),
-}
-```
 
 
 
@@ -323,7 +310,7 @@ Use `:Mchat [name]` to create a new mchat buffer with that chat prompt. The comm
 A brand new `mchat` buffer might look like this:
 
 ```
-openai
+openai_gpt_4
 ---
 {
   params = {
@@ -338,7 +325,7 @@ Count to three
 
 Run `:Mchat` in the new buffer (with no name argument) to get the assistant response.  You can edit any of the messages, params, options or system instruction (the first line, if it starts with `> `) as necessary throughout the conversation. You can also copy/paste to a new buffer, `:set ft=mchat` and run `:Mchat`.
 
-You can save the buffer with an `.mchat` extension to continue the chat later using the same settings shown in the header. `mchat` comes with some syntax highlighting and folds to show the various chat parts - name of the chatprompt runner, options and params in the header, and a system message.
+You can save the buffer with an `.mchat` extension to continue the chat later using the same settings shown in the header. `mchat` comes with some syntax highlighting and folds to show the various chat parts - name of the chatprompt runner, options and params in the header, and a system message. Note that the first line is the chat handler name, _not_ the provider name.
 
 Check out [the starter chat prompts](./lua/model/prompts/chats.lua) to see how to add your own. Check out [the reference](#chatprompt) for the type definitions.
 
@@ -630,6 +617,121 @@ require('model').setup({
 })
 ```
 
+## Tools
+Tools are functions that the model can invoke to perform actions. They are still in beta. 
+
+### Usage
+Only OpenAI and Deepseek providers are currently implemented. Tools can be enabled by setting `options.enable_tools = true` in your chat config:
+
+```mchat
+o3
+---
+{
+  options = {
+    enable_tools = true
+  },
+  params = {
+    max_completion_tokens = 100000,
+    model = "o3"
+  }
+}
+---
+> You are an AI assistant.
+```
+
+Model tool requests will be shown in a `<<<<<< tool_calls` section.
+
+Run `:Mchat` in the chat buffer to invoke those tools and put the results into the next message.
+
+Note: don't add another message after the tool results message - put your response directly into the tool response message content outside of the tool_results data sections.
+
+### Defaults
+The following tools are available by default:
+- `create_file`: Create a new buffer with the file contents and name. You can then `:w` to save the file.
+- `rewrite_file`: Opens a diff view of the old and new file. Hit <tab> to accept changes (mapped to `dp]c`).
+- `fetch_website`: Fetch the contents of a website.
+- `list_buffers`: List all Neovim buffers.
+- `get_buffer_contents`: Get the contents of a buffer.
+- `git`: Execute Git commands.
+- `list_files`: List files in the git repository using `git ls-files`.
+- `read_file`: Read a file's contents.
+- `search_pattern`: Search for a pattern in files.
+
+### Setup
+You can use your own tools by setting them to the `tools` table in the `model.setup` call. This currently overrides the default tools, so you should merge them or explicitly re-add the defaults you want to keep (look in the tools directory).
+
+```lua
+require('model').setup({
+  tools = {
+    my_tool = {
+      description = 'A description of my tool',
+      parameters = {
+        type = 'object',
+        properties = {
+          param1 = { type = 'string' },
+        },
+        required = { 'param1' },
+      },
+      invoke = function(args)
+        -- Do something with args.param1
+        return 'Result of my tool'
+      end,
+    },
+  },
+})
+```
+
+### Note on usage
+Tools work like the rest of mchat buffers - you can save the .mchat file, exit/reload, and continue the conversation. I find it helpful to have a base mchat that I start with for new conversations that has pre-existing tool uses. This helps to 1. encourage tool use, and 2. preload useful context. You can also manually edit tool use to correct minor mistakes or try variations. `:Mchat` with the last message containing a tool_calls block will invoke those tools.
+
+It's also useful to sometimes re-invoke tool calls, to do that just delete messages until the tool call is the last one and re-run `:Mchat`.
+
+````mchat
+reasonds
+---
+{
+  options = {
+    enable_tools = true
+  },
+  params = {
+    max_tokens = 64000,
+    model = "deepseek-reasoner"
+  }
+}
+---
+> You are an AI coding assistant
+
+I'll give you a second to get acquainted with the project.
+
+======
+
+I'll explore the repository to gain some context.
+
+<<<<<< tool_calls
+```js
+[
+  {
+    "id": "call_0_98f9c03f-2dbf-4964-93c2-ca0b1c3f1c94",
+    "type": "function",
+    "function": {
+      "name": "list_files",
+      "arguments": "{\"path\": \".\"}"
+    }
+  },
+  {
+    "id": "call_0_40203437-4b82-4e32-abd4-6abb7c8dd837",
+    "type": "function",
+    "function": {
+      "name": "read_file",
+      "arguments": "{\"path\": \"README.md\"}"
+    }
+  }
+]
+```
+>>>>>>
+======
+````
+
 --- 
 
 ## Reference
@@ -640,6 +742,7 @@ Setup `require('model').setup(SetupOptions)`
 - `default_prompt?: string` - The default prompt to use with `:Model` or `:M`. Default is the openai starter.
 - `prompts?: {string: Prompt}` - A table of custom prompts to use with `:M [name]`. Keys are the names of the prompts. Default are the starters.
 - `chats?: {string: ChatPrompt}` - A table of chat prompts to use with `:Mchat [name]`. Keys are the names of the chats.
+- `tools?: {string: Tool}` - A table of custom tools to make available to the model.
 - `hl_group?: string` - The default highlight group for in-progress responses. Default is `'Comment'`.
 - `join_undo?: boolean` - Whether to join streaming response text as a single undo command. When true, unrelated edits during streaming will also be undone. Default is `true`.
 
@@ -704,6 +807,11 @@ Run `:Mchat [chat name]`
 #### ChatContents
 - `config: ChatConfig` - Configuration for this chat buffer, used by `chatprompt.run`. This includes information such as the system instruction, static request parameters, and provider options.
 - `messages: ChatMessage[]` - Messages in the chat buffer.
+
+#### Tool
+- `description: string` - A description of what the tool does.
+- `parameters: table` - A JSON schema object describing the parameters the tool accepts.
+- `invoke: fun(args: table, on_result: fun(result: string, err?: string))` - A function that invokes the tool with the given arguments. It can optionally take a callback to return results asynchronously.
 
 #### Context
 - `before: string` - The text present before the selection or cursor.
