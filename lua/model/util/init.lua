@@ -190,6 +190,14 @@ function M.json.decode(string)
   if success then
     return obj
   else
+    local char_offset = tonumber(obj:match('character (%d+)'))
+    if char_offset then
+      local start = math.max(1, char_offset - 20)
+      local stop = math.min(#string, char_offset + 20)
+      local context = string:sub(start, stop)
+      obj = obj .. '\nContext:\n' .. context
+    end
+
     return nil, obj
   end
 end
@@ -545,6 +553,107 @@ function M.module.autopairs(table)
   end
 
   return pairs(table)
+end
+
+M.text = {}
+
+function M.text.build_line_offsets(content)
+  local offsets = { 1 }
+  local i = 1
+  local len = #content
+  while i <= len do
+    local c = content:sub(i, i)
+    if c == '\n' then
+      table.insert(offsets, i + 1)
+      i = i + 1
+    elseif c == '\r' then
+      if i + 1 <= len and content:sub(i + 1, i + 1) == '\n' then
+        table.insert(offsets, i + 2)
+        i = i + 2
+      else
+        table.insert(offsets, i + 1)
+        i = i + 1
+      end
+    else
+      i = i + 1
+    end
+  end
+  return offsets
+end
+
+M.text.apply_edits = function(content, edits, match_fn)
+  -- Build line offsets index
+  local line_offsets = M.text.build_line_offsets(content)
+  local total_lines = #line_offsets
+  local processed_edits = {}
+
+  -- Process each edit
+  for i, edit in ipairs(edits) do
+    -- Get search parameters from match function
+    local search_string, start_line, plain = match_fn(edit)
+
+    if type(search_string) ~= 'string' or search_string == '' then
+      error('Edit ' .. i .. ' requires non-empty search string')
+    end
+    if type(edit.replacement_string) ~= 'string' then
+      error('Edit ' .. i .. ' requires replacement_string')
+    end
+    if
+      start_line ~= nil and (type(start_line) ~= 'number' or start_line < 1)
+    then
+      error('Edit ' .. i .. ' has invalid start_line')
+    end
+
+    -- Get start offset for this line
+    start_line = start_line or 1
+    if start_line > total_lines then
+      error('Edit ' .. i .. ': start_line exceeds file length')
+    end
+    local start_offset = line_offsets[start_line]
+
+    -- Find search string starting at the specified line
+    local found_start, found_end =
+      content:find(search_string, start_offset, plain)
+    if not found_start then
+      error(
+        'Edit '
+          .. i
+          .. ': could not find search string starting at line '
+          .. start_line
+      )
+    end
+
+    table.insert(processed_edits, {
+      start = found_start,
+      finish = found_end,
+      replacement_string = edit.replacement_string,
+    })
+  end
+
+  -- Sort edits by start position
+  table.sort(processed_edits, function(a, b)
+    return a.start < b.start
+  end)
+
+  -- Check for overlapping edits
+  for i = 2, #processed_edits do
+    if processed_edits[i].start <= processed_edits[i - 1].finish then
+      error(
+        'Overlapping edits: edit ' .. i .. ' starts before previous edit ends'
+      )
+    end
+  end
+
+  -- Apply edits to create new content
+  local parts = {}
+  local last = 1
+  for _, edit in ipairs(processed_edits) do
+    table.insert(parts, content:sub(last, edit.start - 1))
+    table.insert(parts, edit.replacement_string)
+    last = edit.finish + 1
+  end
+  table.insert(parts, content:sub(last))
+  return table.concat(parts)
 end
 
 return M

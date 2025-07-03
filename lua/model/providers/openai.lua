@@ -1,5 +1,7 @@
+local model = require('model')
 local util = require('model.util')
 local sse = require('model.util.sse')
+local tools_handler = require('model.tools.handler')
 
 local M = {}
 
@@ -29,6 +31,7 @@ local function extract_chat_data(item)
     return {
       content = (data.choices[1].delta or {}).content,
       finish_reason = data.choices[1].finish_reason,
+      tool_calls = (data.choices[1].delta or {}).tool_calls,
     }
   end
 end
@@ -63,6 +66,20 @@ function M.request_completion(handlers, params, options)
 
   local completion = ''
 
+  local tool_handler
+  if options.enable_tools then
+    tool_handler = tools_handler.create(handlers, model.opts.tools)
+    tool_handler.transform_messages(params)
+
+    local tool_uses = tool_handler.get_uses(params)
+
+    if next(tool_uses) ~= nil then
+      return tool_handler.run(tool_uses)
+    end
+  else
+    tool_handler = tools_handler.noop
+  end
+
   return sse.curl_client({
     headers = headers,
     method = 'POST',
@@ -86,10 +103,11 @@ function M.request_completion(handlers, params, options)
         if data.content ~= nil then
           completion = completion .. data.content
           handlers.on_partial(data.content)
-        end
-
-        if data.finish_reason ~= nil then
-          handlers.on_finish(completion, data.finish_reason)
+        elseif data.tool_calls ~= nil then
+          tool_handler.partial(data.tool_calls)
+        elseif data.finish_reason ~= nil then
+          tool_handler.finish()
+          handlers.on_finish(nil, data.finish_reason)
         end
       end
     end,

@@ -40,6 +40,82 @@ function M.scroll(text, rate, set, size)
   end
 end
 
+--- @param seg? Segment Optional segment to place the marquee after
+--- @param label? string Optional string to place after the spinner
+--- @param hl? string Optional highlight group for the marquee segment. Defaults to 'Comment'.
+function M.spinner(seg, label, hl)
+  local spinner_frames = {
+    '⠈⠉',
+    ' ⠙',
+    ' ⠸',
+    ' ⢰',
+    ' ⣠',
+    '⢀⣀',
+    '⣀⡀',
+    '⣄ ',
+    '⡆ ',
+    '⠇ ',
+    '⠋ ',
+    '⠉⠁',
+  }
+  local frame_index = 1
+  local run = true
+  local start_time = vim.loop.now()
+
+  local spinner_seg
+  if seg then
+    local handler_seg = seg.details()
+    spinner_seg = segment.create_segment_at(
+      handler_seg.details.end_row,
+      handler_seg.details.end_col,
+      hl or 'Comment'
+    )
+  end
+
+  local function update_spinner()
+    vim.defer_fn(function()
+      if run then
+        local elapsed = math.floor((vim.loop.now() - start_time) / 1000)
+        local spinner_text = spinner_frames[frame_index]
+        if label then
+          spinner_text = spinner_text .. ' ' .. label .. ' (' .. elapsed .. 's)'
+        end
+
+        if spinner_seg then
+          spinner_seg.set_virt(spinner_text)
+        end
+
+        frame_index = frame_index + 1
+        if frame_index > #spinner_frames then
+          frame_index = 1
+        end
+
+        update_spinner()
+      end
+    end, 80)
+  end
+
+  update_spinner()
+
+  local did_stop = false
+
+  local function cancel()
+    if not did_stop then
+      if spinner_seg then
+        spinner_seg.set_virt('')
+      end
+      run = false
+      did_stop = true
+    end
+  end
+
+  local function update(new_label)
+    label = new_label
+  end
+
+  return cancel, update
+end
+
 --- @param text string The text to display either as a marquee or notification.
 --- @param seg? Segment segment to place the marquee after
 --- @param hl? string Optional highlight group for the marquee segment. Defaults to 'Comment'.

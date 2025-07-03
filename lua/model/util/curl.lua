@@ -57,7 +57,7 @@ local function run_curl(opts, stream, on_stdout, on_error, on_exit, on_headers)
 
   if M._is_debugging then
     util.show(args, 'curl args')
-    util.show(input, 'curl body')
+    util.show(vim.json.decode(input), 'curl body')
   end
 
   local on_curl_out = on_stdout
