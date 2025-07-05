@@ -1,86 +1,13 @@
-local segment = require('model.util.segment')
 local util = require('model.util')
+local files = require('model.util.files')
+local segment = require('model.util.segment')
+local juice = require('model.util.juice')
 local provider = require('model.core.provider')
 local scopes = require('model.core.scopes')
 local chat = require('model.core.chat')
 local input = require('model.core.input')
 
 local M = {}
-
-local function yank_with_line_numbers_and_filename(register, range)
-  register = register or '"'
-
-  local file_text = ''
-  do
-    local lines, filename, buf_name
-    do
-      buf_name = vim.fn.expand('%')
-      if buf_name ~= '' then
-        filename = util.path.relative_norm(buf_name)
-      else
-        filename = '[No Name]'
-      end
-
-      if range == nil then
-        lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      else
-        lines =
-          vim.api.nvim_buf_get_lines(0, range.start - 1, range.stop, false)
-        filename = filename .. '#L' .. range.start .. '-L' .. range.stop
-      end
-    end
-
-    local file_info = 'File: `' .. filename .. '`\n````'
-    local filetype = vim.fn.expand('%:e')
-
-    if filetype and filetype ~= '' then
-      file_info = file_info .. filetype .. '\n'
-    else
-      file_info = file_info .. '\n'
-    end
-
-    file_text = file_info .. table.concat(lines, '\n') .. '\n````\n'
-  end
-
-  local diagnostic_text = ''
-  do
-    local diagnostics
-    do
-      if range == nil then
-        diagnostics = vim.diagnostic.get(0)
-      else
-        local start_zero_idx = range.start - 1
-        local stop_zero_idx = range.stop - 1
-
-        diagnostics = vim.tbl_filter(function(d)
-          local lnum = d.lnum
-          return lnum >= start_zero_idx and lnum <= stop_zero_idx
-        end, vim.diagnostic.get(0))
-      end
-    end
-
-    if #diagnostics > 0 then
-      local lines = { '\nDiagnostics:\n````' }
-
-      for _, d in ipairs(diagnostics) do
-        local severity = vim.diagnostic.severity[d.severity]
-        table.insert(
-          lines,
-          string.format('[%s] L%d: %s', severity, d.lnum + 1, d.message)
-        )
-      end
-
-      table.insert(lines, '````')
-      diagnostic_text = table.concat(lines, '\n')
-    end
-  end
-
-  local result = file_text .. diagnostic_text
-
-  vim.fn.setreg(register, result)
-
-  return result
-end
 
 local function command_request_completion(cmd_params)
   ---Gets the first arg as the prompt name
@@ -197,11 +124,64 @@ local function setup_commands()
   })
 
   vim.api.nvim_create_user_command('Mshow', function()
-    local seg = segment.query(util.cursor.position())
-    if seg then
-      flash(10, 80, seg, 'DiffChange', util.noop)
+    local segs = segment.query_all(util.cursor.position())
+    if #segs then
+      for _, seg in ipairs(segs) do
+        if seg.data and seg.data.info then
+          local buf = vim.api.nvim_create_buf(false, true)
+          vim.api.nvim_buf_set_option(buf, 'filetype', 'markdown')
+          local win = vim.api.nvim_open_win(buf, true, {
+            relative = 'cursor',
+            width = 80,
+            height = 20,
+            row = 1,
+            col = 0,
+            style = 'minimal',
+            border = 'single',
+          })
+
+          local stop
+          do
+            stop = juice.animate(function()
+              if not vim.api.nvim_win_is_valid(win) then
+                stop()
+                return
+              end
+
+              vim.api.nvim_buf_set_lines(
+                buf,
+                0,
+                -1,
+                false,
+                vim.split(seg.data.info, '\n')
+              )
+            end, 250)
+
+            -- Close window when it loses focus
+            vim.api.nvim_create_autocmd('WinLeave', {
+              buffer = buf,
+              once = true,
+              callback = function()
+                if vim.api.nvim_win_is_valid(win) then
+                  vim.api.nvim_win_close(win, true)
+                end
+                stop()
+              end,
+            })
+          end
+        end
+        util.show('No info data')
+      end
+    else
+      util.eshow('No segment here')
     end
   end, {
+    range = true,
+    force = true,
+    desc = 'Show the completion under the cursor. If it has info, show in preview.',
+  })
+
+  vim.api.nvim_create_user_command('Mselect', function() end, {
     range = true,
     force = true,
     desc = 'Show the completion under the cursor',
@@ -302,7 +282,6 @@ local function setup_commands()
 
       if vim.o.ft == 'mchat' then
         -- copy current messages to a new built buffer with target settings
-
         local current = chat.parse(vim.api.nvim_buf_get_lines(0, 0, -1, false))
 
         local target = chat.build_contents(chat_prompt, input_context)
@@ -386,7 +365,7 @@ local function setup_commands()
   end, {})
 
   vim.api.nvim_create_user_command('Myank', function(opts)
-    yank_with_line_numbers_and_filename(
+    files.yank_with_line_numbers_and_filename(
       opts.args,
       opts.range == 2 and { start = opts.line1, stop = opts.line2 } or nil
     )
@@ -397,12 +376,28 @@ local function setup_commands()
 
   local qflist = require('model.util.qflist')
 
-  vim.api.nvim_create_user_command('MCadd', qflist.add, {})
-  vim.api.nvim_create_user_command('MCremove', qflist.remove, {})
+  vim.api.nvim_create_user_command('MCadd', function()
+    qflist.add()
+  end, {})
+  vim.api.nvim_create_user_command('MCremove', function()
+    qflist.remove()
+  end, {})
   vim.api.nvim_create_user_command('MCclear', qflist.clear, {})
   vim.api.nvim_create_user_command('MCpaste', function()
     vim.api.nvim_put(vim.fn.split(qflist.get_text(), '\n'), 'l', true, true)
   end, {})
+  vim.api.nvim_create_user_command('Mterm', function(opts)
+    local cmd = table.concat(opts.fargs or {}, ' ')
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_option(buf, 'scrollback', 1)
+    vim.api.nvim_set_current_buf(buf)
+    vim.fn.termopen(cmd)
+    vim.cmd('startinsert')
+    qflist.add(buf)
+  end, {
+    nargs = '*',
+    desc = 'Open terminal with scrollback=1 and add to qflist',
+  })
 end
 
 local function setup_treesitter_info()

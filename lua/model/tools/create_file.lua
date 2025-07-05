@@ -1,4 +1,5 @@
 local util = require('model.util')
+local files = require('model.util.files')
 
 local function path_is_absolute(path)
   -- cross-platform (windows, unix) check that path is relative
@@ -29,7 +30,7 @@ return {
     },
     required = { 'path', 'content' },
   },
-  invoke = function(args)
+  invoke = function(args, callback)
     if type(args.path) ~= 'string' then
       error('Invalid path: must be a string')
     end
@@ -52,30 +53,62 @@ return {
 
     local already_existed = vim.fn.filereadable(args.path) == 1
 
-    -- Schedule the buffer operations to run in the main thread
-    vim.schedule(function()
-      -- Open a new tab
-      vim.cmd('tabnew')
+    -- Create a new buffer and set its content
+    local bufnr = vim.api.nvim_create_buf(true, false)
+    vim.api.nvim_buf_set_lines(
+      bufnr,
+      0,
+      -1,
+      false,
+      vim.split(args.content, '\n')
+    )
+    vim.api.nvim_buf_set_name(bufnr, args.path)
+    vim.api.nvim_buf_set_option(
+      bufnr,
+      'filetype',
+      vim.filetype.match({ filename = args.path }) or ''
+    )
 
-      -- Create a new buffer and set its content
-      vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(args.content, '\n'))
+    -- Display a message
+    if already_existed then
+      util.show('Creating file that already exists: ' .. args.path)
+    else
+      util.show('Opened buffer for new file: ' .. args.path)
+    end
 
-      -- Set the buffer's file name and filetype
-      vim.api.nvim_buf_set_name(0, args.path)
-      vim.api.nvim_buf_set_option(
-        0,
-        'filetype',
-        vim.filetype.match({ filename = args.path }) or ''
-      )
+    local latest_content = nil
 
-      -- Display a message
-      if already_existed then
-        util.show('Creating file that already exists: ' .. args.path)
+    local function handle_exit()
+      if latest_content then
+        callback(latest_content)
       else
-        util.show('Opened buffer for new file: ' .. args.path)
+        callback(nil, 'Buffer exited without saving')
       end
+    end
+
+    -- Update latest_content on each write
+    vim.api.nvim_create_autocmd('BufWritePost', {
+      buffer = bufnr,
+      callback = function()
+        latest_content = files.yank_with_line_numbers_and_filename()
+      end,
+    })
+
+    -- Handle buffer unload (call callback with latest saved content or error)
+    vim.api.nvim_create_autocmd('BufLeave', {
+      buffer = bufnr,
+      once = true,
+      callback = handle_exit,
+    })
+
+    -- Schedule opening the buffer in a new tab
+    vim.schedule(function()
+      vim.cmd('tabnew')
+      vim.api.nvim_set_current_buf(bufnr)
     end)
 
-    return 'Created file: ' .. args.path
+    return function()
+      -- Cancel function (no-op since we can't cancel the scheduled operation)
+    end
   end,
 }

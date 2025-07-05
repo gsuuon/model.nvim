@@ -1,43 +1,43 @@
 local segment = require('model.util.segment')
 local system = require('model.util.system')
+local util = require('model.util')
 
 local M = {}
 
 M.can_say = false
 M.custom_say = nil -- fun(text: string, on_finish: fun()) override this to use custom say function
 
-function M.scroll(text, rate, set, size)
-  local run = true
+function M.animate(render, interval)
+  local stop = false
 
-  local function scroll_(t)
+  local function run()
     vim.defer_fn(function()
-      if run then
-        local head = t:sub(1, 1)
-        local tail = t:sub(2, #t)
-        local text_ = tail .. head
-
-        if size then
-          set('<' .. text_:sub(1, size) .. '>')
-        else
-          set('<' .. text_ .. '>')
-        end
-
-        return scroll_(text_)
+      if not stop then
+        render()
+        run()
       end
-    end, rate)
+    end, interval)
   end
 
-  scroll_(text)
-
-  local did_stop = false
+  run()
 
   return function()
-    if not did_stop then
-      set('')
-      run = false
-      did_stop = true
-    end
+    stop = true
   end
+end
+
+function M.scroll(text, rate, set, size)
+  return M.animate(function()
+    local head = text:sub(1, 1)
+    local tail = text:sub(2, #text)
+    text = tail .. head
+
+    if size then
+      set('<' .. text:sub(1, size) .. '>')
+    else
+      set('<' .. text .. '>')
+    end
+  end, rate)
 end
 
 --- @param seg? Segment Optional segment to place the marquee after
@@ -59,9 +59,9 @@ function M.spinner(seg, label, hl)
     '⠉⠁',
   }
   local frame_index = 1
-  local run = true
   local start_time = vim.loop.now()
 
+  ---@type Segment
   local spinner_seg
   if seg then
     local handler_seg = seg.details()
@@ -70,42 +70,35 @@ function M.spinner(seg, label, hl)
       handler_seg.details.end_col,
       hl or 'Comment'
     )
+  else
+    local pos = util.cursor.position()
+
+    spinner_seg = segment.create_segment_at(pos.row, pos.col, hl or 'Comment')
   end
 
-  local function update_spinner()
-    vim.defer_fn(function()
-      if run then
-        local elapsed = math.floor((vim.loop.now() - start_time) / 1000)
-        local spinner_text = spinner_frames[frame_index]
-        if label then
-          spinner_text = spinner_text .. ' ' .. label .. ' (' .. elapsed .. 's)'
-        end
+  local function render()
+    local elapsed = math.floor((vim.loop.now() - start_time) / 1000)
+    local spinner_text = spinner_frames[frame_index]
+    if label then
+      spinner_text = spinner_text .. ' ' .. label .. ' (' .. elapsed .. 's)'
+    end
 
-        if spinner_seg then
-          spinner_seg.set_virt(spinner_text)
-        end
+    spinner_seg.set_virt(spinner_text)
 
-        frame_index = frame_index + 1
-        if frame_index > #spinner_frames then
-          frame_index = 1
-        end
-
-        update_spinner()
-      end
-    end, 80)
+    frame_index = frame_index + 1
+    if frame_index > #spinner_frames then
+      frame_index = 1
+    end
   end
 
-  update_spinner()
-
-  local did_stop = false
+  local stop = M.animate(render, 125)
+  local stopped = false
 
   local function cancel()
-    if not did_stop then
-      if spinner_seg then
-        spinner_seg.set_virt('')
-      end
-      run = false
-      did_stop = true
+    if not stopped then
+      spinner_seg.delete()
+      stop()
+      stopped = true
     end
   end
 
@@ -113,7 +106,7 @@ function M.spinner(seg, label, hl)
     label = new_label
   end
 
-  return cancel, update
+  return cancel, update, spinner_seg
 end
 
 --- @param text string The text to display either as a marquee or notification.

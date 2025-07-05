@@ -2,6 +2,8 @@ local model = require('model')
 local util = require('model.util')
 local sse = require('model.util.sse')
 local tools_handler = require('model.tools.handler')
+local juice = require('model.util.juice')
+local format = require('model.format.openai')
 
 local M = {}
 
@@ -49,7 +51,7 @@ end
 
 ---@param handlers StreamHandlers
 ---@param params? any Additional options for OpenAI endpoint
----@param options? { url?: string, endpoint?: string, authorization?: string } Request endpoint and url. Defaults to 'https://api.openai.com/v1/' and 'chat/completions'. `authorization` overrides the request auth header. If url is provided the environment key will not be sent, you'll need to provide an authorization.
+---@param options? { url?: string, endpoint?: string, authorization?: string, tools?: string[] | boolean, debug?: boolean } Request endpoint and url. Defaults to 'https://api.openai.com/v1/' and 'chat/completions'. `authorization` overrides the request auth header. If url is provided the environment key will not be sent, you'll need to provide an authorization.
 function M.request_completion(handlers, params, options)
   options = options or {}
 
@@ -66,28 +68,37 @@ function M.request_completion(handlers, params, options)
 
   local completion = ''
 
-  local tool_handler
-  if options.enable_tools then
-    tool_handler = tools_handler.create(handlers, model.opts.tools)
-    tool_handler.transform_messages(params)
+  local stop_marquee = util.noop
+  local waiting_first_response = true
 
+  local tool_chunk_handler = tools_handler.chunk(handlers.on_partial)
+
+  if options.tools then
+    local tool_handler = tools_handler.tool(model.opts.tools, options.tools)
     local tool_uses = tool_handler.get_uses(params)
 
     if next(tool_uses) ~= nil then
       return tool_handler.run(tool_uses)
     end
-  else
-    tool_handler = tools_handler.noop
+
+    params.tools =
+      format.build_tool_definitions(tool_handler.get_equipped_tools())
   end
 
   return sse.curl_client({
     headers = headers,
     method = 'POST',
     url = util.path.join(options.url or 'https://api.openai.com/v1/', endpoint),
-    body = vim.tbl_deep_extend('force', default_params, params),
+    body = util.tap_if(
+      vim.tbl_deep_extend('force', default_params, params, {
+        messages = format.transform_messages(params.messages),
+      }),
+      options.debug
+    ),
   }, {
     on_message = function(message, pending)
       local data = extract_data(message.data)
+      stop_marquee()
 
       if data == nil then
         if not message.data == '[DONE]' then
@@ -104,18 +115,38 @@ function M.request_completion(handlers, params, options)
           completion = completion .. data.content
           handlers.on_partial(data.content)
         elseif data.tool_calls ~= nil then
-          tool_handler.partial(data.tool_calls)
+          for _, tool_call_partial in ipairs(data.tool_calls) do
+            if tool_call_partial['function'] then
+              local fn = tool_call_partial['function']
+
+              if tool_call_partial.id and fn.name then
+                tool_chunk_handler.new_call(fn.name, tool_call_partial.id)
+              end
+
+              if fn.arguments then
+                tool_chunk_handler.arg_partial(fn.arguments)
+              end
+            end
+          end
         elseif data.finish_reason ~= nil then
-          tool_handler.finish()
+          tool_chunk_handler.finish()
           handlers.on_finish(nil, data.finish_reason)
+        elseif waiting_first_response then
+          waiting_first_response = false
+          handlers.on_partial('') -- stop spinner, we have a response
+          stop_marquee = juice.spinner(handlers.segment, 'Thinking...')
         end
       end
     end,
     on_other = function(content)
+      stop_marquee()
       -- Non-SSE message likely means there was an error
       handlers.on_error(content, 'OpenAI API error')
     end,
-    on_error = handlers.on_error,
+    on_error = function(err)
+      stop_marquee()
+      handlers.on_error(err)
+    end,
   })
 end
 

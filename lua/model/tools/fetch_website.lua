@@ -26,11 +26,11 @@ return {
       headers = args.headers or {},
       body = args.body,
     }, function(text)
-      if not canceled and callback then
+      if not canceled then
         callback(text)
       end
     end, function(error_text)
-      if not canceled and callback then
+      if not canceled then
         callback(nil, error_text)
       end
     end)

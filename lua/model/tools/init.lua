@@ -1,5 +1,9 @@
--- directory of the default tools
--- add new tools here to include as part of default set
+---@class Tool
+---@field description string
+---@field parameters table
+---@field invoke fun(args: table, callback: fun(result: string)): string | fun(): nil takes args and optionally a callback, returns a string result or a cancel function. If cancel function is returned, the callback must be called to resolve the tool use
+
+---@type table<string, Tool>
 return {
   fetch_website = require('model.tools.fetch_website'),
   read_file = require('model.tools.read_file'),
@@ -10,4 +14,5 @@ return {
   list_buffers = require('model.tools.list_buffers'),
   get_buffer_contents = require('model.tools.get_buffer_contents'),
   git = require('model.tools.git'),
+  hand_over = require('model.tools.hand_over'),
 }

@@ -6,6 +6,7 @@ local util = require('model.util')
 ---@field set_text fun(text: string): nil
 ---@field set_virt fun(text: string): nil
 ---@field clear_hl fun(): nil
+---@field delete fun(): nil
 ---@field data table
 ---@field highlight fun(hl_group: string): nil
 ---@field details fun(): {row: number, col: number, details: table, bufnr: number}
@@ -97,7 +98,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
 
     local virt_lines = vim.tbl_map(function(line)
       return { { line, _hl_group } }
-    end, util.string.split_char(virt_text, '\n'))
+    end, vim.split(virt_text, '\n'))
 
     local t = table.remove(virt_lines, 1)
 
@@ -219,16 +220,18 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     delete = vim.schedule_wrap(function()
       local mark = get_details()
 
-      local replacement = _data.original or {}
+      if _data.original then
+        vim.api.nvim_buf_set_text(
+          bufnr,
+          mark.row,
+          mark.col,
+          mark.details.end_row,
+          mark.details.end_col,
+          _data.original
+        )
+      end
 
-      vim.api.nvim_buf_set_text(
-        bufnr,
-        mark.row,
-        mark.col,
-        mark.details.end_row,
-        mark.details.end_col,
-        replacement
-      )
+      vim.api.nvim_buf_del_extmark(bufnr, M.ns_id(), _ext_id)
     end),
 
     ext_id = _ext_id,
@@ -342,8 +345,8 @@ function M.query(pos)
     local details = mark[4]
 
     local stop = {
-      row = details.end_row,
-      col = details.end_col,
+      row = details.end_row or mark[2],
+      col = details.end_col or util.COL_ENTIRE_LINE, -- takes the whole line
     }
 
     if util.position.is_bounded(pos, start, stop) then
@@ -356,6 +359,42 @@ function M.query(pos)
       end
     end
   end
+end
+
+function M.query_all(pos)
+  local extmark_details =
+    vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, { details = true })
+
+  local results = {}
+
+  -- iterate backwards so recent markers are higher
+  for idx = #extmark_details, 1, -1 do
+    local mark = extmark_details[idx]
+
+    local start = {
+      row = mark[2],
+      col = mark[3],
+    }
+
+    local details = mark[4]
+
+    local stop = {
+      row = details.end_row or mark[2],
+      col = details.end_col or util.COL_ENTIRE_LINE, -- takes the whole line
+    }
+
+    if util.position.is_bounded(pos, start, stop) then
+      local ext_id = mark[1]
+
+      local seg = segments_cache[ext_id]
+
+      if seg ~= nil then
+        table.insert(results, seg)
+      end
+    end
+  end
+
+  return results
 end
 
 M._debug = {}

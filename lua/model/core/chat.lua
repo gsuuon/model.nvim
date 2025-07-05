@@ -13,9 +13,15 @@ local M = {}
 ---@field params? table Static request parameters
 ---@field options? table Provider options
 
+---@class DataSection
+---@field label? string
+---@field content string
+
 ---@class ChatMessage
 ---@field role 'user' | 'assistant'
----@field content string
+---@field content string Content without data sections
+---@field data_sections DataSection[]
+---@field raw_content string Full content including data section unparsed text
 
 ---@alias ChatConfig { system?: string, params?: table, options?: table }
 
@@ -26,7 +32,7 @@ local M = {}
 --- Splits lines into array of { role: 'user' | 'assistant', content: string }
 --- If first line starts with '> ', then the rest of that line is system message
 ---@param text string[] Text of buffer. '\n======\n' denote alternations between user and assistant roles
----@return { messages: { role: 'user'|'assistant', content: string}[], system?: string }
+---@return { messages: ChatMessage[], system?: string, last_message_has_separator: boolean }
 local function split_messages(text)
   local messages = {}
 
@@ -34,14 +40,31 @@ local function split_messages(text)
 
   local chunk_lines = {}
   local chunk_is_user = true
+  local last_message_has_separator = true
 
   --- Insert message and reset/toggle chunk state. User text is trimmed.
   local function add_message()
-    local text_ = table.concat(chunk_lines, '\n')
+    local aggregate_text = table.concat(chunk_lines, '\n')
+
+    ---@type DataSection[]
+    local data_sections = {}
+
+    local clean_content = aggregate_text:gsub(
+      '\n?<<<<<< (.-)\n(.-)\n>>>>>>\n?',
+      function(label, content)
+        table.insert(data_sections, {
+          label = label,
+          content = content,
+        })
+        return ''
+      end
+    )
 
     table.insert(messages, {
       role = chunk_is_user and 'user' or 'assistant',
-      content = chunk_is_user and vim.trim(text_) or text_,
+      content = vim.trim(clean_content),
+      data_sections = data_sections,
+      raw_content = aggregate_text,
     })
 
     chunk_lines = {}
@@ -64,12 +87,14 @@ local function split_messages(text)
 
   -- add text after last `======` if not empty
   if table.concat(chunk_lines, '') ~= '' then
+    last_message_has_separator = false
     add_message()
   end
 
   return {
     system = system,
     messages = messages,
+    last_message_has_separator = last_message_has_separator,
   }
 end
 
@@ -142,9 +167,10 @@ end
 --- the system instruction. The rest of the text is parsed as alternating
 --- user/assistant messages, with `\n======\n` delimiters.
 ---@param text string[]
----@return { contents: ChatContents, chat: string }
+---@return { contents: ChatContents, chat: string, trail: boolean }
 function M.parse(text)
   local parsed = parse_config(text)
+
   local messages_and_system = split_messages(parsed.rest)
   if messages_and_system.system ~= nil then
     parsed.config.system = messages_and_system.system
@@ -153,9 +179,12 @@ function M.parse(text)
   return {
     contents = {
       messages = messages_and_system.messages,
-      config = parsed.config,
+      config = vim.tbl_extend('force', parsed.config, {
+        system = messages_and_system.system,
+      }),
     },
     chat = parsed.chat,
+    last_message_has_separator = messages_and_system.last_message_has_separator,
   }
 end
 
@@ -183,6 +212,17 @@ function M.to_string(contents, name)
   for i, message in ipairs(contents.messages) do
     if i ~= 1 then
       result = result .. '\n======\n'
+    end
+
+    if message.data_sections then
+      for _, section in ipairs(message.data_sections) do
+        result = result
+          .. string.format(
+            '<<<<<< %s\n%s\n>>>>>>\n',
+            section.label,
+            section.content
+          )
+      end
     end
 
     if message.role == 'user' then
@@ -286,11 +326,13 @@ function M.run_chat(opts)
 
   local run_params =
     chat_prompt.run(parsed.contents.messages, parsed.contents.config)
+
   if run_params == nil then
     error('Chat prompt run() returned nil')
   end
 
   local starter_separator = needs_nl(buf_lines) and '\n======\n' or '======\n'
+
   local seg
 
   local last_msg = parsed.contents.messages[#parsed.contents.messages]
@@ -306,15 +348,19 @@ function M.run_chat(opts)
 
   seg.clear_hl()
 
+  local stop_spinner = juice.spinner(seg, 'Waiting for response.. ')
+
   local sayer = juice.sayer()
 
   ---@type StreamHandlers
   local handlers = {
     on_partial = function(text)
+      stop_spinner()
       seg.add(text)
       sayer.say(text)
     end,
     on_finish = function(text, reason)
+      stop_spinner()
       sayer.finish()
 
       if text then
@@ -338,6 +384,7 @@ function M.run_chat(opts)
       end
     end,
     on_error = function(err, label)
+      stop_spinner()
       util.notify(vim.inspect(err), vim.log.levels.ERROR, { title = label })
       seg.set_text('')
       seg.clear_hl()
@@ -352,22 +399,26 @@ function M.run_chat(opts)
     options = vim.tbl_deep_extend('force', options, chat_prompt.runOptions())
   end
 
-  if type(run_params) == 'function' then
-    run_params(function(async_params)
-      local merged_params = vim.tbl_deep_extend('force', params, async_params)
-
+  local function make_request(params_from_run)
+    local ok, err = pcall(function()
       seg.data.cancel = chat_prompt.provider.request_completion(
         handlers,
-        merged_params,
+        vim.tbl_deep_extend('force', params, params_from_run),
         options
       )
     end)
+    if not ok then
+      stop_spinner()
+      util.eshow(err)
+    end
+  end
+
+  if type(run_params) == 'function' then
+    run_params(function(async_run_params)
+      make_request(async_run_params)
+    end)
   else
-    seg.data.cancel = chat_prompt.provider.request_completion(
-      handlers,
-      vim.tbl_deep_extend('force', params, run_params),
-      options
-    )
+    make_request(run_params)
   end
 end
 
