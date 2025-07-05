@@ -1,32 +1,81 @@
 local util = require('model.util')
 
 -- Tool handling utilities
-local TOOL_CALL_DELIM = '<<<<<< tool_calls\n```js\n'
-local TOOL_CALL_DELIM_END = '\n```\n>>>>>>'
+local TOOL_CALL_DELIM = '<<<<<< tool_calls\n'
+local TOOL_CALL_DELIM_END = '\n>>>>>>'
 
-local function create_tool_handler(request_handlers, available_tools)
-  local tool_calls = {}
+local function create_tool_chunk_handlers(emit)
   local has_tool_calls = false
-  local current_index = nil
 
-  local function init_tool_call(call)
-    if not has_tool_calls then
-      has_tool_calls = true
-      request_handlers.on_partial('\n' .. TOOL_CALL_DELIM .. '[\n')
+  return {
+    ---@param name string
+    ---@param id string
+    new_call = function(name, id)
+      if not has_tool_calls then
+        has_tool_calls = true
+        -- the newline before is necessary, sometimes we already have several -- would be nice to skip this if we do to avoid unecessary ugly spacing
+        emit('\n' .. TOOL_CALL_DELIM .. '[\n')
+      else
+        emit('"\n  },\n')
+      end
+
+      emit(([[
+  {
+    "id": "%s",
+    "name": "%s",
+    "arguments": "]]):format(id, name))
+    end,
+    arg_partial = function(partial)
+      emit(
+        partial
+          :gsub('\\', '\\\\')
+          :gsub('"', '\\"')
+          :gsub('\n', '\\n')
+          :gsub('\r', '\\r')
+          :gsub('\t', '\\t')
+      )
+    end,
+    finish = function()
+      if has_tool_calls then
+        emit('"\n  }\n]' .. TOOL_CALL_DELIM_END)
+      end
+    end,
+  }
+end
+
+---@param available_tools table<string, table> Map of available tool names to their definitions
+---@param allowed_tools string[] | boolean An allowlist of tools, or true for all, or falsy for none
+local function create_tool_handler(available_tools, allowed_tools)
+  ---@type table<string, Tool>
+  local equipped_tools = {}
+  do
+    if allowed_tools == nil or type(allowed_tools) == 'boolean' then
+      if allowed_tools == true then
+        for tool_name in util.module.autopairs(available_tools) do
+          equipped_tools[tool_name] = available_tools[tool_name]
+        end
+      else
+        -- allowed_tools is falsy, so we just provide no-op handlers
+        -- these handlers are weaved into the handlers the provider builds so always need to be available
+        return {
+          partial = util.noop,
+          finish = util.noop,
+        }
+      end
     else
-      request_handlers.on_partial('"\n    }\n  },\n')
+      if vim.islist(allowed_tools) then
+        for _, tool_name in pairs(allowed_tools) do
+          if available_tools[tool_name] then
+            equipped_tools[tool_name] = available_tools[tool_name]
+          else
+            util.eshow('Missing tool: ' .. tool_name)
+          end
+        end
+      end
     end
-
-    request_handlers.on_partial(('  {\n    "id": "%s",\n'):format(call.id))
-    request_handlers.on_partial(('    "type": "%s",\n'):format(call.type))
-    request_handlers.on_partial('    "function": {\n')
-    request_handlers.on_partial(
-      ('      "name": "%s",\n'):format(call['function'].name)
-    )
-    request_handlers.on_partial('      "arguments": "')
   end
 
-  local function run_tool(tool_uses)
+  local function run_tool(tool_uses, on_finish)
     if next(tool_uses) ~= nil then
       local results = {}
       local cancels = {}
@@ -51,7 +100,7 @@ local function create_tool_handler(request_handlers, available_tools)
                   or vim.json.encode(content)
               )
           end
-          request_handlers.on_finish(result_str)
+          on_finish(result_str)
         end
       end
 
@@ -97,22 +146,33 @@ local function create_tool_handler(request_handlers, available_tools)
     local last_msg = params.messages[#params.messages]
     local tool_queue = {}
 
-    if last_msg and last_msg.role == 'assistant' and last_msg.tool_calls then
-      for _, tool_call in ipairs(last_msg.tool_calls) do
-        local tool_name = tool_call['function'].name
-        local tool = available_tools[tool_name]
+    if last_msg and last_msg.role == 'assistant' and last_msg.data_sections then
+      for _, section in ipairs(last_msg.data_sections) do
+        if section.label == 'tool_calls' then
+          local tool_calls = util.json.decode(section.content)
 
-        if tool then
-          tool_queue[tool_call.id] = function(resolve)
-            local args, err = util.json.decode(tool_call['function'].arguments)
-            if args then
-              return tool.invoke(args, resolve)
+          for _, tool_call in ipairs(tool_calls or {}) do
+            local tool_name = tool_call.name
+            local tool = equipped_tools[tool_name]
+
+            if tool then
+              tool_queue[tool_call.id] = function(resolve)
+                if tool_call.arguments == '' then
+                  return tool.invoke({}, resolve)
+                else
+                  local args, err = util.json.decode(tool_call.arguments)
+
+                  if args then
+                    return tool.invoke(args, resolve)
+                  else
+                    error(err)
+                  end
+                end
+              end
             else
-              return nil, err
+              util.eshow('Unknown tool: ' .. tool_name)
             end
           end
-        else
-          util.eshow('Unknown tool: ' .. tool_name)
         end
       end
     end
@@ -120,154 +180,16 @@ local function create_tool_handler(request_handlers, available_tools)
     return tool_queue
   end
 
-  local function transform_messages(params)
-    local transformed = {}
-
-    for _, msg in ipairs(params.messages) do
-      if msg.role == 'assistant' then
-        local content = msg.content or ''
-        local pattern = TOOL_CALL_DELIM .. '(.-)' .. TOOL_CALL_DELIM_END
-        local tool_block = content:match(pattern)
-
-        if tool_block then
-          local parsed, err = util.json.decode(tool_block)
-          if parsed then
-            local updated = {
-              content = content:gsub(
-                TOOL_CALL_DELIM .. '.-' .. TOOL_CALL_DELIM_END,
-                ''
-              ),
-              tool_calls = parsed,
-            }
-            table.insert(
-              transformed,
-              vim.tbl_deep_extend('force', msg, updated)
-            )
-          else
-            util.eshow(err, 'Tool block failed to parse')
-            table.insert(transformed, msg)
-          end
-        else
-          table.insert(transformed, msg)
-        end
-      else
-        local content = msg.content or ''
-        local tool_results = {}
-
-        local clean_content = content:gsub(
-          '<<<<<< tool_result: (%S+)\n(.-)\n>>>>>>',
-          function(id, result)
-            table.insert(tool_results, {
-              role = 'tool',
-              tool_call_id = id,
-              content = result,
-            })
-            return ''
-          end
-        )
-
-        if #tool_results > 0 then
-          for _, res in ipairs(tool_results) do
-            table.insert(transformed, res)
-          end
-          if clean_content ~= '' then
-            table.insert(
-              transformed,
-              vim.tbl_extend('keep', msg, { content = clean_content })
-            )
-          end
-        else
-          table.insert(transformed, msg)
-        end
-      end
-    end
-
-    -- Show warning if tool_results is immediately followed by an assistant message
-    if #transformed >= 2 then
-      local last = transformed[#transformed]
-      local prev = transformed[#transformed - 1]
-      if
-        last.role == 'assistant'
-        and prev.role == 'tool'
-        and last.tool_calls == nil
-      then
-        util.show(
-          'Warning: Tool use with a trailing assistant message is probably not supported. '
-            .. 'You can add your response to tool_results directly in the same message as the tool_block section.'
-        )
-      end
-    end
-
-    if available_tools and next(available_tools) ~= nil then
-      local tool_list = {}
-
-      for tool_name, tool in util.module.autopairs(available_tools) do
-        table.insert(tool_list, {
-          type = 'function',
-          ['function'] = {
-            name = tool_name,
-            description = tool.description,
-            parameters = tool.parameters,
-          },
-        })
-      end
-      params.tools = tool_list
-    end
-
-    params.messages = transformed
-    return params
-  end
-
   return {
-    partial = function(chunk_tool_calls)
-      for _, tool_call_partial in ipairs(chunk_tool_calls) do
-        local index = tool_call_partial.index or 0
-        local call = tool_call_partial
-
-        if not tool_calls[index + 1] then
-          tool_calls[index + 1] = {
-            id = call.id or '',
-            type = call.type or 'function',
-            ['function'] = {
-              name = call['function'] and call['function'].name or '',
-              arguments = call['function'] and call['function'].arguments or '',
-            },
-          }
-          current_index = index + 1
-          init_tool_call(tool_calls[current_index])
-        end
-
-        if call['function'] and call['function'].arguments then
-          local escaped = call['function'].arguments
-            :gsub('\\', '\\\\')
-            :gsub('"', '\\"')
-            :gsub('\n', '\\n')
-            :gsub('\r', '\\r')
-            :gsub('\t', '\\t')
-
-          tool_calls[current_index]['function'].arguments = tool_calls[current_index]['function'].arguments
-            .. escaped
-          request_handlers.on_partial(escaped)
-        end
-      end
-    end,
-    finish = function()
-      if has_tool_calls then
-        request_handlers.on_partial(
-          '"\n    }\n  }\n]' .. TOOL_CALL_DELIM_END .. '\n'
-        )
-      end
-    end,
     run = run_tool,
     get_uses = get_uses,
-    transform_messages = transform_messages,
+    get_equipped_tools = function()
+      return equipped_tools
+    end,
   }
 end
 
 return {
-  create = create_tool_handler,
-  noop = {
-    partial = util.noop,
-    finish = util.noop,
-  },
+  tool = create_tool_handler,
+  chunk = create_tool_chunk_handlers,
 }

@@ -11,7 +11,7 @@ https://github.com/gsuuon/model.nvim/assets/6422188/3af3e65d-d13c-4196-abe1-07d6
 - Chat file format
 - Tool use
 
-No floats or preview windows, just normal buffers and temporary extmarks. Nice if you prefer a buffer-centric workflow, or want to work with AI conversations like normal files.
+No floats or preview windows, just normal buffers and temporary extmarks. Nice if you prefer a buffer-centric workflow, or want to work with AI conversations like normal files (ie, a literate programming style).
 
 ### Contents
 - [Setup](#setup)
@@ -41,7 +41,7 @@ require('lazy').setup({
     'gsuuon/model.nvim',
 
     -- Don't need these if lazy = false
-    cmd = { 'M', 'Model', 'Mchat' },
+    cmd = { 'M', 'Model', 'Mchat', 'MCadd' },
     init = function()
       vim.filetype.add({
         extension = {
@@ -63,6 +63,7 @@ require('lazy').setup({
     --   require('model').setup({
     --     prompts = {..},
     --     chats = {..},
+    --     tools = {..},
     --     ..
     --   })
     --
@@ -93,20 +94,213 @@ require('model').setup({
 })
 ```
 
-
 ## Usage
-
-
 https://github.com/gsuuon/model.nvim/assets/6422188/ae00076d-3327-4d97-9cc1-41acffead327
 
 There are 2 modes of use:
- - completions, which alter your current buffer
- - chat, where you have multiturn conversations
+- [Chat](#chat) for multiturn conversations
+- [Completion](#completion) for single completions
 
-### Prompts
-**model.nvim** comes with some [starter prompts](./lua/model/prompts/starters.lua) and makes it easy to build your own prompt library. For an example of a more complex agent-like multi-step prompt where we curl for openapi schema, ask gpt for relevant endpoint, then include that in a final prompt look at the `openapi` starter prompt.
+### Chat
+`:Mchat [handler name]` to start chatting. `:Mchat <tab>` shows available handlers. This opens a new buffer with filetype `mchat`. Run `:Mchat` (no handler name) in this buffer to run the conversation.
 
-Prompts can have 5 different [modes](#segmentmode) which determine what happens to the response: append, insert, replace, buffer, insert_or_replace. The default is to append, and with no visual selection the default input is the entire buffer, so your response will be at the end of the file. Modes are configured on a per-prompt basis.
+Default chat handlers are defined in [`lua/model/prompts/chats.lua`](lua/model/prompts/chats.lua).
+
+#### Note on chats
+The name at the top of the mchat file is the _handler name_, not the provider. That means if you remove handlers, that file won't be runnable anymore.
+
+### Completion
+`:Model [handler name] [instruction]` or `:M [handler name] [instruction]` to run a completion. If you have a selection or instruction, the handler can use them to build the request.
+
+**model.nvim** comes with some [starter prompts](./lua/model/prompts/starters.lua). For an example of a more complex multi-step prompt where we curl for openapi schema, ask gpt for relevant endpoint, then include that in a final prompt look at the `openapi` starter prompt.
+
+Completion prompts can have 5 different [modes](#segmentmode) which determine what happens to the response: append, insert, replace, buffer, insert_or_replace. The default is to append, and with no visual selection the default input is the entire buffer, so your response will be at the end of the file. Modes are configured on a per-prompt basis.
+
+### Tools
+Tools are functions that the model can invoke to perform actions. Providers must inject tool definitions when building a request and parse the tool partials.
+
+Providers implementing tool use:
+- OpenAI 
+- Deepseek
+- Anthropic
+
+#### Usage
+Tools can be enabled by setting `options.tools = true` in your chat config:
+
+```mchat
+o3
+---
+{
+  options = {
+    tools = true
+  },
+  params = {
+    max_completion_tokens = 100000,
+    model = "o3"
+  }
+}
+---
+> You are an AI assistant.
+```
+
+`options.tools` can also be a list of allowed tools:
+
+```mchat
+oa-nano
+---
+{
+  options = {
+    tools = {'read_file', 'list_files'}
+  },
+  params = {
+    max_completion_tokens = 100000,
+    model = "gpt-4.1-nano"
+  }
+}
+---
+> You are an AI context builder assistant.
+```
+
+Model tool requests will be shown in a `tool_calls` data section in their JSON format.
+
+Run `:Mchat` in the chat buffer to invoke those tools and put the results into the next message. Verify the results, then run `:Mchat` again to send the results and continue the conversation.
+
+Only `tool_calls` of the last message of the conversation are run.
+
+Note: don't add another message after the tool results message - put your response directly into the tool response message content outside of the `tool_results` data sections. You can write whatever you want into the `tool_results` section. For example, if you don't like a set of changes you can replace the section contents with 'REJECTED' and your explanation.
+
+#### Default tools
+None of the default tools directly modify files. They show the results, it's up to you to take the changes you want.
+
+The following tools are available by default:
+- `create_file`: Create a new buffer with the file contents and name. You can then `:w` to save the file.
+- `rewrite_file`: Opens a diff view of the old and new file. Hit <tab> to accept changes (mapped to `dp]c`).
+- `fetch_website`: Fetch the contents of a website.
+- `list_buffers`: List all Neovim buffers.
+- `get_buffer_contents`: Get the contents of a buffer.
+- `git`: Execute Git commands.
+- `list_files`: List files in the git repository using `git ls-files`.
+- `read_file`: Read a file's contents.
+- `search_pattern`: Search for a pattern in files.
+
+##### `create_file`
+Opens a new tab with the file.
+
+You can edit or simply close without saving. The tool result shows the final file when you closed this buffer and any diagnostics. If you discarded the file, the result says so.
+
+Will show an error if the file already existed, but you can use `:w! [filename]` to overwrite if desired.
+
+##### `rewrite_file`
+Opens a new tab with a vertical diff split of the new file on the left, original on the right.
+
+Use `dp` or `do` to apply the changes you want to the original file. `<Tab>` is nmapped to `dp]c` so you can just hit `<tab>` on the left to rapidly take changes. Quit the new file buffer once you're satisfied. You can make other desired edits - once you 'BufLeave' the original file (e.g. with `:q` or `:x`), the final written version is returned as the tool result along with any diagnostics.
+
+#### Setup
+You can use your own tools by setting them to the `tools` table in the `model.setup` call. This overrides the default tools, so you should merge them or explicitly re-add the defaults you want to keep. Default tools are in [`lua/model/tools/`](lua/model/tools).
+
+```lua
+require('model').setup({
+  tools = {
+    my_tool = {
+      description = 'A description of my tool',
+      parameters = {
+        type = 'object',
+        properties = {
+          param1 = { type = 'string' },
+        },
+        required = { 'param1' },
+      },
+      invoke = function(args)
+        -- Do something with args.param1
+        return 'Result of my tool'
+      end,
+    },
+  },
+})
+```
+
+
+To create an asynchronous (callback) tool:
+```lua
+require('model').setup({
+  tools = {
+    my_tool = {
+      description = 'A description of my tool',
+      parameters = {
+        type = 'object',
+        properties = {
+          param1 = { type = 'string' },
+        },
+        required = { 'param1' },
+      },
+      invoke = function(args, callback)
+        vim.defer_fn(function()
+          -- Do something with args.param1
+          callback('Result of my tool')
+        end, 1000)
+
+        return function()
+          -- This function should cancel the action
+        end 
+      end,
+    },
+  },
+})
+```
+
+#### Note on usage
+Tools work like the rest of mchat buffers - you can save the .mchat file, exit neovim, open the file again, and continue the conversation. I find it helpful to have a base mchat that I start with for new conversations that has pre-existing tool uses. This helps to 1. encourage tool use, and 2. preload useful context. You can also manually edit tool use to correct minor mistakes or try variations. `:Mchat` with the last message containing a `tool_calls` block will invoke those tools.
+
+It's also useful to sometimes re-invoke tool calls, to do that just delete messages until the tool call is the last one and re-run `:Mchat`.
+
+````mchat
+reasonds
+---
+{
+  options = {
+    tools = true
+  },
+  params = {
+    max_tokens = 64000,
+    model = "deepseek-reasoner"
+  }
+}
+---
+> You are an AI coding assistant
+
+I'll give you a second to get acquainted with the project.
+
+======
+
+I'll explore the repository to gain some context.
+
+<<<<<< tool_calls
+```js
+[
+  {
+    "id": "call_0_98f9c03f-2dbf-4964-93c2-ca0b1c3f1c94",
+    "type": "function",
+    "function": {
+      "name": "list_files",
+      "arguments": "{\"path\": \".\"}"
+    }
+  },
+  {
+    "id": "call_0_40203437-4b82-4e32-abd4-6abb7c8dd837",
+    "type": "function",
+    "function": {
+      "name": "read_file",
+      "arguments": "{\"path\": \"README.md\"}"
+    }
+  }
+]
+```
+>>>>>>
+======
+````
+
+--- 
+
 
 ### Commands
 
@@ -122,6 +316,8 @@ Run a chat buffer
 #### Utilities
 Yank a file or range with diagnostics and filename
 - `:Myank` — in normal mode, yanks the entire file and diagnostics to the default register. In visual, yanks the given lines and diagnostics within the selected region. You can provide an argument to yank to a different register, e.g. `:Myank *<CR>`. Use `:Myank` then `p` to quickly add some context into a chat.
+
+- `:Mterm` — Same as `:e term://`, use like `:Mterm bash` but set scrollback to 1 and automatically add to quickfix list. Useful to open up a terminal that the LLM can automatically see if you've added `require('model.util.qflist').get_text()` to the prompt you use.
 
 ##### Telescope extension
 If you use [telescope](https://github.com/nvim-telescope/telescope.nvim), mchat buffers can be browsed with `:Telescope model mchat`.
@@ -213,11 +409,11 @@ https://user-images.githubusercontent.com/6422188/233773449-3b85355b-bad1-4e40-a
 Setup and usage
 </summary>
 
-### Requirements
+#### Requirements
   - Python 3.10+
   - `pip install numpy openai tiktoken`
 
-### Usage
+#### Usage
 Check the module functions exposed in [store](./lua/model/store/init.lua). This uses the OpenAI embeddings api to generate vectors and queries them by cosine similarity.
 
 To add items call into the `model.store` lua module functions, e.g.
@@ -617,122 +813,6 @@ require('model').setup({
 })
 ```
 
-## Tools
-Tools are functions that the model can invoke to perform actions. They are still in beta. 
-
-### Usage
-Only OpenAI and Deepseek providers are currently implemented. Tools can be enabled by setting `options.enable_tools = true` in your chat config:
-
-```mchat
-o3
----
-{
-  options = {
-    enable_tools = true
-  },
-  params = {
-    max_completion_tokens = 100000,
-    model = "o3"
-  }
-}
----
-> You are an AI assistant.
-```
-
-Model tool requests will be shown in a `<<<<<< tool_calls` section.
-
-Run `:Mchat` in the chat buffer to invoke those tools and put the results into the next message.
-
-Note: don't add another message after the tool results message - put your response directly into the tool response message content outside of the tool_results data sections.
-
-### Defaults
-The following tools are available by default:
-- `create_file`: Create a new buffer with the file contents and name. You can then `:w` to save the file.
-- `rewrite_file`: Opens a diff view of the old and new file. Hit <tab> to accept changes (mapped to `dp]c`).
-- `fetch_website`: Fetch the contents of a website.
-- `list_buffers`: List all Neovim buffers.
-- `get_buffer_contents`: Get the contents of a buffer.
-- `git`: Execute Git commands.
-- `list_files`: List files in the git repository using `git ls-files`.
-- `read_file`: Read a file's contents.
-- `search_pattern`: Search for a pattern in files.
-
-### Setup
-You can use your own tools by setting them to the `tools` table in the `model.setup` call. This currently overrides the default tools, so you should merge them or explicitly re-add the defaults you want to keep (look in the tools directory).
-
-```lua
-require('model').setup({
-  tools = {
-    my_tool = {
-      description = 'A description of my tool',
-      parameters = {
-        type = 'object',
-        properties = {
-          param1 = { type = 'string' },
-        },
-        required = { 'param1' },
-      },
-      invoke = function(args)
-        -- Do something with args.param1
-        return 'Result of my tool'
-      end,
-    },
-  },
-})
-```
-
-### Note on usage
-Tools work like the rest of mchat buffers - you can save the .mchat file, exit/reload, and continue the conversation. I find it helpful to have a base mchat that I start with for new conversations that has pre-existing tool uses. This helps to 1. encourage tool use, and 2. preload useful context. You can also manually edit tool use to correct minor mistakes or try variations. `:Mchat` with the last message containing a tool_calls block will invoke those tools.
-
-It's also useful to sometimes re-invoke tool calls, to do that just delete messages until the tool call is the last one and re-run `:Mchat`.
-
-````mchat
-reasonds
----
-{
-  options = {
-    enable_tools = true
-  },
-  params = {
-    max_tokens = 64000,
-    model = "deepseek-reasoner"
-  }
-}
----
-> You are an AI coding assistant
-
-I'll give you a second to get acquainted with the project.
-
-======
-
-I'll explore the repository to gain some context.
-
-<<<<<< tool_calls
-```js
-[
-  {
-    "id": "call_0_98f9c03f-2dbf-4964-93c2-ca0b1c3f1c94",
-    "type": "function",
-    "function": {
-      "name": "list_files",
-      "arguments": "{\"path\": \".\"}"
-    }
-  },
-  {
-    "id": "call_0_40203437-4b82-4e32-abd4-6abb7c8dd837",
-    "type": "function",
-    "function": {
-      "name": "read_file",
-      "arguments": "{\"path\": \"README.md\"}"
-    }
-  }
-]
-```
->>>>>>
-======
-````
-
---- 
 
 ## Reference
 The following are types and the fields they contain:

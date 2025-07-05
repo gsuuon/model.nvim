@@ -4,7 +4,7 @@ local M = {}
 
 M.secrets = {}
 
-function M.noop() end
+function M.noop(x) end
 
 function M.notify(msg, level, opts)
   if vim.in_fast_event() then
@@ -41,6 +41,14 @@ end
 
 function M.tap(x, opt)
   M.show(x, opt)
+  return x
+end
+
+function M.tap_if(x, cond)
+  if cond then
+    M.show(x)
+  end
+
   return x
 end
 
@@ -405,6 +413,7 @@ end
 -- pos is between start (inclusive) and final (exclusive)
 -- false if pos == start == final
 function M.position.is_bounded(pos, start, stop)
+  -- stop.row can be nil? huh
   return M.position.is_greater_eq(start, pos) and M.position.is_less(stop, pos)
 end
 

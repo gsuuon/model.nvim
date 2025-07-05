@@ -1,3 +1,5 @@
+local util = require('model.util')
+
 local function is_file_within_cwd(path)
   if not path or path == '' then
     return false
@@ -177,7 +179,7 @@ local function apply_edits(filename, content, edit_requests)
   return table.concat(parts)
 end
 
-local function show_diff(original_name, updated)
+local function show_diff(original_name, updated, on_show)
   vim.schedule(function()
     vim.cmd('tabnew')
     vim.cmd('set diffopt+=vertical')
@@ -202,8 +204,90 @@ local function show_diff(original_name, updated)
     vim.keymap.set('n', '<tab>', 'dp]c', { buffer = true, nowait = true })
 
     vim.cmd('diffsplit ' .. vim.fn.fnameescape(original_name))
+
+    local orig_bufnr = vim.api.nvim_get_current_buf()
+
     vim.cmd('wincmd h') -- Focus on the new version
+
+    if on_show then
+      on_show(orig_bufnr)
+    end
   end)
+end
+
+local function yank_with_line_numbers_and_filename(register, range)
+  register = register or '"'
+
+  local file_text = ''
+  do
+    local lines, filename, buf_name
+    do
+      buf_name = vim.fn.expand('%')
+      if buf_name ~= '' then
+        filename = util.path.relative_norm(buf_name)
+      else
+        filename = '[No Name]'
+      end
+
+      if range == nil then
+        lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      else
+        lines =
+          vim.api.nvim_buf_get_lines(0, range.start - 1, range.stop, false)
+        filename = filename .. '#L' .. range.start .. '-L' .. range.stop
+      end
+    end
+
+    local file_info = 'File: `' .. filename .. '`\n````'
+    local filetype = vim.fn.expand('%:e')
+
+    if filetype and filetype ~= '' then
+      file_info = file_info .. filetype .. '\n'
+    else
+      file_info = file_info .. '\n'
+    end
+
+    file_text = file_info .. table.concat(lines, '\n') .. '\n````'
+  end
+
+  local diagnostic_text = ''
+  do
+    local diagnostics
+    do
+      if range == nil then
+        diagnostics = vim.diagnostic.get(0)
+      else
+        local start_zero_idx = range.start - 1
+        local stop_zero_idx = range.stop - 1
+
+        diagnostics = vim.tbl_filter(function(d)
+          local lnum = d.lnum
+          return lnum >= start_zero_idx and lnum <= stop_zero_idx
+        end, vim.diagnostic.get(0))
+      end
+    end
+
+    if #diagnostics > 0 then
+      local lines = { '\nDiagnostics:\n````' }
+
+      for _, d in ipairs(diagnostics) do
+        local severity = vim.diagnostic.severity[d.severity]
+        table.insert(
+          lines,
+          string.format('[%s] L%d: %s', severity, d.lnum + 1, d.message)
+        )
+      end
+
+      table.insert(lines, '````')
+      diagnostic_text = table.concat(lines, '\n')
+    end
+  end
+
+  local result = file_text .. diagnostic_text
+
+  vim.fn.setreg(register, result)
+
+  return result
 end
 
 return {
@@ -214,4 +298,5 @@ return {
   build_line_offsets = build_line_offsets,
   apply_edits = apply_edits,
   show_diff = show_diff,
+  yank_with_line_numbers_and_filename = yank_with_line_numbers_and_filename,
 }

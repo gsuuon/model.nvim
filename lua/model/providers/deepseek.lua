@@ -3,6 +3,7 @@ local util = require('model.util')
 local sse = require('model.util.sse')
 local tools_handler = require('model.tools.handler')
 local juice = require('model.util.juice')
+local format = require('model.format.openai')
 
 -- Response extraction utilities
 local function extract_chunk(data)
@@ -23,26 +24,14 @@ end
 local REASONING_DELIM_START = '<<<<<< reasoning\n'
 local REASONING_DELIM_STOP = '\n>>>>>>\n'
 
-local function strip_reasoning(text)
-  local start_pos, end_pos =
-    text:find(REASONING_DELIM_START .. '.-' .. REASONING_DELIM_STOP)
-
-  return start_pos and text:sub(1, start_pos - 1) .. text:sub(end_pos + 1)
-    or text
-end
-
 local function create_reason_handler(handler, show_reasoning)
   local is_reasoning = false
 
-  local stop_marquee = juice.spinner(handler.segment, 'Waiting for a response')
-
-  local update_marquee = function(_) end
   local reason_count = 0
 
   if show_reasoning then
     return {
       reason = function(partial)
-        stop_marquee()
         if not is_reasoning then
           is_reasoning = true
           handler.on_partial(REASONING_DELIM_START .. partial)
@@ -51,7 +40,6 @@ local function create_reason_handler(handler, show_reasoning)
         end
       end,
       content = function(partial)
-        stop_marquee()
         if is_reasoning then
           is_reasoning = false
           handler.on_partial(REASONING_DELIM_STOP .. partial)
@@ -65,29 +53,44 @@ local function create_reason_handler(handler, show_reasoning)
         end
         handler.on_finish(complete_text, finish_reason)
       end,
+      stop = util.noop,
     }
   else
+    local stop_marquee = util.noop
+    local update_marquee = util.noop
+    local spinner_segment = {}
+
     return {
-      reason = function()
+      reason = function(partial)
         if is_reasoning then
           reason_count = reason_count + 1
-          update_marquee('Thinking (' .. tostring(reason_count) .. ' thoughts)')
+          spinner_segment.data.info = spinner_segment.data.info .. partial
+          update_marquee(
+            'Thinking.. (' .. tostring(reason_count) .. ' thoughts)'
+          )
         else
-          stop_marquee()
           is_reasoning = true
-          stop_marquee, update_marquee =
+          handler.on_partial('') -- to stop the 'waiting' spinner, we have a response
+
+          stop_marquee, update_marquee, spinner_segment =
             juice.spinner(handler.segment, 'Thinking ')
+
+          spinner_segment.data.info = partial or ''
+          spinner_segment.data.cancel = stop_marquee
         end
       end,
       content = function(partial)
         if is_reasoning then
           is_reasoning = false
+          stop_marquee()
         end
 
-        stop_marquee()
         handler.on_partial(partial)
       end,
       finish = handler.on_finish,
+      stop = function()
+        stop_marquee()
+      end,
     }
   end
 end
@@ -122,24 +125,79 @@ local M = {
       set_prefix_field_on_last_message(params)
     end
 
-    local tool_handler
-    do
-      if options.enable_tools then
-        tool_handler = tools_handler.create(handler, model.opts.tools)
-        tool_handler.transform_messages(params)
+    local reason_handler =
+      create_reason_handler(handler, options.show_reasoning)
 
-        local tool_uses = tool_handler.get_uses(params)
+    local function on_other(msg)
+      reason_handler.stop()
+      util.show(msg)
+    end
 
-        if next(tool_uses) ~= nil then
-          return tool_handler.run(tool_uses)
+    local function on_error(err)
+      reason_handler.stop()
+      handler.on_error(err)
+    end
+
+    local tool_chunk_handler = tools_handler.chunk(handler.on_partial)
+
+    local function on_message(msg, raw)
+      local data = util.json.decode(msg.data)
+      local chunk = extract_chunk(data)
+
+      if not chunk then
+        if msg.data ~= '[DONE]' then
+          util.eshow(raw, 'Extracted empty chunk')
         end
-      else
-        tool_handler = tools_handler.noop
+        return
+      end
+
+      if chunk.reasoning_content then
+        reason_handler.reason(chunk.reasoning_content)
+      elseif chunk.finish_reason then
+        tool_chunk_handler.finish()
+        reason_handler.finish(nil, chunk.finish_reason)
+      elseif chunk.content then
+        reason_handler.content(chunk.content)
+      elseif chunk.tool_calls then
+        for _, tool_call_partial in ipairs(chunk.tool_calls) do
+          if tool_call_partial['function'] then
+            local fn = tool_call_partial['function']
+
+            if tool_call_partial.id and fn.name then
+              tool_chunk_handler.new_call(fn.name, tool_call_partial.id)
+            end
+
+            if fn.arguments then
+              tool_chunk_handler.arg_partial(fn.arguments)
+            end
+          end
+        end
       end
     end
 
-    local reason_handler =
-      create_reason_handler(handler, options.show_reasoning)
+    if options.tools then
+      local tool_handler = tools_handler.tool(model.opts.tools, options.tools)
+
+      local tool_uses = tool_handler.get_uses(params)
+
+      if next(tool_uses) ~= nil then
+        return tool_handler.run(tool_uses, function(result)
+          reason_handler.stop()
+          handler.on_finish(result)
+        end)
+      end
+
+      params.tools =
+        format.build_tool_definitions(tool_handler.get_equipped_tools())
+    end
+
+    params.messages = format.transform_messages(params.messages)
+
+    if options.debug then
+      util.show(params)
+    end
+
+    handler.segment.data.params = params
 
     return sse.curl_client({
       url = url,
@@ -151,44 +209,15 @@ local M = {
       },
       body = vim.tbl_deep_extend('force', params, { stream = true }),
     }, {
-      on_message = function(msg)
-        local data = util.json.decode(msg.data)
-        local chunk = extract_chunk(data)
-        if not chunk then
-          if msg.data ~= '[DONE]' then
-            util.eshow(msg, 'Extracted chunk was empty')
-          end
-
-          return
-        end
-
-        if chunk.reasoning_content then
-          reason_handler.reason(chunk.reasoning_content)
-        elseif chunk.finish_reason then
-          tool_handler.finish()
-          reason_handler.finish(nil, chunk.finish_reason)
-        elseif chunk.content then
-          reason_handler.content(chunk.content)
-        elseif chunk.tool_calls then
-          tool_handler.partial(chunk.tool_calls)
-        end
-      end,
-      on_error = handler.on_error,
-      on_other = util.show,
+      on_message = on_message,
+      on_error = on_error,
+      on_other = on_other,
     })
   end,
 
+  ---@deprecated handled by chat parse
   strip_asst_messages_of_reasoning = function(body)
-    return vim.tbl_deep_extend('force', body, {
-      messages = vim.tbl_map(function(msg)
-        if msg.role == 'assistant' then
-          return vim.tbl_extend('keep', msg, {
-            content = strip_reasoning(msg.content or ''),
-          })
-        end
-        return msg
-      end, body.messages),
-    })
+    return body
   end,
 }
 

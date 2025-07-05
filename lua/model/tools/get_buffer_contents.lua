@@ -40,6 +40,11 @@ return {
     local end_line = args.stop and args.stop - 1 or -1 -- -1 means last line
 
     local lines = vim.api.nvim_buf_get_lines(buf, start_line, end_line, false)
-    return table.concat(lines, '\n')
+    if vim.api.nvim_buf_get_option(buf, 'buftype') == 'terminal' then
+      local content = table.concat(lines, '\n')
+      return content:gsub('^%s+', ''):gsub('%s+$', '')
+    else
+      return table.concat(lines, '\n')
+    end
   end,
 }

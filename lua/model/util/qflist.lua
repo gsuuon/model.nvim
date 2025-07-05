@@ -1,7 +1,12 @@
 local util = require('model.util')
 
-local function add()
-  local filename = vim.fn.bufname()
+local function add(buf_or_filename)
+  local filename = type(buf_or_filename) == 'number'
+      and vim.fn.bufname(buf_or_filename)
+    or buf_or_filename
+    or vim.fn.bufname()
+  local bufnr = type(buf_or_filename) == 'number' and buf_or_filename
+    or vim.fn.bufnr(filename)
 
   local already_added = vim.tbl_contains(
     vim.fn.getqflist() or {},
@@ -16,18 +21,23 @@ local function add()
       {
         filename = filename,
         text = 'model.nvim context',
-        bufnr = vim.fn.bufnr(),
+        bufnr = bufnr,
       },
     }, 'a')
   end
 end
 
-local function remove()
-  local filename = vim.fn.bufname()
+local function remove(buf_or_filename)
+  local filename = type(buf_or_filename) == 'number'
+      and vim.fn.bufname(buf_or_filename)
+    or buf_or_filename
+    or vim.fn.bufname()
+  local bufnr = type(buf_or_filename) == 'number' and buf_or_filename
+    or vim.fn.bufnr(filename)
 
   vim.fn.setqflist(
     vim.tbl_filter(function(item)
-      return vim.fn.bufname(item.bufnr) ~= filename
+      return item.bufnr ~= bufnr
     end, vim.fn.getqflist() or {}),
     'r'
   )
