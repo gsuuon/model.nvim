@@ -2,6 +2,8 @@ local segment = require('model.util.segment')
 local system = require('model.util.system')
 local util = require('model.util')
 
+local y = 0
+
 local M = {}
 
 M.can_say = false

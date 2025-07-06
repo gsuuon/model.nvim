@@ -43,72 +43,91 @@ return {
       error('Path must resolve to within cwd')
     end
 
-    local dir = vim.fs.dirname(args.path)
-    if dir and dir ~= '' then
-      local success = vim.fn.mkdir(dir, 'p')
-      if success == 0 then
-        error('Failed to create directory: ' .. dir)
-      end
-    end
-
-    local already_existed = vim.fn.filereadable(args.path) == 1
-
-    -- Create a new buffer and set its content
-    local bufnr = vim.api.nvim_create_buf(true, false)
-    vim.api.nvim_buf_set_lines(
-      bufnr,
-      0,
-      -1,
-      false,
-      vim.split(args.content, '\n')
-    )
-    vim.api.nvim_buf_set_name(bufnr, args.path)
-    vim.api.nvim_buf_set_option(
-      bufnr,
-      'filetype',
-      vim.filetype.match({ filename = args.path }) or ''
-    )
-
-    -- Display a message
-    if already_existed then
-      util.show('Creating file that already exists: ' .. args.path)
-    else
-      util.show('Opened buffer for new file: ' .. args.path)
-    end
-
-    local latest_content = nil
-
-    local function handle_exit()
-      if latest_content then
-        callback(latest_content)
-      else
-        callback(nil, 'Buffer exited without saving')
-      end
-    end
-
-    -- Update latest_content on each write
-    vim.api.nvim_create_autocmd('BufWritePost', {
-      buffer = bufnr,
-      callback = function()
-        latest_content = files.yank_with_line_numbers_and_filename()
-      end,
-    })
-
-    -- Handle buffer unload (call callback with latest saved content or error)
-    vim.api.nvim_create_autocmd('BufLeave', {
-      buffer = bufnr,
-      once = true,
-      callback = handle_exit,
-    })
-
-    -- Schedule opening the buffer in a new tab
-    vim.schedule(function()
-      vim.cmd('tabnew')
-      vim.api.nvim_set_current_buf(bufnr)
-    end)
+    files.get_file_and_diagnostics(args.path, callback)
 
     return function()
-      -- Cancel function (no-op since we can't cancel the scheduled operation)
-    end
+      -- no cancel
+    end,
+      'Getting written file with diagnostics..'
+  end,
+  presentation = function()
+    local content = ''
+    local path = ''
+    local bufnr = nil
+
+    return util.tools.process_partial_tool_call({
+      content = {
+        part = function(part)
+          content = content .. part
+
+          local text, err = util.json.decode('"' .. content .. '"')
+          if text then
+            if bufnr then
+              vim.api.nvim_buf_set_lines(
+                bufnr,
+                0,
+                -1,
+                false,
+                vim.split(text, '\n')
+              )
+            else
+              util.eshow(err)
+            end
+          end
+        end,
+        complete = function()
+          if path == '' then
+            util.show('Received all content')
+          else
+            util.show('Received all content for ' .. path)
+          end
+        end,
+      },
+      path = {
+        part = function(part)
+          path = path .. part
+        end,
+        complete = function()
+          local dir = vim.fs.dirname(path)
+          if dir and dir ~= '' then
+            local success = vim.fn.mkdir(dir, 'p')
+            if success == 0 then
+              error('Failed to create directory: ' .. dir)
+            end
+          end
+
+          local already_existed = vim.fn.filereadable(path) == 1
+
+          -- Create a new buffer and set its content
+          bufnr = vim.api.nvim_create_buf(true, false)
+          vim.api.nvim_buf_set_lines(
+            bufnr,
+            0,
+            -1,
+            false,
+            vim.split(content, '\n')
+          )
+          vim.api.nvim_buf_set_name(bufnr, path)
+          vim.api.nvim_buf_set_option(
+            bufnr,
+            'filetype',
+            vim.filetype.match({ filename = path }) or ''
+          )
+
+          -- Display a message
+          if already_existed then
+            util.show('Creating file that already exists: ' .. path)
+          else
+            util.show('Opened buffer for new file: ' .. path)
+          end
+
+          -- Schedule opening the buffer in a new tab
+          vim.schedule(function()
+            vim.cmd('tabnew')
+            vim.api.nvim_set_current_buf(bufnr)
+          end)
+        end,
+      },
+    })
   end,
 }

@@ -38,7 +38,14 @@ local function transform_data_section(message)
           end
 
           for _, tool_call in ipairs(tool_calls) do
-            table.insert(assistant_message.tool_calls, tool_call)
+            table.insert(assistant_message.tool_calls, {
+              id = tool_call.id,
+              type = 'function',
+              ['function'] = {
+                name = tool_call.name,
+                arguments = tool_call.arguments,
+              },
+            })
           end
         end
       end

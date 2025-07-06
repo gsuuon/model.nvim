@@ -1,4 +1,5 @@
 local files = require('model.util.files')
+local util = require('model.util')
 
 return {
   description = 'Show a diff between the current file and a proposed new version, allowing the user to accept changes by chunk.',
@@ -20,43 +21,68 @@ return {
     if type(args.path) ~= 'string' then
       error('Invalid path: must be a string')
     end
-    if not files.is_file_within_cwd(args.path) then
-      error(
-        'File must exist and be within current working directory: ' .. args.path
-      )
-    end
+
     if type(args.new_content) ~= 'string' then
       error('new_content must be a string')
     end
 
-    files.show_diff(args.path, args.new_content, function(original_bufnr)
-      -- like in create_file, we want to call callback with actual saved disk contents extracted by files.yank_with_line_numbers_and_filename
-      local latest_content = nil
+    files.get_file_and_diagnostics(args.path, callback)
 
-      local function handle_exit()
-        if latest_content then
-          callback(latest_content)
-        else
-          callback(nil, 'Buffer exited without saving')
-        end
-      end
+    return function()
+      -- no cancel
+    end,
+      'Getting rewritten file with diagnostics..'
+  end,
+  presentation = function()
+    local new_content = ''
+    local path = ''
+    local bufnr = nil
 
-      -- Update latest_content on each write
-      vim.api.nvim_create_autocmd('BufWritePost', {
-        buffer = original_bufnr,
-        callback = function()
-          latest_content = files.yank_with_line_numbers_and_filename()
+    return util.tools.process_partial_tool_call({
+      new_content = {
+        part = function(part)
+          new_content = new_content .. part
+
+          local text, err = util.json.decode('"' .. new_content .. '"')
+          if text then
+            if bufnr then
+              vim.api.nvim_buf_set_lines(
+                bufnr,
+                0,
+                -1,
+                false,
+                vim.split(text, '\n')
+              )
+            else
+              util.eshow(err)
+            end
+          end
         end,
-      })
+        complete = function()
+          if bufnr then
+            vim.api.nvim_buf_set_name(bufnr, 'rewrite_file done - ' .. path)
+          else
+            if path == '' then
+              util.show('Received all content')
+            else
+              util.show('Received all content for ' .. path)
+            end
+          end
+        end,
+      },
+      path = {
+        part = function(part)
+          path = path .. part
+        end,
+        complete = function()
+          files.show_diff(path, new_content, function(_, new_bufnr)
+            bufnr = new_bufnr
 
-      -- Handle buffer unload (call callback with latest saved content or error)
-      vim.api.nvim_create_autocmd('BufLeave', {
-        buffer = original_bufnr,
-        once = true,
-        callback = handle_exit,
-      })
-    end)
-
-    return function() end
+            -- TODO set name can error if that name is already taken
+            vim.api.nvim_buf_set_name(bufnr, 'rewrite_file pending - ' .. path)
+          end)
+        end,
+      },
+    })
   end,
 }
