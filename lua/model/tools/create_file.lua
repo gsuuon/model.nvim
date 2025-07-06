@@ -43,7 +43,7 @@ return {
       error('Path must resolve to within cwd')
     end
 
-    files.get_file_and_diagnostics(args.path, callback)
+    files.get_file_and_diagnostics(args.path, 'Created file', callback)
 
     return function()
       -- no cancel

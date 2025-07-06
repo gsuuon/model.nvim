@@ -26,7 +26,7 @@ return {
       error('new_content must be a string')
     end
 
-    files.get_file_and_diagnostics(args.path, callback)
+    files.get_file_and_diagnostics(args.path, 'Final saved file', callback)
 
     return function()
       -- no cancel

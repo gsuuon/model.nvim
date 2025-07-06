@@ -27,8 +27,8 @@ local function find_max_backticks(lines)
   return max_backticks
 end
 
-local function format_file_content(filename, lines, range)
-  local file_info = 'File: `' .. filename .. '`\n'
+local function format_file_content(filename, lines, label, range)
+  local file_info = (label and label or 'File') .. ': `' .. filename .. '`\n'
 
   -- Count maximum number of consecutive backticks in file content
   local max_backticks = find_max_backticks(lines)
@@ -78,7 +78,7 @@ local function format_diagnostics(diagnostics)
   return table.concat(lines, '\n')
 end
 
-local function get_buffer_content_and_diagnostics(range, callback)
+local function get_buffer_content_and_diagnostics(range)
   local buf_name = vim.fn.expand('%')
   local filename = buf_name ~= '' and util.path.relative_norm(buf_name)
     or '[No Name]'
@@ -107,11 +107,7 @@ local function get_buffer_content_and_diagnostics(range, callback)
   local diagnostic_content = format_diagnostics(diagnostics)
   local result = file_content .. diagnostic_content
 
-  if callback then
-    callback(result)
-  else
-    return result
-  end
+  return result
 end
 
 local function yank_with_line_numbers_and_filename(register, range)
@@ -121,7 +117,7 @@ local function yank_with_line_numbers_and_filename(register, range)
   return result
 end
 
-local function get_file_and_diagnostics(filepath, callback)
+local function get_file_and_diagnostics(filepath, file_label, callback)
   local bufnr = vim.fn.bufadd(filepath)
   if not vim.loop.fs_stat(filepath) then
     error('File does not exist: ' .. filepath)
@@ -151,7 +147,7 @@ local function get_file_and_diagnostics(filepath, callback)
     local filename = buf_name ~= '' and util.path.relative_norm(buf_name)
       or '[No Name]'
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local result = format_file_content(filename, lines, nil)
+    local result = format_file_content(filename, lines, file_label)
 
     if not was_loaded then
       vim.api.nvim_buf_delete(bufnr, { force = true })
@@ -172,7 +168,7 @@ local function get_file_and_diagnostics(filepath, callback)
     local filename = buf_name ~= '' and util.path.relative_norm(buf_name)
       or '[No Name]'
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local file_content = format_file_content(filename, lines, nil)
+    local file_content = format_file_content(filename, lines, nil, file_label)
     local diagnostic_content = format_diagnostics(diagnostics)
     local result = file_content .. diagnostic_content
 
