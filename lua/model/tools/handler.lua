@@ -1,11 +1,15 @@
 local util = require('model.util')
+local juice = require('model.util.juice')
 
 -- Tool handling utilities
 local TOOL_CALL_DELIM = '<<<<<< tool_calls\n'
 local TOOL_CALL_DELIM_END = '\n>>>>>>'
 
-local function create_tool_chunk_handlers(emit)
+local function create_tool_chunk_handlers(emit, equipped_tools)
   local has_tool_calls = false
+  local active_tool = util.noop
+  -- TODO REMOVE
+  -- local presented_tool_use_ids = {}
 
   return {
     ---@param name string
@@ -24,21 +28,41 @@ local function create_tool_chunk_handlers(emit)
     "id": "%s",
     "name": "%s",
     "arguments": "]]):format(id, name))
+
+      local tool = equipped_tools[name]
+      if tool and tool.presentation then
+        active_tool = tool.presentation()
+        -- TODO REMOVE
+        -- table.insert(presented_tool_use_ids, id)
+      end
     end,
     arg_partial = function(partial)
-      emit(
-        partial
-          :gsub('\\', '\\\\')
-          :gsub('"', '\\"')
-          :gsub('\n', '\\n')
-          :gsub('\r', '\\r')
-          :gsub('\t', '\\t')
-      )
+      local escaped = partial
+        :gsub('\\', '\\\\')
+        :gsub('"', '\\"')
+        :gsub('\n', '\\n')
+        :gsub('\r', '\\r')
+        :gsub('\t', '\\t')
+
+      emit(escaped)
+
+      if active_tool then
+        active_tool(partial)
+      end
     end,
     finish = function()
       if has_tool_calls then
         emit('"\n  }\n]' .. TOOL_CALL_DELIM_END)
       end
+
+      -- TODO REMOVE
+      -- if #presented_tool_use_ids then
+      --   emit('<<<<<< tool_presentations\n')
+      --   for _, id in ipairs(presented_tool_use_ids) do
+      --     emit(id .. '\n')
+      --   end
+      --   emit('>>>>>>')
+      -- end
     end,
   }
 end
@@ -54,13 +78,6 @@ local function create_tool_handler(available_tools, allowed_tools)
         for tool_name in util.module.autopairs(available_tools) do
           equipped_tools[tool_name] = available_tools[tool_name]
         end
-      else
-        -- allowed_tools is falsy, so we just provide no-op handlers
-        -- these handlers are weaved into the handlers the provider builds so always need to be available
-        return {
-          partial = util.noop,
-          finish = util.noop,
-        }
       end
     else
       if vim.islist(allowed_tools) then
@@ -104,6 +121,8 @@ local function create_tool_handler(available_tools, allowed_tools)
         end
       end
 
+      local cancel_spinners = {}
+
       for id, closure in pairs(tool_uses) do
         local function on_tool_done(result, err)
           if err ~= nil then
@@ -112,15 +131,23 @@ local function create_tool_handler(available_tools, allowed_tools)
             results[id] = result == nil and 'nil' or result
           end
           finished = finished + 1
+
+          if cancel_spinners[id] then
+            cancel_spinners[id]()
+          end
+
           maybe_finish()
         end
 
-        local ok, ret = pcall(function()
+        local ok, ret, msg = pcall(function()
           return closure(on_tool_done)
         end)
 
         if ok then
           if type(ret) == 'function' then
+            if msg then
+              cancel_spinners[id] = juice.spinner(nil, msg)
+            end
             table.insert(cancels, ret)
           else
             results[id] = ret == nil and 'nil' or ret
@@ -144,40 +171,89 @@ local function create_tool_handler(available_tools, allowed_tools)
 
   local function get_uses(params)
     local last_msg = params.messages[#params.messages]
-    local tool_queue = {}
+    local tool_uses = {}
 
     if last_msg and last_msg.role == 'assistant' and last_msg.data_sections then
+      local needs_presentation = {}
+      local tool_calls = {}
+
       for _, section in ipairs(last_msg.data_sections) do
         if section.label == 'tool_calls' then
-          local tool_calls = util.json.decode(section.content)
+          local section_tool_calls = util.json.decode(section.content)
 
-          for _, tool_call in ipairs(tool_calls or {}) do
+          for _, tool_call in ipairs(section_tool_calls or {}) do
             local tool_name = tool_call.name
             local tool = equipped_tools[tool_name]
 
             if tool then
-              tool_queue[tool_call.id] = function(resolve)
+              tool_uses[tool_call.id] = function(resolve)
                 if tool_call.arguments == '' then
+                  -- TODO REMOVE
+                  -- if tool.presentation then
+                  --   needs_presentation[tool_call.id] = true
+                  -- end
                   return tool.invoke({}, resolve)
                 else
                   local args, err = util.json.decode(tool_call.arguments)
 
                   if args then
+                    -- TODO REMOVE
+                    -- if tool.presentation then
+                    --   needs_presentation[tool_call.id] = true
+                    -- end
                     return tool.invoke(args, resolve)
                   else
                     error(err)
                   end
                 end
               end
+              tool_calls[tool_call.id] = tool_call
             else
               util.eshow('Unknown tool: ' .. tool_name)
             end
           end
+        elseif section.label == 'tool_rerun_presentations' then
+          -- _just_ do the presentations again, without doing the invokes
+          for _, id in ipairs(vim.split(section.content, '\n')) do
+            needs_presentation[id] = true
+          end
         end
+      end
+
+      if next(needs_presentation) ~= nil then
+        local presentations = {}
+
+        for id, need in pairs(needs_presentation) do
+          if need then
+            if tool_calls[id] then
+              local tool_call = tool_calls[id]
+              local tool_name = tool_call.name
+              local tool = equipped_tools[tool_name]
+
+              if tool and tool.presentation then
+                presentations[id] = function()
+                  local consume = tool.presentation()
+
+                  consume(tool_call.arguments)
+
+                  return (
+                    'Re-ran presentation for tool call: '
+                    .. id
+                    .. '\nRemove the tool_rerun_presentations data section and run the chat again to continue the conversation with the real result.'
+                  )
+                end
+              end
+            else
+              error('No tool call for tool_rerun_presentations item ' .. id)
+            end
+          end
+        end
+
+        return presentations
       end
     end
 
-    return tool_queue
+    return tool_uses
   end
 
   return {

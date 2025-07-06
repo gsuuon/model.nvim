@@ -389,6 +389,10 @@ function M.run_chat(opts)
       seg.set_text('')
       seg.clear_hl()
     end,
+    on_other = function(x)
+      stop_spinner()
+      util.show(x)
+    end,
     segment = seg,
   }
 

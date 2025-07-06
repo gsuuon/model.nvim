@@ -87,7 +87,10 @@ local function create_segment(source, segment_mode, hl_group)
   elseif segment_mode == M.mode.INSERT then
     local pos = util.cursor.position()
 
-    return segment.create_segment_at(pos.row, pos.col, hl_group, 0)
+    local seg = segment.create_segment_at(pos.row, pos.col, hl_group, 0)
+    seg.data.original = {}
+
+    return seg
   else
     error('Unknown segment mode: ' .. segment_mode)
   end

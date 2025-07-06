@@ -121,10 +121,6 @@ local M = {
         or 'https://api.deepseek.com/chat/completions'
       )
 
-    if is_prefix_completion then
-      set_prefix_field_on_last_message(params)
-    end
-
     local reason_handler =
       create_reason_handler(handler, options.show_reasoning)
 
@@ -138,7 +134,9 @@ local M = {
       handler.on_error(err)
     end
 
-    local tool_chunk_handler = tools_handler.chunk(handler.on_partial)
+    local tool_handler = tools_handler.tool(model.opts.tools, options.tools)
+    local tool_chunk_handler =
+      tools_handler.chunk(handler.on_partial, tool_handler.get_equipped_tools())
 
     local function on_message(msg, raw)
       local data = util.json.decode(msg.data)
@@ -176,8 +174,6 @@ local M = {
     end
 
     if options.tools then
-      local tool_handler = tools_handler.tool(model.opts.tools, options.tools)
-
       local tool_uses = tool_handler.get_uses(params)
 
       if next(tool_uses) ~= nil then
@@ -192,6 +188,10 @@ local M = {
     end
 
     params.messages = format.transform_messages(params.messages)
+
+    if is_prefix_completion then
+      set_prefix_field_on_last_message(params)
+    end
 
     if options.debug then
       util.show(params)
