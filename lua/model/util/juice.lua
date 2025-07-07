@@ -15,8 +15,11 @@ function M.animate(render, interval)
   local function run()
     vim.defer_fn(function()
       if not stop then
-        render()
-        run()
+        if pcall(render) then
+          run()
+        else
+          stop = true
+        end
       end
     end, interval)
   end
