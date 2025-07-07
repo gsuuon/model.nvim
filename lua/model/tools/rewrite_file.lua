@@ -44,7 +44,7 @@ return {
         part = function(part)
           new_content = new_content .. part
 
-          local text, err = util.json.decode('"' .. new_content .. '"')
+          local text = util.json.decode('"' .. new_content .. '"')
 
           if text then
             if bufnr then
@@ -56,11 +56,6 @@ return {
                 vim.split(text, '\n')
               )
             end
-          else
-            util.eshow(
-              { new_content = new_content, err = err },
-              'Failed to decode'
-            )
           end
         end,
         complete = function()

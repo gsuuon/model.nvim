@@ -168,7 +168,7 @@ local function get_file_and_diagnostics(filepath, file_label, callback)
     local filename = buf_name ~= '' and util.path.relative_norm(buf_name)
       or '[No Name]'
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local file_content = format_file_content(filename, lines, nil, file_label)
+    local file_content = format_file_content(filename, lines, file_label)
     local diagnostic_content = format_diagnostics(diagnostics)
     local result = file_content .. diagnostic_content
 
