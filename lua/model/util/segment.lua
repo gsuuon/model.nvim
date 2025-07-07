@@ -74,7 +74,9 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     -- remove ns_id, even though neovim returns it when setting the extmark it's
     -- an unexpected key
     local details = extmark[3]
-    details['ns_id'] = nil
+    if details then
+      details['ns_id'] = nil
+    end
 
     return {
       row = extmark[1],
