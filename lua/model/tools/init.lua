@@ -1,7 +1,7 @@
 ---@class Tool
 ---@field description string
 ---@field parameters table
----@field invoke fun(args: table, callback: fun(result: string)): string | fun(): nil takes args and optionally a callback, returns a string result or a cancel function. If cancel function is returned, the callback must be called to resolve the tool use
+---@field invoke fun(args: table, callback: fun(result: string)): string | fun() takes args and optionally a callback, returns a string result or a cancel function. If cancel function is returned, the callback must be called to resolve the tool use
 ---@field presentation fun(): fun(partial: string), msg: string? - presents partial tool call arguments. consumes the raw json partial. presentation is called as soon as we receive any arguments for this tool, then the returned function is called for each tool argument partial while displaying a spinner with the optional second return value as message. presentation is assumed to be necessary if present, so unpresented tool_calls will be re-presented. when run happens.
 
 ---@type table<string, Tool>

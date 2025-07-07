@@ -186,8 +186,8 @@ end
 
 M.json = {}
 
-function M.json.decode(string)
-  local success, obj = pcall(vim.json.decode, string, {
+function M.json.decode(json_string)
+  local success, obj = pcall(vim.json.decode, json_string, {
     -- obj is error message if not success
     luanil = {
       object = true,
@@ -201,8 +201,8 @@ function M.json.decode(string)
     local char_offset = tonumber(obj:match('character (%d+)'))
     if char_offset then
       local start = math.max(1, char_offset - 20)
-      local stop = math.min(#string, char_offset + 20)
-      local context = string:sub(start, stop)
+      local stop = math.min(#json_string, char_offset + 20)
+      local context = json_string:sub(start, stop)
       obj = obj .. '\nContext:\n' .. context
     end
 
@@ -663,75 +663,6 @@ M.text.apply_edits = function(content, edits, match_fn)
   end
   table.insert(parts, content:sub(last))
   return table.concat(parts)
-end
-
-M.tools = {}
-
-function M.tools.process_partial_tool_call(handle_fields)
-  local args = ''
-
-  local completed_fields = {}
-  local current_field = ''
-
-  local function partial_field(text)
-    handle_fields[current_field].part(text)
-  end
-
-  local function complete_field()
-    handle_fields[current_field].complete()
-    completed_fields[current_field] = true
-    current_field = ''
-  end
-
-  ---@param arg_partial string
-  return function(arg_partial)
-    if args == '' then
-      -- check if we got the entire arguments object in one go
-      -- e.g. when re-running presentation
-      local all_args = M.json.decode(arg_partial)
-      if all_args then
-        for field, handle in pairs(handle_fields) do
-          handle.part(all_args[field])
-          handle.complete()
-        end
-      end
-    end
-
-    -- TODO if we get an arg_partial which adds more than 1 field, this breaks
-
-    local next_args = args .. arg_partial
-    -- show({ arg_partial = arg_partial })
-
-    if current_field == '' then
-      local arg_attempt = M.json.decode(next_args .. '"}')
-      if arg_attempt ~= nil then
-        for field in pairs(handle_fields) do
-          if arg_attempt[field] ~= nil and completed_fields[field] == nil then
-            current_field = field
-
-            partial_field(arg_attempt[field])
-          end
-        end
-      end
-    else
-      -- this won't match if " is the first char, since we test for \
-      local ending = arg_partial:match('^(.*[^\\])"')
-      -- if our preceding args didn't end with an escape char and our new partial starts with a quote
-      -- we're immediately closing the string
-      local immediate_close = args:match('[^\\]$') and arg_partial:match('^"')
-
-      if immediate_close then
-        complete_field()
-      elseif ending then
-        partial_field(ending)
-        complete_field()
-      else
-        partial_field(arg_partial)
-      end
-    end
-
-    args = next_args
-  end
 end
 
 return M

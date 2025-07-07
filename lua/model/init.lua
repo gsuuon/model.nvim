@@ -12,6 +12,7 @@ local M = {}
 local function command_request_completion(cmd_params)
   ---Gets the first arg as the prompt name
   ---the rest of the args are passed to the prompt builder as a string
+
   ---@return Prompt, string
   local function get_prompt_and_args(args)
     local prompt_arg = table.remove(args, 1)
@@ -317,6 +318,11 @@ local function setup_commands()
           'Not in mchat buffer. Either `:set ft=mchat` or run `:Mchat [name]`.'
         )
       end
+
+      -- TODO REMOVE
+      util.eshow(
+        'Use `:MchatRun` to run the current chat. `:Mchat` to run chats is deprecated.'
+      )
 
       chat.run_chat(M.opts)
     end

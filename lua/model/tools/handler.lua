@@ -1,15 +1,15 @@
 local util = require('model.util')
 local juice = require('model.util.juice')
+local util_tools = require('model.util.tools')
 
 -- Tool handling utilities
 local TOOL_CALL_DELIM = '<<<<<< tool_calls\n'
 local TOOL_CALL_DELIM_END = '\n>>>>>>'
 
+-- Emits tool calls in a data_section with contents as JSON encoded of type ToolCall
 local function create_tool_chunk_handlers(emit, equipped_tools)
   local has_tool_calls = false
   local active_tool = util.noop
-  -- TODO REMOVE
-  -- local presented_tool_use_ids = {}
 
   return {
     ---@param name string
@@ -32,8 +32,6 @@ local function create_tool_chunk_handlers(emit, equipped_tools)
       local tool = equipped_tools[name]
       if tool and tool.presentation then
         active_tool = tool.presentation()
-        -- TODO REMOVE
-        -- table.insert(presented_tool_use_ids, id)
       end
     end,
     arg_partial = function(partial)
@@ -54,15 +52,6 @@ local function create_tool_chunk_handlers(emit, equipped_tools)
       if has_tool_calls then
         emit('"\n  }\n]' .. TOOL_CALL_DELIM_END)
       end
-
-      -- TODO REMOVE
-      -- if #presented_tool_use_ids then
-      --   emit('<<<<<< tool_presentations\n')
-      --   for _, id in ipairs(presented_tool_use_ids) do
-      --     emit(id .. '\n')
-      --   end
-      --   emit('>>>>>>')
-      -- end
     end,
   }
 end
@@ -70,27 +59,7 @@ end
 ---@param available_tools table<string, table> Map of available tool names to their definitions
 ---@param allowed_tools string[] | boolean An allowlist of tools, or true for all, or falsy for none
 local function create_tool_handler(available_tools, allowed_tools)
-  ---@type table<string, Tool>
-  local equipped_tools = {}
-  do
-    if allowed_tools == nil or type(allowed_tools) == 'boolean' then
-      if allowed_tools == true then
-        for tool_name in util.module.autopairs(available_tools) do
-          equipped_tools[tool_name] = available_tools[tool_name]
-        end
-      end
-    else
-      if vim.islist(allowed_tools) then
-        for _, tool_name in pairs(allowed_tools) do
-          if available_tools[tool_name] then
-            equipped_tools[tool_name] = available_tools[tool_name]
-          else
-            util.eshow('Missing tool: ' .. tool_name)
-          end
-        end
-      end
-    end
-  end
+  local equipped_tools = util_tools.equip_tools(available_tools, allowed_tools)
 
   local function run_tool(tool_uses, on_finish)
     if next(tool_uses) ~= nil then
@@ -174,9 +143,6 @@ local function create_tool_handler(available_tools, allowed_tools)
     local tool_uses = {}
 
     if last_msg and last_msg.role == 'assistant' and last_msg.data_sections then
-      local needs_presentation = {}
-      local tool_calls = {}
-
       for _, section in ipairs(last_msg.data_sections) do
         if section.label == 'tool_calls' then
           local section_tool_calls = util.json.decode(section.content)
@@ -188,68 +154,22 @@ local function create_tool_handler(available_tools, allowed_tools)
             if tool then
               tool_uses[tool_call.id] = function(resolve)
                 if tool_call.arguments == '' then
-                  -- TODO REMOVE
-                  -- if tool.presentation then
-                  --   needs_presentation[tool_call.id] = true
-                  -- end
                   return tool.invoke({}, resolve)
                 else
                   local args, err = util.json.decode(tool_call.arguments)
 
                   if args then
-                    -- TODO REMOVE
-                    -- if tool.presentation then
-                    --   needs_presentation[tool_call.id] = true
-                    -- end
                     return tool.invoke(args, resolve)
                   else
                     error(err)
                   end
                 end
               end
-              tool_calls[tool_call.id] = tool_call
             else
               util.eshow('Unknown tool: ' .. tool_name)
             end
           end
-        elseif section.label == 'tool_rerun_presentations' then
-          -- _just_ do the presentations again, without doing the invokes
-          for _, id in ipairs(vim.split(section.content, '\n')) do
-            needs_presentation[id] = true
-          end
         end
-      end
-
-      if next(needs_presentation) ~= nil then
-        local presentations = {}
-
-        for id, need in pairs(needs_presentation) do
-          if need then
-            if tool_calls[id] then
-              local tool_call = tool_calls[id]
-              local tool_name = tool_call.name
-              local tool = equipped_tools[tool_name]
-
-              if tool and tool.presentation then
-                presentations[id] = function()
-                  local consume = tool.presentation()
-
-                  consume(tool_call.arguments)
-
-                  return (
-                    'Re-ran presentation for tool call: '
-                    .. id
-                    .. '\nRemove the tool_rerun_presentations data section and run the chat again to continue the conversation with the real result.'
-                  )
-                end
-              end
-            else
-              error('No tool call for tool_rerun_presentations item ' .. id)
-            end
-          end
-        end
-
-        return presentations
       end
     end
 

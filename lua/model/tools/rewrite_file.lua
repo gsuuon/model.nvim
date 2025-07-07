@@ -1,5 +1,6 @@
 local files = require('model.util.files')
 local util = require('model.util')
+local tool_utils = require('model.util.tools')
 
 return {
   description = 'Show a diff between the current file and a proposed new version, allowing the user to accept changes by chunk.',
@@ -38,12 +39,13 @@ return {
     local path = ''
     local bufnr = nil
 
-    return util.tools.process_partial_tool_call({
+    return tool_utils.process_partial_tool_call({
       new_content = {
         part = function(part)
           new_content = new_content .. part
 
           local text, err = util.json.decode('"' .. new_content .. '"')
+
           if text then
             if bufnr then
               vim.api.nvim_buf_set_lines(
@@ -53,9 +55,12 @@ return {
                 false,
                 vim.split(text, '\n')
               )
-            else
-              util.eshow(err)
             end
+          else
+            util.eshow(
+              { new_content = new_content, err = err },
+              'Failed to decode'
+            )
           end
         end,
         complete = function()
