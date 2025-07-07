@@ -1,4 +1,5 @@
 local util = require('model.util')
+local tool_utils = require('model.util.tools')
 local files = require('model.util.files')
 
 local function path_is_absolute(path)
@@ -55,7 +56,7 @@ return {
     local path = ''
     local bufnr = nil
 
-    return util.tools.process_partial_tool_call({
+    return tool_utils.process_partial_tool_call({
       content = {
         part = function(part)
           content = content .. part
@@ -70,9 +71,9 @@ return {
                 false,
                 vim.split(text, '\n')
               )
-            else
-              util.eshow(err)
             end
+          else
+            util.eshow({ content = content, err = err }, 'Failed to decode')
           end
         end,
         complete = function()
