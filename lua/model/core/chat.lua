@@ -12,6 +12,7 @@ local M = {}
 ---@field system? string System instruction
 ---@field params? table Static request parameters
 ---@field options? table Provider options
+---@field completion_prefix? string Prefix assistant message for completion requests
 
 ---@class DataSection
 ---@field label? string

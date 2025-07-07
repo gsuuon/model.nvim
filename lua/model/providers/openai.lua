@@ -71,14 +71,15 @@ function M.request_completion(handlers, params, options)
   local stop_marquee = util.noop
   local waiting_first_response = true
 
-  local tool_chunk_handler = tools_handler.chunk(handlers.on_partial)
+  local tool_handler = tools_handler.tool(model.opts.tools, options.tools)
+  local tool_chunk_handler =
+    tools_handler.chunk(handlers.on_partial, tool_handler.get_equipped_tools())
 
   if options.tools then
-    local tool_handler = tools_handler.tool(model.opts.tools, options.tools)
     local tool_uses = tool_handler.get_uses(params)
 
     if next(tool_uses) ~= nil then
-      return tool_handler.run(tool_uses)
+      return tool_handler.run(tool_uses, handlers.on_finish)
     end
 
     params.tools =
