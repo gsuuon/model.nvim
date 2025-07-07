@@ -28,5 +28,12 @@ if not vim.b.did_mchat_plugin then
     end,
   })
 
+  vim.keymap.set(
+    'n',
+    '<CR>',
+    '<cmd>MchatRun<CR>',
+    { buffer = true, silent = true }
+  )
+
   vim.b.did_mchat_plugin = true
 end
