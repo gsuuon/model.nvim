@@ -63,6 +63,25 @@ return {
       end
     end
 
-    return results
+    if #results == 0 then
+      return 'No matches found for pattern: ' .. args.pattern
+    end
+
+    local output = {}
+    for _, result in ipairs(results) do
+      table.insert(
+        output,
+        string.format(
+          'File: %s\nLines: %d-%d\nContext:\n```%s\n%s\n```\n',
+          result.file,
+          result.start,
+          result.finish,
+          vim.fn.fnamemodify(result.file, ':e'),
+          result.text
+        )
+      )
+    end
+
+    return table.concat(output, '\n')
   end,
 }

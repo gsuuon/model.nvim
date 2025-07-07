@@ -12,7 +12,7 @@ return {
     },
     required = { 'path' },
   },
-  invoke = function(args)
+  invoke = function(args, callback)
     if type(args.path) ~= 'string' then
       error('Invalid path: must be a string')
     end
@@ -23,6 +23,11 @@ return {
       )
     end
 
-    return files.read_file(args.path)
+    files.get_file_and_diagnostics(args.path, 'Read file', callback)
+
+    return function()
+      -- no cancel
+    end,
+      'Getting file with diagnostics..'
   end,
 }
