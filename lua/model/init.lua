@@ -314,12 +314,8 @@ local function setup_commands()
 
       local source = input.get_source(want_visual_selection)
       local input_context = input.get_input_context(source, instructions)
-      local chat_contents = chat.build_contents(chat_prompt, input_context)
 
-      chat.start_chat_completion({
-        contents = chat_contents,
-        chat = chat_name,
-      }, chat_prompt, source)
+      chat.start_chat_completion(chat_name, chat_prompt, input_context, source)
     end
   end, {
     desc = 'Complete using a chat handler',

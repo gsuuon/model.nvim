@@ -4,6 +4,15 @@ local juice = require('model.util.juice')
 
 local M = {}
 
+---@class ChatCompletionOptions Options for Chat Completion mode
+---@field prefix? string Prefix assistant message for completion requests (like an opening codefence)
+---@field suffix? string Suffix to add to completion responses (like a trailing codefence)
+---@field run? fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil ) ) Override ChatPrompt run
+---@field create? fun(input: string, context: Context): string | ChatContents Override chatprompt create
+---@field system? string Override system instruction
+---@field params? table Override static request parameters
+---@field options? table Override provider options
+
 ---@class ChatPrompt
 ---@field provider Provider The API provider for this prompt
 ---@field create fun(input: string, context: Context): string | ChatContents Converts input and context to the first message text or ChatContents
@@ -12,8 +21,7 @@ local M = {}
 ---@field system? string System instruction
 ---@field params? table Static request parameters
 ---@field options? table Provider options
----@field completion_prefix? string Prefix assistant message for completion requests (like an opening codefence)
----@field completion_suffix? string Suffix to add to completion responses (like a trailing codefence)
+---@field completion? ChatCompletionOptions
 
 ---@class DataSection
 ---@field label? string
@@ -479,11 +487,11 @@ local function run_chat_completion(chat, chat_prompt, seg)
       stop_spinner()
       seg.clear_hl()
 
-      if chat_prompt.completion_prefix then
+      if chat_prompt.completion and chat_prompt.completion.prefix then
         -- Replace the prefix message
-        response = chat_prompt.completion_prefix
+        response = chat_prompt.completion.prefix
           .. response
-          .. (chat_prompt.completion_suffix or '')
+          .. (chat_prompt.completion.suffix or '')
 
         local parsed = parse_data_sections(response)
 
@@ -527,16 +535,36 @@ local function run_chat_completion(chat, chat_prompt, seg)
   end
 end
 
----@param chat Chat
+---@param chat_prompt ChatPrompt
+local function override_with_completion_config(chat_prompt)
+  local completion = chat_prompt.completion or {}
+  return vim.tbl_deep_extend('force', chat_prompt, {
+    create = completion.create,
+    run = completion.run,
+    params = completion.params,
+    options = completion.options,
+    system = completion.system,
+  })
+end
+
+---@param input_context InputContext
 ---@param chat_prompt ChatPrompt
 ---@param source Source
-function M.start_chat_completion(chat, chat_prompt, source)
+function M.start_chat_completion(chat_name, chat_prompt, input_context, source)
   local seg = insert_or_replace_segment(source)
 
-  if chat_prompt.completion_prefix then
+  chat_prompt = override_with_completion_config(chat_prompt)
+
+  ---@type Chat
+  local chat = {
+    contents = M.build_contents(chat_prompt, input_context),
+    chat = chat_name,
+  }
+
+  if chat_prompt.completion and chat_prompt.completion.prefix then
     table.insert(chat.contents.messages, {
       role = 'assistant',
-      content = chat_prompt.completion_prefix,
+      content = chat_prompt.completion.prefix,
     })
   end
 
@@ -567,17 +595,17 @@ function M.continue_chat_completion(opts, instruction)
 
     found_segment.set_text('')
 
-    -- TODO add the chatprompt prefix again
-
     table.insert(chat.contents.messages, {
       role = 'user',
       content = instruction,
     })
 
-    if chat_prompt.completion_prefix then
+    chat_prompt = override_with_completion_config(chat_prompt)
+
+    if chat_prompt.completion and chat_prompt.completion.prefix then
       table.insert(chat.contents.messages, {
         role = 'assistant',
-        content = chat_prompt.completion_prefix,
+        content = chat_prompt.completion.prefix,
       })
     end
 
