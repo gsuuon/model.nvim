@@ -74,11 +74,10 @@ After user cursor:
 %s
 ````
 %s
-User instruction:
+Response format:
+Write code that goes between the "Before user cursor" and "After user cursor" sections.
 %s
-
-
-            ]]):format(
+]]):format(
     model_ctx.get_text(),
     context.filename,
     context.before,
@@ -92,9 +91,7 @@ User selection:
                 ]]):format(input),
     context.after,
     get_diagnostics(context.selection),
-    context.args == ''
-        and 'Write code that goes between the "Before user cursor" and "After user cursor" sections.'
-      or context.args
+    context.args == '' and '' or ('User instruction: ' .. context.args)
   )
 end
 

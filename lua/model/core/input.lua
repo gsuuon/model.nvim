@@ -40,13 +40,27 @@ function M.get_source(want_visual_selection)
 end
 
 local function get_before_after(source)
+  local before_range_stop
+  do
+    local selection_start = source.selection == nil and source.position
+      or source.selection.start
+
+    if selection_start.col == 0 and selection_start.row > 0 then
+      before_range_stop = {
+        row = selection_start.row - 1,
+        col = -1,
+      }
+    else
+      before_range_stop = selection_start
+    end
+  end
+
   local before_range = {
     start = {
       row = 0,
       col = 0,
     },
-    stop = source.selection ~= nil and source.selection.start
-      or source.position,
+    stop = before_range_stop,
   }
 
   local after_range = {
@@ -60,19 +74,11 @@ local function get_before_after(source)
 
   local after = util.buf.text(after_range)
 
-  local after_last_line = after[#after]
-
   return {
     before = util.buf.text(before_range),
     after = after,
     before_range = before_range,
-    after_range = {
-      start = after_range.start,
-      stop = {
-        row = after_range.start.row + #after,
-        col = after_last_line and #after_last_line or after_range.start,
-      },
-    },
+    after_range = after_range,
   }
 end
 

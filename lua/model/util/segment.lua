@@ -4,6 +4,7 @@ local util = require('model.util')
 ---@field add fun(text: string): nil
 ---@field add_virt fun(text: string): nil
 ---@field set_text fun(text: string): nil
+---@field get_text fun(): string
 ---@field set_virt fun(text: string): nil
 ---@field clear_hl fun(): nil
 ---@field delete fun(): nil
@@ -50,6 +51,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
   local _hl_group = hl_group or M.default_hl
   local _data = {}
   local _did_add_text_to_undo = false
+  local _text = ''
 
   local _ext_id = vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), row, col, {
     hl_group = hl_group,
@@ -145,7 +147,12 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
         end_row = end_pos.row,
         hl_group = _hl_group,
       })
+      _text = text
     end),
+
+    get_text = function()
+      return _text
+    end,
 
     set_virt = vim.schedule_wrap(set_virt_text),
 
@@ -363,10 +370,12 @@ function M.query(pos)
   end
 end
 
+--- Finds all segments at position, most recent first
 function M.query_all(pos)
   local extmark_details =
     vim.api.nvim_buf_get_extmarks(0, M.ns_id(), 0, -1, { details = true })
 
+  ---@type Segment[]
   local results = {}
 
   -- iterate backwards so recent markers are higher

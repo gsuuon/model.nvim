@@ -128,50 +128,58 @@ local function setup_commands()
     local segs = segment.query_all(util.cursor.position())
     if #segs then
       for _, seg in ipairs(segs) do
-        if seg.data and seg.data.info then
-          local buf = vim.api.nvim_create_buf(false, true)
-          vim.api.nvim_buf_set_option(buf, 'filetype', 'markdown')
-          local win = vim.api.nvim_open_win(buf, true, {
-            relative = 'cursor',
-            width = 80,
-            height = 20,
-            row = 1,
-            col = 0,
-            style = 'minimal',
-            border = 'single',
-          })
-
-          local stop
-          do
-            stop = juice.animate(function()
-              if not vim.api.nvim_win_is_valid(win) then
-                stop()
-                return
-              end
-
-              vim.api.nvim_buf_set_lines(
-                buf,
-                0,
-                -1,
-                false,
-                vim.split(seg.data.info, '\n')
-              )
-            end, 250)
-
-            -- Close window when it loses focus
-            vim.api.nvim_create_autocmd('WinLeave', {
-              buffer = buf,
-              once = true,
-              callback = function()
-                if vim.api.nvim_win_is_valid(win) then
-                  vim.api.nvim_win_close(win, true)
-                end
-                stop()
-              end,
+        if seg.data then
+          if seg.data.info then -- streaming thoughts?
+            -- TODO probably make this seg.data.thinking
+            local buf = vim.api.nvim_create_buf(false, true)
+            vim.api.nvim_buf_set_option(buf, 'filetype', 'markdown')
+            local win = vim.api.nvim_open_win(buf, true, {
+              relative = 'cursor',
+              width = 80,
+              height = 20,
+              row = 1,
+              col = 0,
+              style = 'minimal',
+              border = 'single',
             })
+
+            local stop
+            do
+              stop = juice.animate(function()
+                if not vim.api.nvim_win_is_valid(win) then
+                  stop()
+                  return
+                end
+
+                vim.api.nvim_buf_set_lines(
+                  buf,
+                  0,
+                  -1,
+                  false,
+                  vim.split(seg.data.info, '\n')
+                )
+              end, 250)
+
+              -- Close window when it loses focus
+              vim.api.nvim_create_autocmd('WinLeave', {
+                buffer = buf,
+                once = true,
+                callback = function()
+                  if vim.api.nvim_win_is_valid(win) then
+                    vim.api.nvim_win_close(win, true)
+                  end
+                  stop()
+                end,
+              })
+            end
+            break
+          elseif seg.data.chat then
+            chat.create_buffer(
+              chat.to_string(seg.data.chat.contents, seg.data.chat.chat)
+            )
+            break
           end
         end
-        util.show('No info data')
       end
     else
       util.eshow('No segment here')
@@ -180,12 +188,6 @@ local function setup_commands()
     range = true,
     force = true,
     desc = 'Show the completion under the cursor. If it has info, show in preview.',
-  })
-
-  vim.api.nvim_create_user_command('Mselect', function() end, {
-    range = true,
-    force = true,
-    desc = 'Show the completion under the cursor',
   })
 
   vim.api.nvim_create_user_command('Mselect', function()
@@ -266,6 +268,67 @@ local function setup_commands()
     end,
   })
 
+  local function complete_chat_names(arglead)
+    local chats = M.opts.chats
+    if chats == nil then
+      return
+    end
+
+    local chat_names = {}
+
+    for name in util.module.autopairs(chats) do
+      local name_ = name:gsub(' ', '\\ ')
+      table.insert(chat_names, name_)
+    end
+
+    if #arglead == 0 then
+      return chat_names
+    end
+
+    return vim.fn.matchfuzzy(chat_names, arglead)
+  end
+
+  vim.api.nvim_create_user_command(
+    'MchatCompletionContinue',
+    function(cmd_params)
+      local instructions = table.concat(cmd_params.fargs, ' ')
+
+      chat.continue_chat_completion(M.opts, instructions)
+    end,
+    {
+      nargs = '+',
+    }
+  )
+
+  vim.api.nvim_create_user_command('MchatCompletion', function(cmd_params)
+    local chat_name = table.remove(cmd_params.fargs, 1)
+    local instructions = table.concat(cmd_params.fargs, ' ')
+
+    if chat_name ~= nil and chat_name ~= '' then
+      local chat_prompt = assert(
+        vim.tbl_get(M.opts, 'chats', chat_name),
+        'Chat "' .. chat_name .. '" not found'
+      )
+
+      local want_visual_selection = cmd_params.range ~= 0
+
+      local source = input.get_source(want_visual_selection)
+      local input_context = input.get_input_context(source, instructions)
+      local chat_contents = chat.build_contents(chat_prompt, input_context)
+
+      chat.start_chat_completion({
+        contents = chat_contents,
+        chat = chat_name,
+      }, chat_prompt, source)
+    end
+  end, {
+    desc = 'Complete using a chat handler',
+    force = true,
+    range = true,
+    nargs = '*',
+    complete = complete_chat_names,
+  })
+
   vim.api.nvim_create_user_command('Mchat', function(cmd_params)
     local chat_name = table.remove(cmd_params.fargs, 1)
     local args = table.concat(cmd_params.fargs, ' ')
@@ -331,25 +394,7 @@ local function setup_commands()
     force = true,
     range = true,
     nargs = '*',
-    complete = function(arglead)
-      local chats = M.opts.chats
-      if chats == nil then
-        return
-      end
-
-      local chat_names = {}
-
-      for name in util.module.autopairs(chats) do
-        local name_ = name:gsub(' ', '\\ ')
-        table.insert(chat_names, name_)
-      end
-
-      if #arglead == 0 then
-        return chat_names
-      end
-
-      return vim.fn.matchfuzzy(chat_names, arglead)
-    end,
+    complete = complete_chat_names,
   })
 
   vim.api.nvim_create_user_command('Mcount', function()
