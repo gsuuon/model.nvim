@@ -40,6 +40,7 @@ local function create_segment(source, segment_mode, hl_group)
     if source.selection ~= nil then
       -- clear selection
       util.buf.set_text(source.selection, {})
+
       local seg = segment.create_segment_at(
         source.selection.start.row,
         source.selection.start.col,

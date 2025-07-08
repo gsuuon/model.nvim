@@ -12,7 +12,8 @@ local M = {}
 ---@field system? string System instruction
 ---@field params? table Static request parameters
 ---@field options? table Provider options
----@field completion_prefix? string Prefix assistant message for completion requests
+---@field completion_prefix? string Prefix assistant message for completion requests (like an opening codefence)
+---@field completion_suffix? string Suffix to add to completion responses (like a trailing codefence)
 
 ---@class DataSection
 ---@field label? string
@@ -21,14 +22,39 @@ local M = {}
 ---@class ChatMessage
 ---@field role 'user' | 'assistant'
 ---@field content string Content without data sections
----@field data_sections DataSection[]
----@field raw_content string Full content including data section unparsed text
+---@field data_sections? DataSection[]
+---@field raw_content? string Full content including data section unparsed text
 
 ---@alias ChatConfig { system?: string, params?: table, options?: table }
 
 ---@class ChatContents
 ---@field config ChatConfig Configuration for this chat buffer, used by chatprompt.run
 ---@field messages ChatMessage[] Messages in the chat buffer
+
+---@class Chat
+---@field contents ChatContents
+---@field chat string
+---@field trail? boolean
+
+local function parse_data_sections(content)
+  local data_sections = {}
+
+  local clean_content = content:gsub(
+    '\n?<<<<<< (.-)\n(.-)\n>>>>>>\n?',
+    function(label, data_section_content)
+      table.insert(data_sections, {
+        label = label,
+        content = data_section_content,
+      })
+      return ''
+    end
+  )
+
+  return {
+    data_sections = data_sections,
+    content = clean_content,
+  }
+end
 
 --- Splits lines into array of { role: 'user' | 'assistant', content: string }
 --- If first line starts with '> ', then the rest of that line is system message
@@ -47,24 +73,12 @@ local function split_messages(text)
   local function add_message()
     local aggregate_text = table.concat(chunk_lines, '\n')
 
-    ---@type DataSection[]
-    local data_sections = {}
-
-    local clean_content = aggregate_text:gsub(
-      '\n?<<<<<< (.-)\n(.-)\n>>>>>>\n?',
-      function(label, content)
-        table.insert(data_sections, {
-          label = label,
-          content = content,
-        })
-        return ''
-      end
-    )
+    local parsed_message = parse_data_sections(aggregate_text)
 
     table.insert(messages, {
       role = chunk_is_user and 'user' or 'assistant',
-      content = vim.trim(clean_content),
-      data_sections = data_sections,
+      content = parsed_message.content,
+      data_sections = parsed_message.data_sections,
       raw_content = aggregate_text,
     })
 
@@ -168,7 +182,7 @@ end
 --- the system instruction. The rest of the text is parsed as alternating
 --- user/assistant messages, with `\n======\n` delimiters.
 ---@param text string[]
----@return { contents: ChatContents, chat: string, trail: boolean }
+---@return Chat
 function M.parse(text)
   local parsed = parse_config(text)
 
@@ -282,6 +296,8 @@ local function is_buffer_empty_and_unnamed()
 end
 
 function M.create_buffer(text, smods)
+  smods = smods or { tab = 0 }
+
   if not is_buffer_empty_and_unnamed() then
     -- only create a new buffer if we're not in an empty buffer
     if smods.tab > 0 then
@@ -297,57 +313,58 @@ function M.create_buffer(text, smods)
   vim.cmd.syntax({ 'sync', 'fromstart' })
 
   local lines = vim.fn.split(text, '\n')
-  ---@cast lines string[]
 
   vim.api.nvim_buf_set_lines(0, 0, 0, false, lines)
 end
 
-local function needs_nl(buf_lines)
-  local last_line = buf_lines[#buf_lines]
-
-  return not last_line or vim.fn.trim(last_line) ~= ''
-end
-
----@param opts { chats?: table<string, ChatPrompt> }
-function M.run_chat(opts)
-  local buf_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local parsed = M.parse(buf_lines)
-
-  local chat_name =
-    assert(parsed.chat, 'Chat buffer first line must be a chat prompt name')
-
-  ---@type ChatPrompt
-  local chat_prompt = assert(
-    vim.tbl_get(opts, 'chats', chat_name),
-    'Chat "' .. chat_name .. '" not found'
-  )
-
+---@param chat Chat
+---@param handlers StreamHandlers
+---@param chat_prompt ChatPrompt
+local function create_chat_runner(chat, handlers, chat_prompt)
   local run_params =
-    chat_prompt.run(parsed.contents.messages, parsed.contents.config)
+    chat_prompt.run(chat.contents.messages, chat.contents.config)
 
   if run_params == nil then
     error('Chat prompt run() returned nil')
   end
 
-  local starter_separator = needs_nl(buf_lines) and '\n======\n' or '======\n'
+  local options = chat.contents.config.options or {}
+  local params = chat.contents.config.params or {}
 
-  local seg
-
-  local last_msg = parsed.contents.messages[#parsed.contents.messages]
-
-  if last_msg.role == 'user' then
-    seg = segment.create_segment_at(#buf_lines, 0)
-    if not vim.endswith(vim.trim(table.concat(buf_lines, '\n')), '======') then
-      seg.add(starter_separator)
-    end
-  else
-    seg = segment.create_segment_at(#buf_lines - 1, #buf_lines[#buf_lines])
+  if type(chat_prompt.runOptions) == 'function' then
+    options = vim.tbl_deep_extend('force', options, chat_prompt.runOptions())
   end
 
-  seg.clear_hl()
+  ---@param on_run fun(cancel: fun())
+  return function(on_run)
+    if type(run_params) == 'function' then
+      run_params(function(async_run_params)
+        on_run(
+          chat_prompt.provider.request_completion(
+            handlers,
+            vim.tbl_deep_extend('force', params, async_run_params),
+            options
+          )
+        )
+      end)
+    else
+      on_run(
+        chat_prompt.provider.request_completion(
+          handlers,
+          vim.tbl_deep_extend('force', params, run_params),
+          options
+        )
+      )
+    end
+  end
+end
 
+---@param opts { chats: table<string, ChatPrompt> }
+function M.run_chat(opts)
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+
+  local seg = segment.create_segment_at(#lines, 0)
   local stop_spinner = juice.spinner(seg, 'Waiting for response.. ')
-
   local sayer = juice.sayer()
 
   ---@type StreamHandlers
@@ -362,10 +379,11 @@ function M.run_chat(opts)
       sayer.finish()
 
       if text then
-        seg.set_text(
-          (last_msg.role == 'user' and (starter_separator .. text) or text)
-            .. '\n======\n'
-        )
+        if seg.get_text():match('^\n======\n') then
+          seg.set_text('\n======\n' .. text)
+        else
+          seg.set_text(text)
+        end
       else
         seg.add('\n======\n')
       end
@@ -394,33 +412,178 @@ function M.run_chat(opts)
     segment = seg,
   }
 
-  local options = parsed.contents.config.options or {}
-  local params = parsed.contents.config.params or {}
+  local chat = M.parse(lines)
+  local chat_prompt = assert(
+    vim.tbl_get(opts, 'chats', chat.chat),
+    'Chat prompt "' .. chat.chat .. '" not found in setup({chats = {..}})'
+  )
 
-  if type(chat_prompt.runOptions) == 'function' then
-    options = vim.tbl_deep_extend('force', options, chat_prompt.runOptions())
+  local chat_runner = create_chat_runner(chat, handlers, chat_prompt)
+
+  if not chat.trail then
+    seg.add('\n======\n')
   end
 
-  local function make_request(params_from_run)
-    local ok, err = pcall(function()
-      seg.data.cancel = chat_prompt.provider.request_completion(
-        handlers,
-        vim.tbl_deep_extend('force', params, params_from_run),
-        options
-      )
-    end)
-    if not ok then
+  local ok, err = pcall(chat_runner, function(cancel)
+    seg.data.cancel = cancel
+  end)
+
+  if not ok then
+    stop_spinner()
+    util.eshow(err)
+  end
+end
+
+local function insert_or_replace_segment(source)
+  if source.selection ~= nil then
+    util.buf.set_text(source.selection, {})
+
+    local seg = segment.create_segment_at(
+      source.selection.start.row,
+      source.selection.start.col,
+      nil,
+      0
+    )
+
+    seg.data.original = source.lines
+
+    return seg
+  else
+    local pos = util.cursor.position()
+
+    local seg = segment.create_segment_at(pos.row, pos.col, nil, 0)
+
+    seg.data.original = {}
+
+    return seg
+  end
+end
+
+---@param chat Chat
+---@param chat_prompt ChatPrompt
+---@param seg Segment
+local function run_chat_completion(chat, chat_prompt, seg)
+  seg.data.chat = chat
+
+  local stop_spinner = juice.spinner(seg, 'Waiting for response ..')
+
+  local response = ''
+
+  ---@type StreamHandlers
+  local handlers = {
+    on_error = function(err)
       stop_spinner()
       util.eshow(err)
+    end,
+    on_finish = function()
+      stop_spinner()
+      seg.clear_hl()
+
+      if chat_prompt.completion_prefix then
+        -- Replace the prefix message
+        response = chat_prompt.completion_prefix
+          .. response
+          .. (chat_prompt.completion_suffix or '')
+
+        local parsed = parse_data_sections(response)
+
+        seg.data.chat.contents.messages[#seg.data.chat.contents.messages] = {
+          role = 'assistant',
+          raw_content = response,
+          content = parsed.content,
+          data_sections = parsed.data_sections,
+        }
+      else
+        local parsed = parse_data_sections(response)
+        table.insert(seg.data.chat.contents.messages, {
+          role = 'assistant',
+          raw_content = response,
+          content = parsed.content,
+          data_sections = parsed.data_sections,
+        })
+      end
+    end,
+    on_partial = function(partial)
+      stop_spinner()
+      seg.add(partial)
+      response = response .. partial
+    end,
+    on_other = function(other)
+      stop_spinner()
+      util.show(other)
+    end,
+    segment = seg,
+  }
+
+  local chat_runner = create_chat_runner(chat, handlers, chat_prompt)
+
+  local ok, err = pcall(chat_runner, function(cancel)
+    seg.data.cancel = cancel
+  end)
+
+  if not ok then
+    stop_spinner()
+    util.eshow(err)
+  end
+end
+
+---@param chat Chat
+---@param chat_prompt ChatPrompt
+---@param source Source
+function M.start_chat_completion(chat, chat_prompt, source)
+  local seg = insert_or_replace_segment(source)
+
+  if chat_prompt.completion_prefix then
+    table.insert(chat.contents.messages, {
+      role = 'assistant',
+      content = chat_prompt.completion_prefix,
+    })
+  end
+
+  run_chat_completion(chat, chat_prompt, seg)
+end
+
+function M.continue_chat_completion(opts, instruction)
+  local segments = segment.query_all(util.cursor.position())
+
+  local found_segment
+  do
+    for _, seg in ipairs(segments) do
+      if seg.data.chat.contents then
+        found_segment = seg
+        break
+      end
     end
   end
 
-  if type(run_params) == 'function' then
-    run_params(function(async_run_params)
-      make_request(async_run_params)
-    end)
+  if found_segment then
+    ---@type Chat
+    local chat = found_segment.data.chat
+    local chat_prompt = opts.chats[chat.chat]
+
+    if not chat_prompt then
+      error('Chat handler not found for ' .. chat.chat)
+    end
+
+    found_segment.set_text('')
+
+    -- TODO add the chatprompt prefix again
+
+    table.insert(chat.contents.messages, {
+      role = 'user',
+      content = instruction,
+    })
+
+    if chat_prompt.completion_prefix then
+      table.insert(chat.contents.messages, {
+        role = 'assistant',
+        content = chat_prompt.completion_prefix,
+      })
+    end
+
+    run_chat_completion(chat, chat_prompt, found_segment)
   else
-    make_request(run_params)
+    util.eshow('Nothing to continue here')
   end
 end
 
