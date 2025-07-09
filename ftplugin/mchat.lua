@@ -15,7 +15,7 @@ if not vim.b.did_mchat_plugin then
 
     tools.run_presentation(model.opts.tools, cmd.fargs[1])
   end, {
-    desc = 'Re-run the presentation of a tool call',
+    desc = 'Re-run the presentation effects of a tool call',
     force = true,
     nargs = '?',
     complete = function(arglead)
@@ -65,7 +65,7 @@ if not vim.b.did_mchat_plugin then
       model.tool_auto_accept(vim.fn.bufnr(), tools.accept_by_name(cmd.fargs))
     end
   end, {
-    desc = 'Set auto accepting tools by name',
+    desc = 'Set auto accepting tools by tool name',
     force = true,
     nargs = '*',
     complete = function(arglead)
