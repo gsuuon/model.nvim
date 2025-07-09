@@ -246,6 +246,41 @@ local function accept_by_name(tool_names)
   end
 end
 
+local function accept_by_arguments(acceptors)
+  ---@param call ToolCall
+  return function(call)
+    local tool_acceptor = acceptors[call.name]
+    if not tool_acceptor then
+      return false
+    end
+
+    if tool_acceptor == true then
+      return true
+    end
+
+    local args = util.json.decode(call.arguments)
+    if not args then
+      return false
+    end
+
+    for field, validator in pairs(tool_acceptor) do
+      local arg_value = args[field]
+
+      if type(validator) == 'function' then
+        if not validator(arg_value) then
+          return false
+        end
+      else
+        if arg_value ~= validator then
+          return false
+        end
+      end
+    end
+
+    return true
+  end
+end
+
 return {
   process_partial_tool_call = process_partial_tool_call,
   get_all_tool_calls = get_all_tool_calls,
@@ -254,4 +289,5 @@ return {
   get_presentable_tool_calls = get_presentable_tool_calls,
   autoaccept = autoaccept,
   accept_by_name = accept_by_name,
+  accept_by_arguments = accept_by_arguments,
 }

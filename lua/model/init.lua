@@ -7,7 +7,6 @@ local provider = require('model.core.provider')
 local scopes = require('model.core.scopes')
 local chat = require('model.core.chat')
 local input = require('model.core.input')
-local lsp = require('model.util.lsp')
 
 local M = {}
 
@@ -85,9 +84,11 @@ end
 
 M._tool_auto_acceptors = {}
 
----@param bufnr integer
+---@param bufnr? integer
 ---@param acceptor? fun(call: ToolCall): boolean set nil to clear
 function M.tool_auto_accept(bufnr, acceptor)
+  bufnr = bufnr or vim.fn.bufnr()
+
   M._tool_auto_acceptors[bufnr] = acceptor
 
   if M._tool_auto_acceptors[bufnr] then
