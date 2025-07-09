@@ -45,10 +45,10 @@ function M.scroll(text, rate, set, size)
   end, rate)
 end
 
---- @param seg? Segment Optional segment to place the marquee after
+--- @param seg_or_position? Segment | Position Optional segment or position to place the marquee after
 --- @param label? string Optional string to place after the spinner
 --- @param hl? string Optional highlight group for the marquee segment. Defaults to 'Comment'.
-function M.spinner(seg, label, hl)
+function M.spinner(seg_or_position, label, hl)
   local spinner_frames = {
     '⠈⠉',
     ' ⠙',
@@ -68,13 +68,23 @@ function M.spinner(seg, label, hl)
 
   ---@type Segment
   local spinner_seg
-  if seg then
-    local handler_seg = seg.details()
-    spinner_seg = segment.create_segment_at(
-      handler_seg.details.end_row,
-      handler_seg.details.end_col,
-      hl or 'Comment'
-    )
+
+  if seg_or_position then
+    if seg_or_position.get_span then
+      local handler_seg = seg_or_position.get_span()
+
+      spinner_seg = segment.create_segment_at(
+        handler_seg.stop.row,
+        handler_seg.stop.col,
+        hl or 'Comment'
+      )
+    else
+      spinner_seg = segment.create_segment_at(
+        seg_or_position.row,
+        seg_or_position.col,
+        hl or 'Comment'
+      )
+    end
   else
     local pos = util.cursor.position()
 

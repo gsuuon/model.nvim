@@ -75,8 +75,20 @@ return {
           path = path .. part
         end,
         complete = function()
-          files.show_diff(path, new_content, function(_, new_bufnr)
+          files.show_diff(path, new_content, function(orig_bufnr, new_bufnr)
             bufnr = new_bufnr
+
+            -- set buffer variable on original buffer pointing to the new diff buffer
+            vim.api.nvim_buf_set_var(
+              orig_bufnr,
+              'model_nvim_diff_pair',
+              new_bufnr
+            )
+            vim.api.nvim_buf_set_var(
+              new_bufnr,
+              'model_nvim_diff_pair',
+              orig_bufnr
+            )
 
             -- TODO set name can error if that name is already taken
             vim.api.nvim_buf_set_name(bufnr, 'rewrite_file pending - ' .. path)
@@ -84,5 +96,44 @@ return {
         end,
       },
     })
+  end,
+
+  -- autoaccept side effects of presentation
+  presentation_autoaccept = function(args, done)
+    local arguments, err = util.json.decode(args)
+    -- Find the temporary buffer containing our changes
+
+    -- this whole flow (presentation + autoaccept) breaks with multiple rewrites to the same file
+    -- in a single call, though i think that would be problematic in any case
+    if arguments then
+      local original_bufnr = vim.fn.bufnr(arguments.path)
+      if original_bufnr ~= -1 then
+        local ok, temp_bufnr = pcall(
+          vim.api.nvim_buf_get_var,
+          original_bufnr,
+          'model_nvim_diff_pair'
+        )
+        if ok and temp_bufnr and vim.api.nvim_buf_is_valid(temp_bufnr) then
+          vim.api.nvim_buf_call(original_bufnr, function()
+            vim.cmd('1,$+1diffget')
+            vim.cmd('write')
+            vim.cmd('q')
+            util.show('Autoaccept saved: ' .. arguments.path)
+          end)
+
+          vim.api.nvim_buf_call(temp_bufnr, function()
+            vim.cmd('q')
+          end)
+        else
+          util.eshow('Failed to find rewrite_file temporary buffer')
+        end
+      else
+        util.eshow('Failed to find rewrite_file original file buffer')
+      end
+
+      done()
+    else
+      util.eshow('Failed to parse arguments: ' .. err)
+    end
   end,
 }

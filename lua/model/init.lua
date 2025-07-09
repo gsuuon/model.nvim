@@ -1,4 +1,5 @@
 local util = require('model.util')
+local tools = require('model.util.tools')
 local files = require('model.util.files')
 local segment = require('model.util.segment')
 local juice = require('model.util.juice')
@@ -6,6 +7,7 @@ local provider = require('model.core.provider')
 local scopes = require('model.core.scopes')
 local chat = require('model.core.chat')
 local input = require('model.core.input')
+local lsp = require('model.util.lsp')
 
 local M = {}
 
@@ -73,6 +75,83 @@ local function _create_deprecated_command(
   end, opts)
 
   vim.api.nvim_create_user_command(new_name, cmd_fn, opts)
+end
+
+M._want_auto_scroll = {}
+
+function M.want_auto_scroll(bufnr, want)
+  M._want_auto_scroll[bufnr] = want
+end
+
+M._tool_auto_acceptors = {}
+
+---@param bufnr integer
+---@param acceptor? fun(call: ToolCall): boolean set nil to clear
+function M.tool_auto_accept(bufnr, acceptor)
+  M._tool_auto_acceptors[bufnr] = acceptor
+
+  if M._tool_auto_acceptors[bufnr] then
+    util.show('Now auto accepting tools in buffer ' .. bufnr)
+  else
+    util.show('Now not auto accepting tools in buffer ' .. bufnr)
+  end
+end
+
+local function setup_autocmds()
+  local function scroll_if_wanted_in_buf(buf)
+    if vim.api.nvim_get_current_buf() == buf and M._want_auto_scroll[buf] then
+      vim.api.nvim_win_set_cursor(0, { vim.fn.line('$'), 0 })
+    end
+  end
+
+  vim.api.nvim_create_autocmd('User', {
+    pattern = 'ModelChatPartial',
+    group = M.augroup_id,
+    callback = function(evt)
+      scroll_if_wanted_in_buf(evt.data.bufnr)
+    end,
+  })
+
+  vim.api.nvim_create_autocmd('User', {
+    pattern = 'ModelChatFinished',
+    group = M.augroup_id,
+    callback = function(evt)
+      local bufnr = evt.data.bufnr
+
+      if not M._tool_auto_acceptors[bufnr] then
+        return
+      end
+
+      local finished_chat = evt.data.chat
+      local last_msg =
+        finished_chat.contents.messages[#finished_chat.contents.messages]
+
+      if last_msg.role == 'assistant' then
+        tools.autoaccept(
+          bufnr,
+          M.opts.tools,
+          last_msg,
+          M._tool_auto_acceptors[bufnr]
+        )
+      elseif last_msg.role == 'user' then
+        local tool_results = vim.tbl_filter(function(section)
+          return section.label:match('tool_result')
+        end, last_msg.data_sections)
+
+        if #tool_results > 0 then
+          util.show('Sending ' .. #tool_results .. ' result(s)')
+
+          vim.schedule(function()
+            vim.api.nvim_buf_call(bufnr, function()
+              vim.cmd('MchatRun')
+            end)
+          end)
+        end
+      end
+
+      scroll_if_wanted_in_buf(bufnr)
+    end,
+  })
 end
 
 local function setup_commands()
@@ -494,11 +573,14 @@ function M.setup(opts)
   end
 
   setup_commands()
+  setup_autocmds()
 
   pcall(setup_treesitter_info)
 
   vim.g.did_setup_model = true
 end
+
+M.augroup_id = vim.api.nvim_create_augroup('Model', {})
 
 M.mode = provider.mode -- convenience export
 

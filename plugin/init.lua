@@ -1,4 +1,4 @@
-if vim.g.did_setup_model then
+if vim.g.did_setup_model_filetype then
   return
 end
 
@@ -8,4 +8,4 @@ vim.filetype.add({
   },
 })
 
-require('model').setup()
+vim.g.did_setup_model_filetype = true

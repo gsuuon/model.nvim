@@ -10,15 +10,19 @@ if not vim.b.did_mchat_plugin then
   })
 
   vim.api.nvim_create_user_command('MchatToolPresentation', function(cmd)
+    local model = require('model')
     local tools = require('model.util.tools')
-    tools.run_presentation(cmd.fargs[1])
+
+    tools.run_presentation(model.opts.tools, cmd.fargs[1])
   end, {
     desc = 'Re-run the presentation of a tool call',
     force = true,
     nargs = '?',
     complete = function(arglead)
+      local model = require('model')
       local tools = require('model.util.tools')
-      local presentable = tools.get_presentable_tool_calls()
+
+      local presentable = tools.get_presentable_tool_calls(model.opts.tools)
 
       if #arglead == 0 then
         return presentable
@@ -34,6 +38,48 @@ if not vim.b.did_mchat_plugin then
     '<cmd>MchatRun<CR>',
     { buffer = true, silent = true }
   )
+
+  vim.keymap.set('n', 'G', function()
+    require('model').want_auto_scroll(vim.fn.bufnr(), true)
+
+    vim.api.nvim_feedkeys('G', 'n', false)
+  end, {
+    buffer = true,
+  })
+
+  vim.keymap.set('n', 'k', function()
+    require('model').want_auto_scroll(vim.fn.bufnr(), false)
+
+    vim.api.nvim_feedkeys('k', 'n', false)
+  end, {
+    buffer = true,
+  })
+
+  vim.api.nvim_create_user_command('MchatToolAutoAcceptNames', function(cmd)
+    local model = require('model')
+    local tools = require('model.util.tools')
+
+    if #cmd.fargs == 0 then
+      model.tool_auto_accept(vim.fn.bufnr(), nil)
+    else
+      model.tool_auto_accept(vim.fn.bufnr(), tools.accept_by_name(cmd.fargs))
+    end
+  end, {
+    desc = 'Set auto accepting tools by name',
+    force = true,
+    nargs = '*',
+    complete = function(arglead)
+      local model = require('model')
+
+      local tools = vim.tbl_keys(model.opts.tools)
+
+      if #arglead == 0 then
+        return tools
+      end
+
+      return vim.fn.matchfuzzy(tools, arglead)
+    end,
+  })
 
   vim.b.did_mchat_plugin = true
 end

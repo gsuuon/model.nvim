@@ -1,20 +1,5 @@
 local util = require('model.util')
-
-local function start_lsp_servers(bufnr)
-  local lsp_util = require('lspconfig.util')
-
-  local count = 0
-
-  vim.api.nvim_buf_call(bufnr, function()
-    local matching_configs = lsp_util.get_config_by_ft(vim.bo.filetype)
-    for _, config in ipairs(matching_configs) do
-      config.launch()
-      count = count + 1
-    end
-  end)
-
-  return count
-end
+local lsp = require('model.util.lsp')
 
 local function find_max_backticks(lines)
   local max_backticks = 0
@@ -28,7 +13,7 @@ local function find_max_backticks(lines)
 end
 
 local function format_file_content(filename, lines, label, range)
-  local file_info = (label and label or 'File') .. ': `' .. filename .. '`\n'
+  local file_info = (label and label or 'File') .. ': `' .. filename .. '`'
 
   -- Count maximum number of consecutive backticks in file content
   local max_backticks = find_max_backticks(lines)
@@ -37,16 +22,30 @@ local function format_file_content(filename, lines, label, range)
   local fence_length = math.max(3, max_backticks + 1)
   local fence = string.rep('`', fence_length)
 
-  file_info = file_info .. fence
-  local filetype = vim.fn.fnamemodify(filename, ':e')
-  if filetype and filetype ~= '' then
-    file_info = file_info .. ' ' .. filetype
+  if range then
+    file_info = file_info .. ' ' .. '#L' .. range.start .. '-L' .. range.stop
+  else
+    file_info = file_info .. ' ' .. '#L1-L' .. #lines
   end
+
+  file_info = file_info .. '\n' .. fence
+  local filetype = vim.fn.fnamemodify(filename, ':e')
+
+  if filetype and filetype ~= '' then
+    file_info = file_info .. filetype
+  end
+
   file_info = file_info .. '\n'
 
-  if range then
-    filename = filename .. '#L' .. range.start .. '-L' .. range.stop
-  end
+  lines = vim.tbl_map(function(line)
+    if line == '======' then
+      return '\\======'
+    else
+      return line
+        :gsub('^<<<<<<(.*)$', '\\<<<<<<%1')
+        :gsub('^>>>>>>$', '\\>>>>>>')
+    end
+  end, lines)
 
   return file_info .. table.concat(lines, '\n') .. '\n' .. fence
 end
@@ -56,7 +55,7 @@ local function format_diagnostics(diagnostics)
     return ''
   end
 
-  local lines = { '\nDiagnostics:\n' }
+  local lines = { 'Diagnostics:' }
   for _, d in ipairs(diagnostics) do
     local severity = vim.diagnostic.severity[d.severity]
     table.insert(
@@ -90,7 +89,7 @@ local function get_buffer_content_and_diagnostics(range)
     lines = vim.api.nvim_buf_get_lines(0, range.start - 1, range.stop, false)
   end
 
-  local file_content = format_file_content(filename, lines, range)
+  local file_content = format_file_content(filename, lines, nil, range)
   local diagnostics
 
   if range == nil then
@@ -104,8 +103,12 @@ local function get_buffer_content_and_diagnostics(range)
     end, vim.diagnostic.get(0))
   end
 
-  local diagnostic_content = format_diagnostics(diagnostics)
-  local result = file_content .. diagnostic_content
+  local result = file_content
+
+  if #diagnostics > 0 then
+    local diagnostic_content = format_diagnostics(diagnostics)
+    result = result .. '\n\n' .. diagnostic_content
+  end
 
   return result
 end
@@ -119,6 +122,7 @@ end
 
 local function get_file_and_diagnostics(filepath, file_label, callback)
   local bufnr = vim.fn.bufadd(filepath)
+
   if not vim.loop.fs_stat(filepath) then
     error('File does not exist: ' .. filepath)
   end
@@ -132,77 +136,32 @@ local function get_file_and_diagnostics(filepath, file_label, callback)
 
   vim.fn.bufload(bufnr)
 
-  local started_servers = start_lsp_servers(bufnr)
-
-  local diagnostics_listener = nil
-  local timeout = nil
-
-  local function return_file_only()
-    if diagnostics_listener then
-      vim.api.nvim_del_autocmd(diagnostics_listener)
-    end
-
-    -- Format the file content without diagnostics
-    local buf_name = vim.fn.bufname(bufnr)
-    local filename = buf_name ~= '' and util.path.relative_norm(buf_name)
-      or '[No Name]'
-    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local result = format_file_content(filename, lines, file_label)
-
-    if not was_loaded then
-      vim.api.nvim_buf_delete(bufnr, { force = true })
-    end
-
-    callback(result)
-  end
-
-  local function return_file_and_diagnostics()
-    local diagnostics = vim.diagnostic.get(bufnr)
-
-    if timeout then
-      timeout:stop()
-    end
-
-    -- Format the diagnostics and file content
+  local function format_result(diagnostics)
     local buf_name = vim.fn.bufname(bufnr)
     local filename = buf_name ~= '' and util.path.relative_norm(buf_name)
       or '[No Name]'
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
     local file_content = format_file_content(filename, lines, file_label)
-    local diagnostic_content = format_diagnostics(diagnostics)
-    local result = file_content .. diagnostic_content
 
-    if diagnostics_listener then
-      vim.api.nvim_del_autocmd(diagnostics_listener)
+    if diagnostics then
+      local diagnostic_content = format_diagnostics(diagnostics)
+      return file_content .. '\n\n' .. diagnostic_content
+    else
+      return file_content
     end
+  end
 
+  local function cleanup()
     if not was_loaded then
       vim.api.nvim_buf_delete(bufnr, { force = true, unload = true })
     end
+  end
 
+  lsp.get_diagnostics_for_file(filepath, function(diagnostics)
+    local result = format_result(diagnostics)
+    cleanup()
     callback(result)
-  end
-
-  if started_servers == 0 then
-    vim.schedule(return_file_only)
-  else
-    timeout = vim.defer_fn(return_file_only, 10000) -- 10 second timeout
-    local diagnostics = vim.diagnostic.get(bufnr)
-    if #diagnostics > 0 then
-      -- It already had diagnostics
-      vim.schedule(return_file_and_diagnostics)
-    else
-      vim.schedule(function()
-        diagnostics_listener =
-          vim.api.nvim_create_autocmd('DiagnosticChanged', {
-            buffer = bufnr,
-            callback = function()
-              return_file_and_diagnostics()
-            end,
-          })
-      end)
-    end
-  end
+  end)
 end
 
 local function is_file_within_cwd(path)
@@ -386,19 +345,16 @@ end
 
 local function show_diff(original_name, updated, on_show)
   vim.schedule(function()
+    -- Create a temp buffer for our updated content in a new tab
     vim.cmd('tabnew')
     vim.cmd('set diffopt+=vertical')
     vim.cmd('set buftype=nofile')
     vim.cmd('set bufhidden=wipe')
     vim.cmd('set nobuflisted')
+    vim.cmd('set noswapfile')
 
+    -- FIXME multiple rewrites to the same file won't work
     local bufname = 'diff - ' .. original_name
-    local i = 1
-    while vim.fn.bufexists(bufname) ~= 0 do
-      bufname = 'diff - ' .. i .. ' - ' .. original_name
-      i = i + 1
-    end
-
     vim.cmd('file ' .. vim.fn.fnameescape(bufname))
 
     local new_bufnr = vim.api.nvim_get_current_buf()
@@ -412,7 +368,10 @@ local function show_diff(original_name, updated, on_show)
     vim.keymap.set('n', '<tab>', 'dp]c', { buffer = true, nowait = true })
 
     vim.cmd('diffsplit ' .. vim.fn.fnameescape(original_name))
-    local orig_ft = vim.api.nvim_buf_get_option(0, 'filetype')
+    local orig_bufnr = vim.fn.bufnr()
+    local orig_ft = vim.api.nvim_buf_get_option(orig_bufnr, 'filetype')
+
+    vim.b.is_model_nvim_diff = true
 
     vim.api.nvim_buf_set_option(new_bufnr, 'filetype', orig_ft)
 
