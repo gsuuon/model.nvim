@@ -90,19 +90,19 @@ local function create_tool_handler(available_tools, allowed_tools)
         end
       end
 
-      local cancel_spinners = {}
+      local status_messages = {}
 
       for id, closure in pairs(tool_uses) do
         local function on_tool_done(result, err)
           if err ~= nil then
-            results[id] = 'Error: ' .. tostring(err)
+            results[id] = 'Tool call failed. Error: ' .. tostring(err)
           else
             results[id] = result == nil and 'nil' or result
           end
           finished = finished + 1
 
-          if cancel_spinners[id] then
-            cancel_spinners[id]()
+          if status_messages[id] ~= nil then
+            util.show('Done: ' .. status_messages[id])
           end
 
           maybe_finish()
@@ -115,7 +115,8 @@ local function create_tool_handler(available_tools, allowed_tools)
         if ok then
           if type(ret) == 'function' then
             if msg then
-              cancel_spinners[id] = juice.spinner(nil, msg)
+              status_messages[id] = msg
+              util.show('Started: ' .. msg)
             end
             table.insert(cancels, ret)
           else

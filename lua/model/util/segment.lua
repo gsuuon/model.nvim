@@ -9,6 +9,7 @@ local util = require('model.util')
 ---@field clear_hl fun(): nil
 ---@field delete fun(): nil
 ---@field data table
+---@field get_span fun(): Span
 ---@field highlight fun(hl_group: string): nil
 ---@field details fun(): {row: number, col: number, details: table, bufnr: number}
 
@@ -113,6 +114,29 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       virt_text_pos = 'overlay',
       virt_lines = #virt_lines > 0 and virt_lines or nil,
     })
+  end
+
+  local function get_span()
+    local deets = get_details()
+
+    local end_row = deets.details.end_row or deets.row
+    local end_col = deets.details.end_col or deets.col
+    local start_row = math.min(deets.row, end_row)
+    local start_col = math.min(deets.col, end_col)
+    end_row = math.max(deets.row, end_row)
+    end_col = math.max(deets.col, end_col)
+
+    ---@type Span
+    return {
+      start = {
+        row = start_row,
+        col = start_col,
+      },
+      stop = {
+        row = end_row,
+        col = end_col,
+      },
+    }
   end
 
   return {
@@ -227,18 +251,16 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     end),
 
     delete = vim.schedule_wrap(function()
-      local mark = get_details()
+      local span = get_span()
 
-      if _data.original then
-        vim.api.nvim_buf_set_text(
-          bufnr,
-          mark.row,
-          mark.col,
-          mark.details.end_row,
-          mark.details.end_col,
-          _data.original
-        )
-      end
+      vim.api.nvim_buf_set_text(
+        bufnr,
+        span.start.row,
+        span.start.col,
+        span.stop.row,
+        span.stop.col,
+        _data.original or {}
+      )
 
       vim.api.nvim_buf_del_extmark(bufnr, M.ns_id(), _ext_id)
     end),
@@ -247,10 +269,16 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
 
     details = get_details,
 
+    get_span = get_span,
+
     data = _data,
   }
 end
 
+---@param row integer
+---@param col integer
+---@param hl_group? string
+---@param bufnr? integer
 function M.create_segment_at(row, col, hl_group, bufnr)
   if not bufnr or bufnr == 0 then
     -- Pin the buffer we use to the current buffer if bufnr is 0
@@ -258,6 +286,7 @@ function M.create_segment_at(row, col, hl_group, bufnr)
     bufnr = vim.fn.bufnr('%')
   end
 
+  ---@param pos Position
   local function get_row_length(pos)
     local line =
       vim.api.nvim_buf_get_lines(bufnr, pos.row, pos.row + 1, false)[1]

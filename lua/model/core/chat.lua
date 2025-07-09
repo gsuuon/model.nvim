@@ -41,8 +41,15 @@ local M = {}
 
 ---@class Chat
 ---@field contents ChatContents
----@field chat string
----@field trail? boolean
+---@field chat string name of the chat handler
+---@field trail? boolean last message has a trailing separator
+
+local function emit_event(name, data)
+  vim.api.nvim_exec_autocmds('User', {
+    pattern = name,
+    data = data,
+  })
+end
 
 local function parse_data_sections(content)
   local data_sections = {}
@@ -207,7 +214,7 @@ function M.parse(text)
       }),
     },
     chat = parsed.chat,
-    last_message_has_separator = messages_and_system.last_message_has_separator,
+    trail = messages_and_system.last_message_has_separator,
   }
 end
 
@@ -372,7 +379,15 @@ end
 
 ---@param opts { chats: table<string, ChatPrompt> }
 function M.run_chat(opts)
+  local bufnr = vim.fn.bufnr()
+
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+
+  local chat = M.parse(lines)
+  local chat_prompt = assert(
+    vim.tbl_get(opts, 'chats', chat.chat),
+    'Chat prompt "' .. chat.chat .. '" not found in setup({chats = {..}})'
+  )
 
   local seg = segment.create_segment_at(#lines, 0)
   local stop_spinner = juice.spinner(seg, 'Waiting for response.. ')
@@ -384,16 +399,23 @@ function M.run_chat(opts)
       stop_spinner()
       seg.add(text)
       sayer.say(text)
+
+      vim.schedule(function()
+        emit_event('ModelChatPartial', {
+          text = text,
+          bufnr = bufnr,
+        })
+      end)
     end,
     on_finish = function(text, reason)
       stop_spinner()
       sayer.finish()
 
       if text then
-        if seg.get_text():match('^\n======\n') then
-          seg.set_text('\n======\n' .. text)
-        else
+        if chat.trail then
           seg.set_text(text)
+        else
+          seg.set_text('\n======\n' .. text)
         end
       else
         seg.add('\n======\n')
@@ -409,6 +431,13 @@ function M.run_chat(opts)
       then
         util.notify('Finish reason: ' .. reason)
       end
+
+      vim.schedule(function()
+        emit_event('ModelChatFinished', {
+          chat = M.parse(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)),
+          bufnr = bufnr,
+        })
+      end)
     end,
     on_error = function(err, label)
       stop_spinner()
@@ -422,12 +451,6 @@ function M.run_chat(opts)
     end,
     segment = seg,
   }
-
-  local chat = M.parse(lines)
-  local chat_prompt = assert(
-    vim.tbl_get(opts, 'chats', chat.chat),
-    'Chat prompt "' .. chat.chat .. '" not found in setup({chats = {..}})'
-  )
 
   local chat_runner = create_chat_runner(chat, handlers, chat_prompt)
 

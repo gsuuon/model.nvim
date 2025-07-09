@@ -115,6 +115,9 @@ return {
             vim.filetype.match({ filename = path }) or ''
           )
 
+          -- Set a buffer variable to identify this buffer later
+          vim.api.nvim_buf_set_var(bufnr, 'model_nvim_created_file', true)
+
           -- Display a message
           if already_existed then
             util.show('Creating file that already exists: ' .. path)
@@ -130,5 +133,29 @@ return {
         end,
       },
     })
+  end,
+  presentation_autoaccept = function(args, done)
+    local arguments, err = util.json.decode(args)
+    if arguments then
+      local bufnr = vim.fn.bufnr(arguments.path)
+      if bufnr ~= -1 then
+        local ok, is_created =
+          pcall(vim.api.nvim_buf_get_var, bufnr, 'model_nvim_created_file')
+        if ok and is_created then
+          vim.api.nvim_buf_call(bufnr, function()
+            vim.cmd('write')
+            vim.cmd('q')
+            util.show('Autoaccept saved: ' .. arguments.path)
+          end)
+        else
+          util.eshow('Failed to find created file buffer')
+        end
+      else
+        util.eshow('Failed to find buffer for path: ' .. arguments.path)
+      end
+      done()
+    else
+      util.eshow('Failed to parse arguments: ' .. err)
+    end
   end,
 }

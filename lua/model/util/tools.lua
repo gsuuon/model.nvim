@@ -1,4 +1,3 @@
-local model = require('model')
 local util = require('model.util')
 local chat = require('model.core.chat')
 
@@ -118,7 +117,7 @@ local function get_all_tool_calls(message)
 end
 
 ---Gets the tool calls for tools which the tool is enabled and it has a presentation
-local function get_can_present_tool_calls(bufnr_or_lines)
+local function get_can_present_tool_calls(equipped_tools, bufnr_or_lines)
   local lines
   do
     if type(bufnr_or_lines) == 'number' then
@@ -139,11 +138,6 @@ local function get_can_present_tool_calls(bufnr_or_lines)
 
   local last_message = messages[#messages]
 
-  local equipped_tools = equip_tools(
-    model.opts.tools,
-    vim.tbl_get(parsed, 'contents', 'config', 'options', 'tools')
-  )
-
   local tool_calls = get_all_tool_calls(last_message)
 
   ---@type ToolCall[]
@@ -156,9 +150,9 @@ local function get_can_present_tool_calls(bufnr_or_lines)
 end
 
 ---@return string[] tool_call_ids
-local function get_presentable_tool_calls()
+local function get_presentable_tool_calls(equipped_tools)
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local presentable = get_can_present_tool_calls(lines)
+  local presentable = get_can_present_tool_calls(equipped_tools, lines)
 
   return vim.tbl_map(function(tool_call)
     return tool_call.id
@@ -167,9 +161,13 @@ end
 
 --- @param bufnr_or_lines? integer | string[] buffer number or lines, nil for current buffer
 --- @param target_tool_call_id? string id of tool call, or nil for all
-local function run_presentation(bufnr_or_lines, target_tool_call_id)
+local function run_presentation(
+  equipped_tools,
+  bufnr_or_lines,
+  target_tool_call_id
+)
   local tool_calls_with_presentation =
-    get_can_present_tool_calls(bufnr_or_lines)
+    get_can_present_tool_calls(equipped_tools, bufnr_or_lines)
 
   local tool_calls_to_present = target_tool_call_id
       and (vim.tbl_filter(function(tool_call)
@@ -178,9 +176,73 @@ local function run_presentation(bufnr_or_lines, target_tool_call_id)
     or tool_calls_with_presentation
 
   for _, call in ipairs(tool_calls_to_present) do
-    local tool = model.opts.tools[call.name]
+    local tool = equipped_tools[call.name]
     local consume_partials = tool.presentation()
     consume_partials(call.arguments)
+  end
+end
+
+---@param bufnr integer
+---@param equipped_tools table<string, Tool>
+---@param message ChatMessage
+---@param acceptor fun(call: ToolCall): boolean
+local function autoaccept(bufnr, equipped_tools, message, acceptor)
+  local tool_calls = get_all_tool_calls(message)
+  local accept_status = {}
+
+  local function continue_completion()
+    if
+      #vim.tbl_filter(function(x)
+        return x
+      end, accept_status) == #accept_status
+    then
+      vim.api.nvim_buf_call(bufnr, function()
+        vim.cmd('MchatRun')
+      end)
+    else
+      util.show('Review tool calls then continue')
+    end
+  end
+
+  local function maybe_done()
+    -- check if all tool_calls have been run or accept_status
+    if #accept_status == #tool_calls then
+      continue_completion()
+    end
+  end
+
+  for _, call in ipairs(tool_calls) do
+    if acceptor(call) then
+      local tool = equipped_tools[call.name]
+
+      if tool then
+        table.insert(accept_status, true)
+
+        if tool.presentation_autoaccept then
+          tool.presentation_autoaccept(call.arguments, function()
+            maybe_done()
+          end)
+        else
+          maybe_done()
+        end
+      else
+        util.eshow('Missing tool: ' .. call.name)
+        table.insert(accept_status, false)
+        maybe_done()
+      end
+    else
+      table.insert(accept_status, false)
+      maybe_done()
+    end
+  end
+end
+
+local function accept_by_name(tool_names)
+  return function(call)
+    if vim.tbl_contains(tool_names, call.name) then
+      return true
+    end
+    return false
   end
 end
 
@@ -190,4 +252,6 @@ return {
   run_presentation = run_presentation,
   equip_tools = equip_tools,
   get_presentable_tool_calls = get_presentable_tool_calls,
+  autoaccept = autoaccept,
+  accept_by_name = accept_by_name,
 }
