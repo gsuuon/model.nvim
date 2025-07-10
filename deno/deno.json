@@ -1,0 +1,11 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-env --allow-read --allow-net main.ts"
+  },
+  "imports": {
+    "@lambdalisue/messagepack-rpc": "jsr:@lambdalisue/messagepack-rpc@^2.4.1",
+    "@msgpack/msgpack": "npm:@msgpack/msgpack@^3.1.2",
+    "@std/assert": "jsr:@std/assert@1",
+    "@std/msgpack": "jsr:@std/msgpack@^1.0.3"
+  }
+}
