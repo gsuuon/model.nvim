@@ -1,5 +1,4 @@
 local util = require('model.util')
-local juice = require('model.util.juice')
 local util_tools = require('model.util.tools')
 
 -- Tool handling utilities

@@ -638,4 +638,10 @@ function M.continue_chat_completion(opts, instruction)
   end
 end
 
+function M.parse_buffer_to_json(bufnr)
+  bufnr = bufnr or vim.fn.bufnr()
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  return vim.json.encode(M.parse(lines))
+end
+
 return M

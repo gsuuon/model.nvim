@@ -13,11 +13,11 @@ if not vim.b.did_mchat_plugin then
     local model = require('model')
     local tools = require('model.util.tools')
 
-    tools.run_presentation(model.opts.tools, cmd.fargs[1])
+    tools.run_presentation(model.opts.tools, cmd.fargs)
   end, {
     desc = 'Re-run the presentation effects of a tool call',
     force = true,
-    nargs = '?',
+    nargs = '*',
     complete = function(arglead)
       local model = require('model')
       local tools = require('model.util.tools')
@@ -51,6 +51,14 @@ if not vim.b.did_mchat_plugin then
     require('model').want_auto_scroll(vim.fn.bufnr(), false)
 
     vim.api.nvim_feedkeys('k', 'n', false)
+  end, {
+    buffer = true,
+  })
+
+  vim.keymap.set('n', 'gg', function()
+    require('model').want_auto_scroll(vim.fn.bufnr(), false)
+
+    vim.api.nvim_feedkeys('gg', 'n', false)
   end, {
     buffer = true,
   })

@@ -358,6 +358,8 @@ local function show_diff(original_name, updated, on_show)
     vim.cmd('file ' .. vim.fn.fnameescape(bufname))
 
     local new_bufnr = vim.api.nvim_get_current_buf()
+    local new_win = vim.api.nvim_get_current_win()
+    local tabpagenr = vim.api.nvim_get_current_tabpage()
 
     local lines = vim.split(updated, '\n', { plain = true })
     if lines[#lines] == '' and updated:sub(-1) == '\n' then
@@ -369,6 +371,7 @@ local function show_diff(original_name, updated, on_show)
 
     vim.cmd('diffsplit ' .. vim.fn.fnameescape(original_name))
     local orig_bufnr = vim.fn.bufnr()
+    local orig_win = vim.api.nvim_get_current_win()
     local orig_ft = vim.api.nvim_buf_get_option(orig_bufnr, 'filetype')
 
     vim.b.is_model_nvim_diff = true
@@ -377,8 +380,20 @@ local function show_diff(original_name, updated, on_show)
 
     vim.cmd('wincmd h') -- Focus on the new version
 
+    local data = {
+      path = original_name,
+      orig_bufnr = orig_bufnr,
+      new_bufnr = new_bufnr,
+      orig_win = orig_win,
+      new_win = new_win,
+      tabpagenr = tabpagenr,
+    }
+
+    -- Set tab variables to track the diff pair
+    vim.api.nvim_tabpage_set_var(tabpagenr, 'model_nvim_diff_pair', data)
+
     if on_show then
-      on_show(orig_bufnr, new_bufnr)
+      on_show(data)
     end
   end)
 end

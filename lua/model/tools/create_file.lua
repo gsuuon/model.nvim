@@ -1,6 +1,7 @@
 local util = require('model.util')
 local tool_utils = require('model.util.tools')
 local files = require('model.util.files')
+local rpc = require('model.util.rpc')
 
 local function path_is_absolute(path)
   -- cross-platform (windows, unix) check that path is relative
@@ -72,8 +73,6 @@ return {
                 vim.split(text, '\n')
               )
             end
-          else
-            util.eshow({ content = content, err = err }, 'Failed to decode')
           end
         end,
         complete = function()
@@ -129,6 +128,14 @@ return {
           vim.schedule(function()
             vim.cmd('tabnew')
             vim.api.nvim_set_current_buf(bufnr)
+            local winnr = vim.api.nvim_get_current_win()
+
+            rpc.notify('create_file', {
+              action = 'open',
+              path = path,
+              bufnr = bufnr,
+              winnr = winnr,
+            })
           end)
         end,
       },
