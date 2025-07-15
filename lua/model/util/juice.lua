@@ -2,8 +2,6 @@ local segment = require('model.util.segment')
 local system = require('model.util.system')
 local util = require('model.util')
 
-local y = 0
-
 local M = {}
 
 M.can_say = false
@@ -91,22 +89,7 @@ function M.spinner(seg_or_position, label, hl)
     spinner_seg = segment.create_segment_at(pos.row, pos.col, hl or 'Comment')
   end
 
-  local function render()
-    local elapsed = math.floor((vim.loop.now() - start_time) / 1000)
-    local spinner_text = spinner_frames[frame_index]
-    if label then
-      spinner_text = spinner_text .. ' ' .. label .. ' (' .. elapsed .. 's)'
-    end
-
-    spinner_seg.set_virt(spinner_text)
-
-    frame_index = frame_index + 1
-    if frame_index > #spinner_frames then
-      frame_index = 1
-    end
-  end
-
-  local stop = M.animate(render, 125)
+  local stop = util.noop
   local stopped = false
 
   local function cancel()
@@ -117,9 +100,26 @@ function M.spinner(seg_or_position, label, hl)
     end
   end
 
+  local function render()
+    local elapsed = math.floor((vim.loop.now() - start_time) / 1000)
+    local spinner_text = spinner_frames[frame_index]
+    if label then
+      spinner_text = spinner_text .. ' ' .. label .. ' (' .. elapsed .. 's)'
+    end
+
+    spinner_seg.set_virt(spinner_text, cancel)
+
+    frame_index = frame_index + 1
+    if frame_index > #spinner_frames then
+      frame_index = 1
+    end
+  end
+
   local function update(new_label)
     label = new_label
   end
+
+  stop = M.animate(render, 125)
 
   return cancel, update, spinner_seg
 end

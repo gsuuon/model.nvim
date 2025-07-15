@@ -5,7 +5,7 @@ local util = require('model.util')
 ---@field add_virt fun(text: string): nil
 ---@field set_text fun(text: string): nil
 ---@field get_text fun(): string
----@field set_virt fun(text: string): nil
+---@field set_virt fun(text: string, on_error: fun(err: any)): nil
 ---@field clear_hl fun(): nil
 ---@field delete fun(): nil
 ---@field data table
@@ -39,6 +39,20 @@ local function end_delta(lines, origin_row, origin_col)
     row = origin_row + rows_added,
     col = new_col,
   }
+end
+
+---@generic T
+---@param fn fun(a:T)
+---@return fun(arg: T, on_error: fun(err: any))
+local function schedule_wrap_with_on_error(fn)
+  return function(arg, on_error)
+    vim.schedule(function()
+      local ok, err = pcall(fn, arg)
+      if not ok then
+        on_error(err)
+      end
+    end)
+  end
 end
 
 ---Create a new segment
@@ -178,7 +192,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       return _text
     end,
 
-    set_virt = vim.schedule_wrap(set_virt_text),
+    set_virt = schedule_wrap_with_on_error(set_virt_text),
 
     add_virt = vim.schedule_wrap(function(text)
       set_virt_text(virt_text .. text)

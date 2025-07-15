@@ -19,6 +19,11 @@ return {
         description = 'Path to the repository or directory to search. Defaults to the current working directory.',
         default = '.',
       },
+      includeChats = {
+        type = 'boolean',
+        description = 'Also search chat history',
+        default = false,
+      },
     },
     required = { 'pattern' },
   },
@@ -44,22 +49,71 @@ return {
 
     -- Search each file for the pattern
     for _, file in ipairs(dir_files) do
-      local content = files.read_file(file)
-      local found_start, found_end = content:find(args.pattern, 1, args.plain)
+      if args.includeChats or not file:match('%.mchat$') then
+        local lines = vim.fn.readfile(file)
 
-      if found_start then
-        -- Get surrounding context (50 chars before and after)
-        local context_start = math.max(1, found_start - 50)
-        local context_end = math.min(#content, found_end + 50)
-        local context = content:sub(context_start, context_end)
+        local results_in_file = {}
+        local context_start = 1
+        local in_context = false
+        local last_match_line = 0
 
-        table.insert(results, {
-          file = file,
-          text = context,
-          start = found_start,
-          finish = found_end,
-        })
-      else
+        for i, line in ipairs(lines) do
+          local found = line:find(args.pattern, 1, args.plain)
+
+          if found then
+            if not in_context then
+              -- Start new context (3 lines before match)
+              context_start = math.max(1, i - 3)
+              in_context = true
+            end
+            last_match_line = i
+          end
+
+          -- If we're in a context and either:
+          -- 1. We're 3 lines past the last match
+          -- 2. We're at the end of the file
+          if in_context and ((i >= last_match_line + 3) or (i == #lines)) then
+            -- End context (3 lines after last match)
+            local context_end = math.min(#lines, last_match_line + 3)
+
+            -- Collect context lines
+            local context_lines = {}
+            for j = context_start, context_end do
+              table.insert(context_lines, lines[j])
+            end
+
+            -- Get line numbers of matches in this context
+            local match_lines = {}
+            for j = context_start, context_end do
+              if lines[j]:find(args.pattern, 1, args.plain) then
+                table.insert(match_lines, j)
+              end
+            end
+
+            if #match_lines > 0 then
+              table.insert(results_in_file, {
+                file = file,
+                text = table.concat(context_lines, '\n'),
+                match_lines = match_lines,
+                context_start = context_start,
+                context_end = context_end,
+              })
+            end
+
+            in_context = false
+          end
+        end
+
+        -- Add all results from this file to main results
+        for _, result in ipairs(results_in_file) do
+          table.insert(results, {
+            file = result.file,
+            text = result.text,
+            match_lines = result.match_lines,
+            context_start = result.context_start,
+            context_end = result.context_end,
+          })
+        end
       end
     end
 
@@ -69,17 +123,18 @@ return {
 
     local output = {}
     for _, result in ipairs(results) do
-      table.insert(
-        output,
-        string.format(
-          'File: %s\nLines: %d-%d\nContext:\n```%s\n%s\n```\n',
-          result.file,
-          result.start,
-          result.finish,
-          vim.fn.fnamemodify(result.file, ':e'),
-          result.text
-        )
+      local range = {
+        start = result.context_start,
+        stop = result.context_end,
+      }
+
+      local file_content = files.format_file_content(
+        result.file,
+        vim.split(result.text, '\n'),
+        nil,
+        range
       )
+      table.insert(output, file_content .. '\n')
     end
 
     return table.concat(output, '\n')

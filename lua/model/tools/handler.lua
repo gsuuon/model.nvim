@@ -1,5 +1,4 @@
 local util = require('model.util')
-local juice = require('model.util.juice')
 local util_tools = require('model.util.tools')
 
 -- Tool handling utilities
@@ -9,7 +8,7 @@ local TOOL_CALL_DELIM_END = '\n>>>>>>'
 -- Emits tool calls in a data_section with contents as JSON encoded of type ToolCall
 local function create_tool_chunk_handlers(emit, equipped_tools)
   local has_tool_calls = false
-  local active_tool = util.noop
+  local active_tool_json_stream = nil
 
   return {
     ---@param name string
@@ -31,7 +30,7 @@ local function create_tool_chunk_handlers(emit, equipped_tools)
 
       local tool = equipped_tools[name]
       if tool and tool.presentation then
-        active_tool = tool.presentation()
+        active_tool_json_stream = tool.presentation()
       end
     end,
     arg_partial = function(partial)
@@ -44,8 +43,8 @@ local function create_tool_chunk_handlers(emit, equipped_tools)
 
       emit(escaped)
 
-      if active_tool then
-        active_tool(partial)
+      if active_tool_json_stream then
+        active_tool_json_stream(partial)
       end
     end,
     finish = function()

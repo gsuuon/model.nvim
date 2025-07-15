@@ -105,7 +105,11 @@ local function get_all_tool_calls(message)
 
   for _, section in ipairs(message.data_sections or {}) do
     if section.label == 'tool_calls' then
-      local section_tool_calls = util.json.decode(section.content)
+      local section_tool_calls, err = util.json.decode(section.content)
+
+      if not section_tool_calls then
+        util.eshow(err, 'Failed to decode tool_calls section')
+      end
 
       for _, tool_call in ipairs(section_tool_calls or {}) do
         table.insert(tool_calls, tool_call)
@@ -117,6 +121,9 @@ local function get_all_tool_calls(message)
 end
 
 ---Gets the tool calls for tools which the tool is enabled and it has a presentation
+---@param equipped_tools table<string, Tool> Map of tool names to Tool objects
+---@param bufnr_or_lines? integer|string[] Optional buffer number or lines array, defaults to current buffer
+---@return ToolCall[] Array of ToolCall objects that can be presented
 local function get_can_present_tool_calls(equipped_tools, bufnr_or_lines)
   local lines
   do
@@ -159,21 +166,36 @@ local function get_presentable_tool_calls(equipped_tools)
   end, presentable)
 end
 
+--- @param equipped_tools table<string, Tool>
+--- @param target_tool_call_ids? string [] ids of tool calls, or nil for all
 --- @param bufnr_or_lines? integer | string[] buffer number or lines, nil for current buffer
---- @param target_tool_call_id? string id of tool call, or nil for all
 local function run_presentation(
   equipped_tools,
-  bufnr_or_lines,
-  target_tool_call_id
+  target_tool_call_ids,
+  bufnr_or_lines
 )
   local tool_calls_with_presentation =
     get_can_present_tool_calls(equipped_tools, bufnr_or_lines)
 
-  local tool_calls_to_present = target_tool_call_id
+  if #tool_calls_with_presentation == 0 then
+    util.eshow('No presentable tool calls')
+  end
+
+  local tool_calls_to_present = target_tool_call_ids
       and (vim.tbl_filter(function(tool_call)
-        return tool_call.id == target_tool_call_id
+        return vim.tbl_contains(target_tool_call_ids, tool_call.id)
       end, tool_calls_with_presentation))
     or tool_calls_with_presentation
+
+  util.show(
+    'Rerunning tool call ids:\n'
+      .. table.concat(
+        vim.tbl_map(function(call)
+          return call.id
+        end, tool_calls_to_present),
+        '\n'
+      )
+  )
 
   for _, call in ipairs(tool_calls_to_present) do
     local tool = equipped_tools[call.name]

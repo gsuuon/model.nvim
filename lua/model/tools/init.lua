@@ -17,4 +17,6 @@ return {
   get_buffer_contents = require('model.tools.get_buffer_contents'),
   git = require('model.tools.git'),
   hand_over = require('model.tools.hand_over'),
+  edit_file_treesitter = require('model.tools.edit_file_treesitter'),
+  get_file_treesitter = require('model.tools.get_file_treesitter'),
 }

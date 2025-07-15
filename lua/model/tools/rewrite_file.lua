@@ -1,30 +1,37 @@
 local files = require('model.util.files')
 local util = require('model.util')
 local tool_utils = require('model.util.tools')
+local rpc = require('model.util.rpc')
 
 return {
-  description = 'Show a diff between the current file and a proposed new version, allowing the user to accept changes by chunk.',
+  description = [[
+Rewrite the contents of a file. If modifying a single function, prefer edit_file_treesitter to avoid regenerating the entire fire.
+
+Provide the complete, self-contained file expanded in it's entirety. This tool WILL NOT expand comments like 'the rest goes here'. Leaving comments like that will REPLACE the code that was there with ONLY a comment. This is INCREDIBLY frustrating for users. NEVER do that. ALWAYS provide the ENTIRE, COMPLETE, UNABRIDGED file.
+
+Tool result is the final written file with project formatting applied and diagnostics included. Diagnostics may be stale.
+]],
   parameters = {
     type = 'object',
     properties = {
       path = {
         type = 'string',
-        description = 'Path to the file to edit',
+        description = 'Path of the file to rewrite.',
       },
-      new_content = {
+      content = {
         type = 'string',
-        description = 'The complete new content of the file',
+        description = 'The complete new content of the file. ALWAYS pass the _entire_ file contents. NEVER insert anything like "rest of the file here" in a comment, the comment will replace all the text and the user will end up with a broken file.',
       },
     },
-    required = { 'path', 'new_content' },
+    required = { 'path', 'content' },
   },
   invoke = function(args, callback)
     if type(args.path) ~= 'string' then
       error('Invalid path: must be a string')
     end
 
-    if type(args.new_content) ~= 'string' then
-      error('new_content must be a string')
+    if type(args.content) ~= 'string' then
+      error('content must be a string')
     end
 
     files.get_file_and_diagnostics(args.path, 'Final saved file', callback)
@@ -35,16 +42,18 @@ return {
       'Getting rewritten file with diagnostics..'
   end,
   presentation = function()
-    local new_content = ''
+    local content = ''
     local path = ''
     local bufnr = nil
 
-    return tool_utils.process_partial_tool_call({
-      new_content = {
-        part = function(part)
-          new_content = new_content .. part
+    local did_finish_content = false
 
-          local text = util.json.decode('"' .. new_content .. '"')
+    return tool_utils.process_partial_tool_call({
+      content = {
+        part = function(part)
+          content = content .. part
+
+          local text = util.json.decode('"' .. content .. '"')
 
           if text then
             if bufnr then
@@ -68,6 +77,8 @@ return {
               util.show('Received all content for ' .. path)
             end
           end
+
+          did_finish_content = true
         end,
       },
       path = {
@@ -75,23 +86,29 @@ return {
           path = path .. part
         end,
         complete = function()
-          files.show_diff(path, new_content, function(orig_bufnr, new_bufnr)
-            bufnr = new_bufnr
+          files.show_diff(path, content, function(data)
+            bufnr = data.new_bufnr
 
-            -- set buffer variable on original buffer pointing to the new diff buffer
-            vim.api.nvim_buf_set_var(
-              orig_bufnr,
-              'model_nvim_diff_pair',
-              new_bufnr
-            )
-            vim.api.nvim_buf_set_var(
-              new_bufnr,
-              'model_nvim_diff_pair',
-              orig_bufnr
-            )
+            if did_finish_content then
+              vim.api.nvim_buf_set_lines(
+                bufnr,
+                0,
+                -1,
+                false,
+                vim.split(content, '\n')
+              )
+              vim.api.nvim_buf_set_name(bufnr, 'rewrite_file done - ' .. path)
+            else
+              vim.api.nvim_buf_set_name(
+                bufnr,
+                'rewrite_file pending - ' .. path
+              )
+            end
 
-            -- TODO set name can error if that name is already taken
-            vim.api.nvim_buf_set_name(bufnr, 'rewrite_file pending - ' .. path)
+            rpc.notify(
+              'rewrite_file',
+              vim.tbl_deep_extend('force', data, { action = 'open' })
+            )
           end)
         end,
       },
@@ -101,34 +118,33 @@ return {
   -- autoaccept side effects of presentation
   presentation_autoaccept = function(args, done)
     local arguments, err = util.json.decode(args)
-    -- Find the temporary buffer containing our changes
-
-    -- this whole flow (presentation + autoaccept) breaks with multiple rewrites to the same file
-    -- in a single call, though i think that would be problematic in any case
     if arguments then
-      local original_bufnr = vim.fn.bufnr(arguments.path)
-      if original_bufnr ~= -1 then
-        local ok, temp_bufnr = pcall(
-          vim.api.nvim_buf_get_var,
-          original_bufnr,
-          'model_nvim_diff_pair'
-        )
-        if ok and temp_bufnr and vim.api.nvim_buf_is_valid(temp_bufnr) then
-          vim.api.nvim_buf_call(original_bufnr, function()
+      -- Iterate over all tabpages to find the one with the diff pair
+      local found = false
+      for _, tabpagenr in ipairs(vim.api.nvim_list_tabpages()) do
+        local ok, diff_pair =
+          pcall(vim.api.nvim_tabpage_get_var, tabpagenr, 'model_nvim_diff_pair')
+        if ok and diff_pair and diff_pair.path == arguments.path then
+          found = true
+          -- Apply changes to the original buffer
+          vim.api.nvim_win_call(diff_pair.orig_win, function()
             vim.cmd('1,$+1diffget')
             vim.cmd('write')
             vim.cmd('q')
             util.show('Autoaccept saved: ' .. arguments.path)
           end)
 
-          vim.api.nvim_buf_call(temp_bufnr, function()
+          -- Close the diff buffer
+          vim.api.nvim_win_call(diff_pair.new_win, function()
             vim.cmd('q')
           end)
-        else
-          util.eshow('Failed to find rewrite_file temporary buffer')
+
+          break
         end
-      else
-        util.eshow('Failed to find rewrite_file original file buffer')
+      end
+
+      if not found then
+        util.eshow('Failed to find rewrite_file temporary buffer')
       end
 
       done()

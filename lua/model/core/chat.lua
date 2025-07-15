@@ -54,20 +54,22 @@ end
 local function parse_data_sections(content)
   local data_sections = {}
 
-  local clean_content = content:gsub(
-    '\n?<<<<<< (.-)\n(.-)\n>>>>>>\n?',
-    function(label, data_section_content)
-      table.insert(data_sections, {
-        label = label,
-        content = data_section_content,
-      })
-      return ''
-    end
-  )
+  local function consume_section(label, data_section_content)
+    table.insert(data_sections, {
+      label = label,
+      content = data_section_content,
+    })
+    return '\n'
+  end
+
+  local clean_content = content
+    :gsub('^<<<<<< (.-)\n(.-)\n>>>>>>\n', consume_section)
+    :gsub('\n<<<<<< (.-)\n(.-)\n>>>>>>\n', consume_section)
+    :gsub('\n<<<<<< (.-)\n(.-)\n>>>>>>$', consume_section)
 
   return {
     data_sections = data_sections,
-    content = clean_content,
+    content = vim.trim(clean_content),
   }
 end
 
@@ -200,7 +202,6 @@ end
 ---@return Chat
 function M.parse(text)
   local parsed = parse_config(text)
-
   local messages_and_system = split_messages(parsed.rest)
   if messages_and_system.system ~= nil then
     parsed.config.system = messages_and_system.system
@@ -639,6 +640,12 @@ function M.continue_chat_completion(opts, instruction)
   else
     util.eshow('Nothing to continue here')
   end
+end
+
+function M.parse_buffer_to_json(bufnr)
+  bufnr = bufnr or vim.fn.bufnr()
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  return vim.json.encode(M.parse(lines))
 end
 
 return M
