@@ -176,7 +176,7 @@ function M.strip_asst_messages_of_citations(body)
     messages = vim.tbl_map(function(msg)
       if msg.role == 'assistant' then
         return vim.tbl_deep_extend('force', msg, {
-          content = strip_citations(msg.content)
+          content = strip_citations(msg.content),
         })
       else
         return msg

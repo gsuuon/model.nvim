@@ -146,7 +146,9 @@ end
 function M.parse(text)
   local parsed = parse_config(text)
   local messages_and_system = split_messages(parsed.rest)
-  parsed.config.system = messages_and_system.system
+  if messages_and_system.system ~= nil then
+    parsed.config.system = messages_and_system.system
+  end
 
   return {
     contents = {
