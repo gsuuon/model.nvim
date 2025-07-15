@@ -58,7 +58,7 @@ local function create_reason_handler(handler, show_reasoning)
   else
     local stop_marquee = util.noop
     local update_marquee = util.noop
-    local spinner_segment = {}
+    local spinner_segment = { data = {} }
 
     return {
       reason = function(partial)

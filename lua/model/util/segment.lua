@@ -68,13 +68,18 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
   local _did_add_text_to_undo = false
   local _text = ''
 
-  local _ext_id = vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), row, col, {
-    hl_group = hl_group,
+  local last_line = vim.api.nvim_buf_line_count(bufnr) - 1
+  local safe_row = math.min(row, last_line)
+  local end_row = math.min(safe_row, last_line) -- end_row starts same as row initially
 
-    -- these need to be set or else get_details doesn't return end_*s
-    end_row = row,
-    end_col = col,
-  })
+  local _ext_id =
+    vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), safe_row, col, {
+      hl_group = hl_group,
+
+      -- these need to be set or else get_details doesn't return end_*s
+      end_row = end_row,
+      end_col = col,
+    })
 
   local function get_details()
     if _ext_id == nil then

@@ -29,3 +29,10 @@
     (data_section_body) @injection.content
     (#match? @_marker "tool_result")
     (#set! injection.language "markdown")))
+
+(user_message
+  (data_section
+    (data_section_open) @_marker
+    (data_section_body) @injection.content
+    (#match? @_marker "system")
+    (#set! injection.language "markdown")))

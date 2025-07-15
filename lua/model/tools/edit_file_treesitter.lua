@@ -6,9 +6,9 @@ local segment = require('model.util.segment')
 
 return {
   description = [[
-Edit a file by replacing the contents of a tree-sitter node. When targeting a specific function for modification, prefer this over rewrite_file.
+Edit a file by replacing the contents of a top-level tree-sitter node. When targeting a specific function for modification, prefer this over rewrite_file.
 
-First use get_file_treesitter to identify nodes.
+Never call this without the results of get_file_treesitter. Treesitter nodes can have surprising type names, if you provide wrong type names it will cause the edit to fail. ALWAYS call get_file_treesitter for the file you want to edit before attempting to edit_file_treesitter. This tool only works with the nodes returned by get_file_treesitter.
 ]],
   parameters = {
     type = 'object',
@@ -27,7 +27,7 @@ First use get_file_treesitter to identify nodes.
       },
       content = {
         type = 'string',
-        description = 'Complete content to replace the node. If the node has documentation comment nodes before it, they will also be replaced with this content. Include any desired documentation comments in the content.',
+        description = 'Complete content to replace the node. If the node has documentation comment nodes before it, they will also be replaced with this content. Include any desired documentation comments in the content. If the element previously had documentation comments and you do not provide them again, those comments will be deleted. To keep existing documentation comments, you must include them in "content".',
       },
     },
     required = { 'path', 'node_name', 'contains', 'content' },

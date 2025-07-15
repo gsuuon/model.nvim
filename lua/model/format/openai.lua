@@ -12,8 +12,6 @@ local function transform_data_section(message)
           tool_call_id = tool_id,
           content = section.content,
         })
-      else
-        util.eshow(section, 'Unexpected data section in OpenAI chat')
       end
     end
 

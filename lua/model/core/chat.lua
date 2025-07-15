@@ -78,13 +78,12 @@ end
 ---@param text string[] Text of buffer. '\n======\n' denote alternations between user and assistant roles
 ---@return { messages: ChatMessage[], system?: string, last_message_has_separator: boolean }
 local function split_messages(text)
-  local messages = {}
-
-  local system
+  local system_from_header
 
   local chunk_lines = {}
   local chunk_is_user = true
   local last_message_has_separator = true
+  local messages = {}
 
   --- Insert message and reset/toggle chunk state. User text is trimmed.
   local function add_message()
@@ -105,9 +104,9 @@ local function split_messages(text)
 
   for i, line in ipairs(text) do
     if i == 1 then
-      system = line:match('^> (.+)')
+      system_from_header = line:match('^> (.+)')
 
-      if system == nil then
+      if system_from_header == nil then
         table.insert(chunk_lines, line)
       end
     elseif line == '======' then
@@ -121,6 +120,28 @@ local function split_messages(text)
   if table.concat(chunk_lines, '') ~= '' then
     last_message_has_separator = false
     add_message()
+  end
+
+  -- Look for system data section in first message
+  local system_from_data
+  if #messages > 0 then
+    local first_msg = messages[1]
+    if first_msg.data_sections then
+      for _, section in ipairs(first_msg.data_sections) do
+        if section.label == 'system' then
+          system_from_data = section.content
+          break
+        end
+      end
+    end
+  end
+
+  -- Combine system messages if both exist
+  local system
+  if system_from_header and system_from_data then
+    system = system_from_header .. '\n' .. system_from_data
+  else
+    system = system_from_header or system_from_data
   end
 
   return {
@@ -431,6 +452,12 @@ function M.run_chat(opts)
         and reason ~= 'tool_calls'
       then
         util.notify('Finish reason: ' .. reason)
+      end
+
+      -- The streaming can mess up parsing especially with injections - try a full reparse.
+      local parser = vim.treesitter.get_parser(bufnr)
+      if parser then
+        parser:parse()
       end
 
       vim.schedule(function()
