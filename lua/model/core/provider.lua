@@ -30,9 +30,10 @@ M.mode = {
 }
 
 ---@class StreamHandlers
----@field on_partial (fun(partial_text: string): nil) Partial response of just the diff
----@field on_finish (fun(complete_text?: string, finish_reason?: string): nil) Complete response with finish reason. When implementing a provider you can call this with with no arguments to just finish with the concatenated partials. Finish reason should be 'stop' or nil for a successful completion.
----@field on_error (fun(data: any, label?: string): nil) Error data and optional label
+---@field on_partial fun(partial_text: string) Partial response of just the diff
+---@field on_finish fun(complete_text?: string, finish_reason?: string) Complete response with finish reason. When implementing a provider you can call this with with no arguments to just finish with the concatenated partials. Finish reason should be 'stop' or nil for a successful completion.
+---@field on_error fun(data: any, label?: string) Error data and optional label
+---@field on_other? fun(msg: string) Any pending message after curl exits - it may be an error or info.
 ---@field segment? Segment The segment handling the response, if existing
 
 local function create_segment(source, segment_mode, hl_group)

@@ -107,6 +107,7 @@ end
 
 -- Deepseek provider implementation
 local M = {
+  ---@param handler StreamHandlers
   request_completion = function(handler, params, options)
     options = options or {}
 
@@ -126,7 +127,9 @@ local M = {
 
     local function on_other(msg)
       reason_handler.stop()
-      util.show(msg)
+
+      -- most likely an error
+      handler.on_error(msg)
     end
 
     local function on_error(err)

@@ -149,10 +149,12 @@ return {
         local ok, is_created =
           pcall(vim.api.nvim_buf_get_var, bufnr, 'model_nvim_created_file')
         if ok and is_created then
-          vim.api.nvim_buf_call(bufnr, function()
-            vim.cmd('write')
-            vim.cmd('q')
-            util.show('Autoaccept saved: ' .. arguments.path)
+          vim.schedule(function()
+            vim.api.nvim_buf_call(bufnr, function()
+              vim.cmd('write')
+              vim.cmd('q')
+              util.show('Autoaccept saved: ' .. arguments.path)
+            end)
           end)
         else
           util.eshow('Failed to find created file buffer')
