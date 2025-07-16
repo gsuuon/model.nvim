@@ -62,10 +62,16 @@ local function parse_data_sections(content)
     return '\n'
   end
 
+  -- there must be a better way to do this
+  -- main issue is that we need the separators to be on their _own_ lines to match
+  -- we also need to match if the section contains _only_ a data section (so we get no newlines)
+  -- i've simply covered all the cases here. using `[\n]?` caused an infinite loop in one case.
+  -- maybe `%bxy` ? (though our delimiter is multichar)
   local clean_content = content
     :gsub('^<<<<<< (.-)\n(.-)\n>>>>>>\n', consume_section)
     :gsub('\n<<<<<< (.-)\n(.-)\n>>>>>>\n', consume_section)
     :gsub('\n<<<<<< (.-)\n(.-)\n>>>>>>$', consume_section)
+    :gsub('^<<<<<< (.-)\n(.-)\n>>>>>>$', consume_section)
 
   return {
     data_sections = data_sections,
