@@ -3,6 +3,7 @@ local util = require('model.util')
 local rpc = require('model.util.rpc')
 local json_parse = require('model.util.json_stream_parse')
 
+---@type Tool
 return {
   description = [[
 Rewrite the contents of a file.
@@ -115,7 +116,6 @@ Tool result is the final written file with project formatting applied and diagno
     return parser
   end,
 
-  -- autoaccept side effects of presentation
   presentation_autoaccept = function(args, done)
     local arguments, err = util.json.decode(args)
     if arguments then

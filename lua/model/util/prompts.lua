@@ -95,4 +95,20 @@ User selection:
   )
 end
 
+---@class ChatPromptPartial ChatPrompt with all fields optional
+---@field provider? Provider The API provider for this prompt
+---@field create? fun(input: string, context: Context): string | ChatContents Converts input and context to the first message text or ChatContents
+---@field run? fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil ) ) Converts chat messages and config into completion request params
+---@field runOptions? fun(): table Builds additional options to merge into chat prompt options. E.g. for auth tokens that shouldn't be written to the chat config header.
+---@field system? string System instruction
+---@field params? table Static request parameters
+---@field options? table Provider options
+---@field completion? ChatCompletionOptions
+
+---@param source_prompt ChatPrompt
+---@param partial_prompt ChatPromptPartial
+function M.merge(source_prompt, partial_prompt)
+  return util.merge(source_prompt, partial_prompt)
+end
+
 return M

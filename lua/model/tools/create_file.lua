@@ -1,7 +1,7 @@
 local util = require('model.util')
 local files = require('model.util.files')
 local rpc = require('model.util.rpc')
-local json_parse = require('model.util.json_stream_parse')
+local parse = require('model.util.json_stream_parse')
 
 local function path_is_absolute(path)
   -- cross-platform (windows, unix) check that path is relative
@@ -16,6 +16,7 @@ local function path_is_above_cwd(path)
     or normalized:match('/%.%./')
 end
 
+---@type Tool
 return {
   description = 'Create a new file with given content',
   parameters = {
@@ -57,9 +58,8 @@ return {
     local path = ''
     local bufnr = nil
 
-    -- State for JSON parsing
-    local parser = json_parse.object({
-      path = json_parse.string(function(_, complete)
+    return parse.object({
+      path = parse.string(function(_, complete)
         if complete then
           path = complete
 
@@ -114,19 +114,19 @@ return {
           end)
         end
       end),
-      content = json_parse.string(function(part, complete)
+      content = parse.string(function(part, complete)
         if complete then
-          -- content = complete
+          content = complete
 
-          -- if bufnr then
-          --   vim.api.nvim_buf_set_lines(
-          --     bufnr,
-          --     0,
-          --     -1,
-          --     false,
-          --     vim.split(content, '\n')
-          --   )
-          -- end
+          if bufnr then
+            vim.api.nvim_buf_set_lines(
+              bufnr,
+              0,
+              -1,
+              false,
+              vim.split(content, '\n')
+            )
+          end
           util.show('Received all content for ' .. path)
         else
           content = content .. part
@@ -143,8 +143,6 @@ return {
         end
       end),
     })
-
-    return parser
   end,
   presentation_autoaccept = function(args, done)
     local arguments, err = util.json.decode(args)

@@ -1,9 +1,9 @@
 ---@class Tool
----@field description string
----@field parameters table
----@field invoke fun(args: table, callback: fun(result: string)): string | fun() takes args and optionally a callback, returns a string result or a cancel function. If cancel function is returned, the callback must be called to resolve the tool use
----@field presentation fun(): fun(partial: string), msg: string? - presents partial tool call arguments. consumes the raw json partial. presentation is called as soon as we receive any arguments for this tool, then the returned function is called for each tool argument partial while displaying a spinner with the optional second return value as message. presentation is assumed to be necessary if present, so unpresented tool_calls will be re-presented. when run happens.
----@field presentation_autoaccept fun(args: any, done: fun()) takes arguments and done callback. Ran when autoaccepting before 'invoke' - use to take presentation side effects (e.g. to write files).
+---@field description string Description to provide the LLM. Include instructions and guidelines if necessary.
+---@field parameters table JSON schema of the arguments the tool expects
+---@field invoke fun(args: table, callback: fun(result: string)): cancel: fun(), message: string? Synchronously returns a string result or asynchronously calls the callback function, returning a function which cancels the task. Invoke is called when the last message in a Chat has tool_calls data section. If the tool has a presentation then invoke should collect the side-effects of the presentation instead of executing the tool itself. For example, a file editing tool should present the modified file in `tool.presentation` to the user. The user can then accept, edit, or reject the modification by diff hunk. The final saved file is then returned by invoke to be fed back to the LLM.
+---@field presentation fun(): consumer: fun(partial: string) Presents the tool call to the user as it's streamed in. Returns a streaming partial json consumer. Presentation is called as soon as we receive any arguments for this tool, then the returned function is called for each tool argument partial.
+---@field presentation_autoaccept fun(args: any, done: fun()) If autoaccept matches this tool call and the tool has a presentation, then presentation_autoaccept runs after the LLM response completes. Use this to take presentation side effects (e.g. to `:write` modified buffers presented to user).
 
 ---@type table<string, Tool>
 return {
