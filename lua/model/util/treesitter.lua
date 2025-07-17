@@ -76,7 +76,10 @@ local function get_node_range(bufnr, criteria)
         {}
       )[1]
 
-      if string.find(node_text_first_line, criteria.contains, 1, true) then
+      if
+        not criteria.contains
+        or string.find(node_text_first_line, criteria.contains, 1, true)
+      then
         -- Handle doc comments if requested
         if criteria.doc_comments then
           local prev = child:prev_named_sibling()

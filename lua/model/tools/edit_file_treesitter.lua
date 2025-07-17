@@ -1,14 +1,12 @@
 local treesitter = require('model.util.treesitter')
 local files = require('model.util.files')
 local util = require('model.util')
-local tool_utils = require('model.util.tools')
+local json_parse = require('model.util.json_stream_parse')
 local segment = require('model.util.segment')
 
 return {
   description = [[
-Edit a file by replacing the contents of a top-level tree-sitter node. When targeting a specific function for modification, prefer this over rewrite_file.
-
-Never call this without the results of get_file_treesitter. Treesitter nodes can have surprising type names, if you provide wrong type names it will cause the edit to fail. ALWAYS call get_file_treesitter for the file you want to edit before attempting to edit_file_treesitter. This tool only works with the nodes returned by get_file_treesitter.
+Edit a file by replacing the contents of a tree-sitter node. First use get_file_treesitter to identify nodes.
 ]],
   parameters = {
     type = 'object',
@@ -27,7 +25,7 @@ Never call this without the results of get_file_treesitter. Treesitter nodes can
       },
       content = {
         type = 'string',
-        description = 'Complete content to replace the node. If the node has documentation comment nodes before it, they will also be replaced with this content. Include any desired documentation comments in the content. If the element previously had documentation comments and you do not provide them again, those comments will be deleted. To keep existing documentation comments, you must include them in "content".',
+        description = 'Complete content to replace the node. If the node has documentation comment nodes before it, they will also be replaced with this content. Include any desired documentation comments in the content.',
       },
     },
     required = { 'path', 'node_name', 'contains', 'content' },
@@ -87,12 +85,11 @@ Never call this without the results of get_file_treesitter. Treesitter nodes can
       return seg
     end
 
-    return tool_utils.process_partial_tool_call({
-      path = {
-        part = function(part)
-          path = path .. part
-        end,
-        complete = function()
+    -- State for JSON parsing
+    local parser = json_parse.object({
+      path = json_parse.string(function(_, complete)
+        if complete then
+          path = complete
           files.show_diff(path, '', function(data)
             bufnr = data.new_bufnr
             vim.api.nvim_buf_set_name(bufnr, 'edit_file_treesitter - ' .. path)
@@ -106,48 +103,45 @@ Never call this without the results of get_file_treesitter. Treesitter nodes can
               pending_edit = nil
             end
           end)
-        end,
-      },
-      node_name = {
-        part = function(part)
+        end
+      end),
+      node_name = json_parse.string(function(_, complete)
+        if complete then
           pending_edit = pending_edit or {}
-          pending_edit.node_name = (pending_edit.node_name or '') .. part
-        end,
-        complete = function()
-          if pending_edit and pending_edit.contains then
+          pending_edit.node_name = complete
+          if pending_edit.contains then
             apply_edit(pending_edit)
           end
-        end,
-      },
-      contains = {
-        part = function(part)
+        end
+      end),
+      contains = json_parse.string(function(_, complete)
+        if complete then
           pending_edit = pending_edit or {}
-          pending_edit.contains = (pending_edit.contains or '') .. part
-        end,
-        complete = function()
-          if pending_edit and pending_edit.node_name then
+          pending_edit.contains = complete
+          if pending_edit.node_name then
             apply_edit(pending_edit)
           end
-        end,
-      },
-      content = {
-        part = function(part)
+        end
+      end),
+      content = json_parse.string(function(part, complete)
+        if complete then
           pending_edit = pending_edit or {}
-          pending_edit.content = (pending_edit.content or '') .. part
-
-          local text = util.json.decode('"' .. pending_edit.content .. '"')
-
-          if text and seg then
-            seg.set_text(text)
-          end
-        end,
-        complete = function()
+          pending_edit.content = complete
           if seg then
+            seg.set_text(complete)
             seg.clear_hl()
           end
-        end,
-      },
+        else
+          pending_edit = pending_edit or {}
+          pending_edit.content = (pending_edit.content or '') .. part
+          if seg then
+            seg.set_text(pending_edit.content)
+          end
+        end
+      end),
     })
+
+    return parser
   end,
   presentation_autoaccept = function(args, done)
     local arguments, err = util.json.decode(args)
@@ -178,6 +172,7 @@ Never call this without the results of get_file_treesitter. Treesitter nodes can
     if not found then
       util.eshow('Failed to find temporary buffer for ' .. arguments.path)
     end
+
     done()
   end,
 }

@@ -44,7 +44,16 @@ local function create_tool_chunk_handlers(emit, equipped_tools)
       emit(escaped)
 
       if active_tool_json_stream then
-        active_tool_json_stream(partial)
+        local consumed_offset = active_tool_json_stream(partial)
+
+        if consumed_offset and consumed_offset ~= #partial then
+          util.eshow(
+            'Finished handling json object but there was more left. Consumed: '
+              .. consumed_offset
+              .. ', Partial: '
+              .. #partial
+          )
+        end
       end
     end,
     finish = function()

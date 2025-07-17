@@ -1,11 +1,11 @@
 local files = require('model.util.files')
 local util = require('model.util')
-local tool_utils = require('model.util.tools')
 local rpc = require('model.util.rpc')
+local json_parse = require('model.util.json_stream_parse')
 
 return {
   description = [[
-Rewrite the contents of a file. If modifying a single function, prefer edit_file_treesitter to avoid regenerating the entire fire.
+Rewrite the contents of a file.
 
 Provide the complete, self-contained file expanded in it's entirety. This tool WILL NOT expand comments like 'the rest goes here'. Leaving comments like that will REPLACE the code that was there with ONLY a comment. This is INCREDIBLY frustrating for users. NEVER do that. ALWAYS provide the ENTIRE, COMPLETE, UNABRIDGED file.
 
@@ -46,50 +46,16 @@ Tool result is the final written file with project formatting applied and diagno
     local path = ''
     local bufnr = nil
 
-    local did_finish_content = false
+    -- State for JSON parsing
+    local parser = json_parse.object({
+      path = json_parse.string(function(part, complete)
+        if complete then
+          path = complete
 
-    return tool_utils.process_partial_tool_call({
-      content = {
-        part = function(part)
-          content = content .. part
-
-          local text = util.json.decode('"' .. content .. '"')
-
-          if text then
-            if bufnr then
-              vim.api.nvim_buf_set_lines(
-                bufnr,
-                0,
-                -1,
-                false,
-                vim.split(text, '\n')
-              )
-            end
-          end
-        end,
-        complete = function()
-          if bufnr then
-            vim.api.nvim_buf_set_name(bufnr, 'rewrite_file done - ' .. path)
-          else
-            if path == '' then
-              util.show('Received all content')
-            else
-              util.show('Received all content for ' .. path)
-            end
-          end
-
-          did_finish_content = true
-        end,
-      },
-      path = {
-        part = function(part)
-          path = path .. part
-        end,
-        complete = function()
           files.show_diff(path, content, function(data)
             bufnr = data.new_bufnr
 
-            if did_finish_content then
+            if content ~= '' then
               vim.api.nvim_buf_set_lines(
                 bufnr,
                 0,
@@ -110,9 +76,43 @@ Tool result is the final written file with project formatting applied and diagno
               vim.tbl_deep_extend('force', data, { action = 'open' })
             )
           end)
-        end,
-      },
+        else
+          path = path .. part
+        end
+      end),
+      content = json_parse.string(function(part, complete)
+        if complete then
+          content = complete
+
+          if bufnr then
+            vim.api.nvim_buf_set_lines(
+              bufnr,
+              0,
+              -1,
+              false,
+              vim.split(content, '\n')
+            )
+            vim.api.nvim_buf_set_name(bufnr, 'rewrite_file done - ' .. path)
+          else
+            util.show('Received all content for ' .. path)
+          end
+        else
+          content = content .. part
+
+          if bufnr then
+            vim.api.nvim_buf_set_lines(
+              bufnr,
+              0,
+              -1,
+              false,
+              vim.split(content, '\n')
+            )
+          end
+        end
+      end),
     })
+
+    return parser
   end,
 
   -- autoaccept side effects of presentation

@@ -6,71 +6,6 @@ local chat = require('model.core.chat')
 ---@field name string name of tool
 ---@field arguments string JSON encoded arguments
 
-local function process_partial_tool_call(handle_fields)
-  local args = ''
-
-  local completed_fields = {}
-  local current_field = ''
-
-  local function partial_field(text)
-    handle_fields[current_field].part(text)
-  end
-
-  local function complete_field()
-    handle_fields[current_field].complete()
-    completed_fields[current_field] = true
-    current_field = ''
-  end
-
-  ---@param arg_partial string
-  return function(arg_partial)
-    if args == '' then
-      -- check if we got the entire arguments object in one go
-      -- e.g. when re-running presentation
-      local all_args = util.json.decode(arg_partial)
-      if all_args then
-        for field, handle in pairs(handle_fields) do
-          handle.part(all_args[field])
-          handle.complete()
-        end
-      end
-    end
-
-    -- TODO if we get an arg_partial which adds more than 1 field, this breaks
-    local next_args = args .. arg_partial
-
-    if current_field == '' then
-      local arg_attempt = util.json.decode(next_args .. '"}')
-      if arg_attempt ~= nil then
-        for field in pairs(handle_fields) do
-          if arg_attempt[field] ~= nil and completed_fields[field] == nil then
-            current_field = field
-
-            partial_field(arg_attempt[field])
-          end
-        end
-      end
-    else
-      -- this won't match if " is the first char, since we test for \
-      local ending = arg_partial:match('^(.*[^\\])"')
-      -- if our preceding args didn't end with an escape char and our new partial starts with a quote
-      -- we're immediately closing the string
-      local immediate_close = args:match('[^\\]$') and arg_partial:match('^"')
-
-      if immediate_close then
-        complete_field()
-      elseif ending then
-        partial_field(ending)
-        complete_field()
-      else
-        partial_field(arg_partial)
-      end
-    end
-
-    args = next_args
-  end
-end
-
 ---@param available_tools table<string, Tool>
 ---@param allowed_tools boolean | string[] true for all, nil or false for none, list of strings to filter
 local function equip_tools(available_tools, allowed_tools)
@@ -304,7 +239,6 @@ local function accept_by_arguments(acceptors)
 end
 
 return {
-  process_partial_tool_call = process_partial_tool_call,
   get_all_tool_calls = get_all_tool_calls,
   run_presentation = run_presentation,
   equip_tools = equip_tools,

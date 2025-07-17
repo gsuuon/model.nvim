@@ -1,7 +1,7 @@
 local util = require('model.util')
-local tool_utils = require('model.util.tools')
 local files = require('model.util.files')
 local rpc = require('model.util.rpc')
+local json_parse = require('model.util.json_stream_parse')
 
 local function path_is_absolute(path)
   -- cross-platform (windows, unix) check that path is relative
@@ -57,37 +57,12 @@ return {
     local path = ''
     local bufnr = nil
 
-    return tool_utils.process_partial_tool_call({
-      content = {
-        part = function(part)
-          content = content .. part
+    -- State for JSON parsing
+    local parser = json_parse.object({
+      path = json_parse.string(function(_, complete)
+        if complete then
+          path = complete
 
-          local text, err = util.json.decode('"' .. content .. '"')
-          if text then
-            if bufnr then
-              vim.api.nvim_buf_set_lines(
-                bufnr,
-                0,
-                -1,
-                false,
-                vim.split(text, '\n')
-              )
-            end
-          end
-        end,
-        complete = function()
-          if path == '' then
-            util.show('Received all content')
-          else
-            util.show('Received all content for ' .. path)
-          end
-        end,
-      },
-      path = {
-        part = function(part)
-          path = path .. part
-        end,
-        complete = function()
           local dir = vim.fs.dirname(path)
           if dir and dir ~= '' then
             local success = vim.fn.mkdir(dir, 'p')
@@ -137,9 +112,39 @@ return {
               winnr = winnr,
             })
           end)
-        end,
-      },
+        end
+      end),
+      content = json_parse.string(function(part, complete)
+        if complete then
+          -- content = complete
+
+          -- if bufnr then
+          --   vim.api.nvim_buf_set_lines(
+          --     bufnr,
+          --     0,
+          --     -1,
+          --     false,
+          --     vim.split(content, '\n')
+          --   )
+          -- end
+          util.show('Received all content for ' .. path)
+        else
+          content = content .. part
+
+          if bufnr then
+            vim.api.nvim_buf_set_lines(
+              bufnr,
+              0,
+              -1,
+              false,
+              vim.split(content, '\n')
+            )
+          end
+        end
+      end),
     })
+
+    return parser
   end,
   presentation_autoaccept = function(args, done)
     local arguments, err = util.json.decode(args)
