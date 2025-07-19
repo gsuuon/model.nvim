@@ -107,7 +107,7 @@ function M.spinner(seg_or_position, label, hl)
       spinner_text = spinner_text .. ' ' .. label .. ' (' .. elapsed .. 's)'
     end
 
-    spinner_seg.set_virt(spinner_text, cancel)
+    spinner_seg.set_virt(spinner_text, nil, nil, cancel)
 
     frame_index = frame_index + 1
     if frame_index > #spinner_frames then

@@ -5,13 +5,14 @@ local util = require('model.util')
 ---@field add_virt fun(text: string): nil
 ---@field set_text fun(text: string): nil
 ---@field get_text fun(): string
----@field set_virt fun(text: string, on_error: fun(err: any)): nil
+---@field set_virt fun(text: string, hl_group?:string, opts?: vim.api.keyset.set_extmark, on_error?: fun(err: any)): nil
 ---@field clear_hl fun(): nil
 ---@field delete fun(): nil
 ---@field data table
 ---@field get_span fun(): Span
 ---@field highlight fun(hl_group: string): nil
 ---@field details fun(): {row: number, col: number, details: table, bufnr: number}
+---@field ext_id number
 
 local M = {
   default_hl = 'Comment',
@@ -41,20 +42,6 @@ local function end_delta(lines, origin_row, origin_col)
   }
 end
 
----@generic T
----@param fn fun(a:T)
----@return fun(arg: T, on_error: fun(err: any))
-local function schedule_wrap_with_on_error(fn)
-  return function(arg, on_error)
-    vim.schedule(function()
-      local ok, err = pcall(fn, arg)
-      if not ok then
-        on_error(err)
-      end
-    end)
-  end
-end
-
 ---Create a new segment
 ---@param row number 0-indexed start row
 ---@param col number 0-indexed end row
@@ -63,6 +50,7 @@ end
 ---@param join_undo? boolean Join set_text call undos. Will join any undos made between add and set_text.
 ---@return Segment
 local function create_segment_at(row, col, bufnr, hl_group, join_undo)
+  ---@type string | nil
   local _hl_group = hl_group or M.default_hl
   local _data = {}
   local _did_add_text_to_undo = false
@@ -108,41 +96,14 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     }
   end
 
-  local virt_text = ''
-
-  local function set_virt_text(text)
-    -- virtual text can't be multiline and doesn't wrap
-    -- this workaround will set the first line of the virt text at the mark
-    -- the other lines will start at the row under
-    -- this can be weird in some cases. If the virt text is intended to replace
-    -- a bit of inline text, e.g. foo<virt>baz -- in a multiline case the first
-    -- line goes at <virt> while the rest will start the line under, leaving the baz.
-    local mark = get_details()
-    virt_text = text
-
-    local virt_lines = vim.tbl_map(function(line)
-      return { { line, _hl_group } }
-    end, vim.split(virt_text, '\n'))
-
-    local t = table.remove(virt_lines, 1)
-
-    vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, {
-      id = _ext_id,
-      hl_group = _hl_group,
-      virt_text = t,
-      virt_text_pos = 'overlay',
-      virt_lines = #virt_lines > 0 and virt_lines or nil,
-    })
-  end
-
   local function get_span()
     local deets = get_details()
 
-    local end_row = deets.details.end_row or deets.row
+    local end_row_ = deets.details.end_row or deets.row
     local end_col = deets.details.end_col or deets.col
-    local start_row = math.min(deets.row, end_row)
+    local start_row = math.min(deets.row, end_row_)
     local start_col = math.min(deets.col, end_col)
-    end_row = math.max(deets.row, end_row)
+    end_row = math.max(deets.row, end_row_)
     end_col = math.max(deets.col, end_col)
 
     ---@type Span
@@ -158,15 +119,49 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     }
   end
 
-  return {
+  local virt_text = ''
 
+  local function set_virt_text(text, virt_hl_group, opts)
+    -- virtual text can't be multiline and doesn't wrap
+    -- this workaround will set the first line of the virt text at the mark
+    -- the other lines will start at the row under
+    -- this can be weird in some cases. If the virt text is intended to replace
+    -- a bit of inline text, e.g. foo<virt>baz -- in a multiline case the first
+    -- line goes at <virt> while the rest will start the line under, leaving the baz.
+    local span = get_span()
+    virt_text = text
+
+    local virt_lines = vim.tbl_map(function(line)
+      return { { line, virt_hl_group or _hl_group } }
+    end, vim.split(virt_text, '\n'))
+
+    local t = table.remove(virt_lines, 1)
+
+    vim.api.nvim_buf_set_extmark(
+      bufnr,
+      M.ns_id(),
+      span.start.row,
+      span.start.col,
+      vim.tbl_deep_extend('force', {
+        id = _ext_id,
+        hl_group = _hl_group,
+        virt_text = t,
+        virt_text_pos = 'inline',
+        virt_lines = #virt_lines > 0 and virt_lines or nil,
+        end_row = span.stop.row,
+        end_col = span.stop.col,
+      }, opts or {})
+    )
+  end
+
+  return {
     set_text = vim.schedule_wrap(function(text)
       if text == nil then
         return
       end
 
-      local lines = util.string.split_char(text, '\n')
-      local mark = get_details()
+      local lines = vim.split(text, '\n')
+      local span = get_span()
 
       if _did_add_text_to_undo and join_undo then
         pcall(vim.cmd.undojoin)
@@ -175,21 +170,27 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       -- TODO FIXME can end_row be before row? no docs on the details dict
       vim.api.nvim_buf_set_text(
         bufnr,
-        mark.row,
-        mark.col,
-        mark.details.end_row or mark.row,
-        mark.details.end_col or mark.col,
+        span.start.row,
+        span.start.col,
+        span.stop.row,
+        span.stop.col,
         lines
       )
 
-      local end_pos = end_delta(lines, mark.row, mark.col)
+      local end_pos = end_delta(lines, span.start.row, span.start.col)
 
-      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, {
-        id = _ext_id,
-        end_col = end_pos.col,
-        end_row = end_pos.row,
-        hl_group = _hl_group,
-      })
+      vim.api.nvim_buf_set_extmark(
+        bufnr,
+        M.ns_id(),
+        span.start.row,
+        span.start.col,
+        {
+          id = _ext_id,
+          end_col = end_pos.col,
+          end_row = end_pos.row,
+          hl_group = _hl_group,
+        }
+      )
       _text = text
     end),
 
@@ -197,23 +198,28 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       return _text
     end,
 
-    set_virt = schedule_wrap_with_on_error(set_virt_text),
+    set_virt = vim.schedule_wrap(function(text, virt_hl_group, opts, on_error)
+      local ok, res = pcall(set_virt_text, text, virt_hl_group, opts)
+      if not ok and on_error then
+        on_error(res)
+      end
+    end),
 
     add_virt = vim.schedule_wrap(function(text)
       set_virt_text(virt_text .. text)
     end),
 
     add = vim.schedule_wrap(function(text)
-      local lines = util.string.split_char(text, '\n')
+      local lines = vim.split(text, '\n')
 
       if lines == nil or #lines == 0 then
         return
       end
 
-      local mark = get_details()
+      local span = get_span()
 
-      local r = mark.details.end_row
-      local c = mark.details.end_col
+      local r = span.stop.row
+      local c = span.stop.col
 
       if _did_add_text_to_undo and join_undo then
         pcall(vim.cmd.undojoin) -- Errors if user did undo immediately before
@@ -224,12 +230,18 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
 
       local end_pos = end_delta(lines, r, c)
 
-      vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), mark.row, mark.col, {
-        id = _ext_id,
-        end_col = end_pos.col,
-        end_row = end_pos.row,
-        hl_group = _hl_group, -- need to set hl_group every time we want to update the extmark
-      })
+      vim.api.nvim_buf_set_extmark(
+        bufnr,
+        M.ns_id(),
+        span.start.row,
+        span.start.col,
+        {
+          id = _ext_id,
+          end_col = end_pos.col,
+          end_row = end_pos.row,
+          hl_group = _hl_group, -- need to set hl_group every time we want to update the extmark
+        }
+      )
 
       _did_add_text_to_undo = true
     end),

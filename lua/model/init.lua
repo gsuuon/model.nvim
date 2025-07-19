@@ -277,21 +277,11 @@ local function setup_commands()
       return
     end
 
-    local details = seg.details()
+    local span = seg.get_span()
 
-    local start = {
-      row = details.row,
-      col = details.col,
-    }
-
-    local stop = {
-      row = details.details.end_row,
-      col = details.details.end_col,
-    }
-
-    local visual_select_keys = util.cursor.place_with_keys(start)
+    local visual_select_keys = util.cursor.place_with_keys(span.start)
       .. 'v'
-      .. util.cursor.place_with_keys(stop)
+      .. util.cursor.place_with_keys(span.stop)
 
     vim.api.nvim_feedkeys(visual_select_keys, 'n', true)
   end, {

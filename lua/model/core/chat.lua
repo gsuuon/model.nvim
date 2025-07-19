@@ -570,6 +570,25 @@ local function run_chat_completion(chat, chat_prompt, seg)
           data_sections = parsed.data_sections,
         })
       end
+
+      local span = seg.get_span()
+      local seg_height = span.stop.row - span.start.row + 1
+
+      seg.set_virt(
+        string.format(
+          '%s | %d %s',
+          chat.chat,
+          seg_height,
+          seg_height > 1 and 'lines' or 'line'
+        ),
+        'Comment',
+        {
+          virt_text_pos = 'right_align',
+          sign_text = '⢸',
+          sign_hl_group = 'modelChatCompletionSign',
+        },
+        util.eshow
+      )
     end,
     on_partial = function(partial)
       stop_spinner()

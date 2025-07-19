@@ -9,3 +9,5 @@ vim.filetype.add({
 })
 
 vim.g.did_setup_model_filetype = true
+
+vim.cmd([[hi link modelChatCompletionSign PurpleSign]])
