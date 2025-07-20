@@ -92,11 +92,6 @@ local function get_node_range(bufnr, criteria)
             and prev:named()
             and string.find(prev:type():lower(), 'comment', 1, true)
           do
-            dshow({
-              type = prev:type(),
-              range = { prev:range() },
-            })
-
             local prev_start_row = prev:start()
 
             -- Check if there's a gap between this comment and the previous node
@@ -112,7 +107,6 @@ local function get_node_range(bufnr, criteria)
             for _, line in ipairs(lines_between) do
               if line:match('^%s*$') then
                 has_gap = true
-                dshow('gap')
                 break
               end
             end

@@ -43,10 +43,17 @@ function M.scroll(text, rate, set, size)
   end, rate)
 end
 
---- @param seg_or_position? Segment | Position Optional segment or position to place the marquee after
---- @param label? string Optional string to place after the spinner
---- @param hl? string Optional highlight group for the marquee segment. Defaults to 'Comment'.
-function M.spinner(seg_or_position, label, hl)
+---@class SpinnerOpts
+---@field position? Position Position to place the marquee
+---@field bufnr? integer Buffer number
+---@field label? string String to place after the spinner
+---@field hl? string Highlight group for the marquee segment. Defaults to 'Comment'.
+
+--- @param opts? SpinnerOpts
+function M.spinner(opts)
+  opts = opts or {}
+  local label = opts.label
+
   local spinner_frames = {
     '⠈⠉',
     ' ⠙',
@@ -67,26 +74,22 @@ function M.spinner(seg_or_position, label, hl)
   ---@type Segment
   local spinner_seg
 
-  if seg_or_position then
-    if seg_or_position.get_span then
-      local handler_seg = seg_or_position.get_span()
-
-      spinner_seg = segment.create_segment_at(
-        handler_seg.stop.row,
-        handler_seg.stop.col,
-        hl or 'Comment'
-      )
-    else
-      spinner_seg = segment.create_segment_at(
-        seg_or_position.row,
-        seg_or_position.col,
-        hl or 'Comment'
-      )
-    end
+  if opts.position then
+    spinner_seg = segment.create_segment_at(
+      opts.position.row,
+      opts.position.col,
+      opts.hl or 'Comment',
+      opts.bufnr
+    )
   else
     local pos = util.cursor.position()
 
-    spinner_seg = segment.create_segment_at(pos.row, pos.col, hl or 'Comment')
+    spinner_seg = segment.create_segment_at(
+      pos.row,
+      pos.col,
+      opts.hl or 'Comment',
+      opts.bufnr
+    )
   end
 
   local stop = util.noop
@@ -131,12 +134,10 @@ end
 --- @return function stop stop and clear the marquee
 function M.handler_marquee_or_notify(text, seg, hl, size)
   if seg then
-    local handler_seg = seg.details()
-    local pending = segment.create_segment_at(
-      handler_seg.details.end_row,
-      handler_seg.details.end_col,
-      hl or 'Comment'
-    )
+    local span = seg.get_span()
+
+    local pending =
+      segment.create_segment_at(span.stop.row, span.stop.col, hl or 'Comment')
     return M.scroll(text .. '   ', 160, pending.set_virt, size)
   else
     vim.notify(text)

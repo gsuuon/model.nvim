@@ -72,8 +72,10 @@ local function create_reason_handler(handler, show_reasoning)
           is_reasoning = true
           handler.on_partial('') -- to stop the 'waiting' spinner, we have a response
 
-          stop_marquee, update_marquee, spinner_segment =
-            juice.spinner(handler.segment, 'Thinking ')
+          stop_marquee, update_marquee, spinner_segment = juice.spinner({
+            position = handler.segment.get_span().stop,
+            label = 'Thinking',
+          })
 
           spinner_segment.data.info = partial or ''
           spinner_segment.data.cancel = stop_marquee

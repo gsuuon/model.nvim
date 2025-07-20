@@ -418,7 +418,17 @@ function M.run_chat(opts)
   )
 
   local seg = segment.create_segment_at(#lines, 0)
-  local stop_spinner = juice.spinner(seg, 'Waiting for response.. ')
+
+  if not chat.trail then
+    seg.add_line('======')
+  end
+
+  local stop_spinner = juice.spinner({
+    position = util.position.row_below(seg.get_span().stop),
+    label = 'Waiting for response.. ',
+    bufnr = bufnr,
+  })
+
   local sayer = juice.sayer()
 
   ---@type StreamHandlers
@@ -446,7 +456,7 @@ function M.run_chat(opts)
           seg.set_text('\n======\n' .. text)
         end
       else
-        seg.add('\n======\n')
+        seg.add_line('======')
       end
 
       seg.clear_hl()
@@ -487,10 +497,6 @@ function M.run_chat(opts)
   }
 
   local chat_runner = create_chat_runner(chat, handlers, chat_prompt)
-
-  if not chat.trail then
-    seg.add('\n======\n')
-  end
 
   local ok, err = pcall(chat_runner, function(cancel)
     seg.data.cancel = cancel
@@ -533,7 +539,10 @@ end
 local function run_chat_completion(chat, chat_prompt, seg)
   seg.data.chat = chat
 
-  local stop_spinner = juice.spinner(seg, 'Waiting for response ..')
+  local stop_spinner = juice.spinner({
+    position = seg.get_span().stop,
+    label = 'Waiting for response ..',
+  })
 
   local response = ''
 

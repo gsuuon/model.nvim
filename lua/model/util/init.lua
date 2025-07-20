@@ -417,6 +417,15 @@ function M.position.is_bounded(pos, start, stop)
   return M.position.is_greater_eq(start, pos) and M.position.is_less(stop, pos)
 end
 
+---@param pos Position
+---@return Position
+function M.position.row_below(pos)
+  return {
+    col = 0,
+    row = pos.row + 1,
+  }
+end
+
 --- Converts a 0-indexed position like {row = 0, col = 0} to '(0,0)'
 ---@param pos Position
 ---@return string

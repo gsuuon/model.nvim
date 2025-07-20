@@ -1,17 +1,17 @@
 local util = require('model.util')
 
 ---@class Segment
----@field add fun(text: string): nil
----@field add_virt fun(text: string): nil
----@field set_text fun(text: string): nil
+---@field add fun(text: string)
+---@field add_line fun(line:string) add some text, ensuring it's own it's own line
+---@field add_virt fun(text: string)
+---@field set_text fun(text: string)
 ---@field get_text fun(): string
----@field set_virt fun(text: string, hl_group?:string, opts?: vim.api.keyset.set_extmark, on_error?: fun(err: any)): nil
----@field clear_hl fun(): nil
----@field delete fun(): nil
+---@field set_virt fun(text: string, hl_group?:string, opts?: vim.api.keyset.set_extmark, on_error?: fun(err: any))
+---@field clear_hl fun()
+---@field delete fun()
 ---@field data table
 ---@field get_span fun(): Span
----@field highlight fun(hl_group: string): nil
----@field details fun(): {row: number, col: number, details: table, bufnr: number}
+---@field highlight fun(hl_group: string)
 ---@field ext_id number
 
 local M = {
@@ -54,20 +54,23 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
   local _hl_group = hl_group or M.default_hl
   local _data = {}
   local _did_add_text_to_undo = false
+  local _did_delete = false
   local _text = ''
 
-  local last_line = vim.api.nvim_buf_line_count(bufnr) - 1
-  local safe_row = math.min(row, last_line)
-  local end_row = math.min(safe_row, last_line) -- end_row starts same as row initially
+  local _ext_id
+  do
+    local last_line = vim.api.nvim_buf_line_count(bufnr) - 1
+    local safe_row = math.min(row, last_line)
+    local end_row = math.min(safe_row, last_line)
 
-  local _ext_id =
-    vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), safe_row, col, {
+    _ext_id = vim.api.nvim_buf_set_extmark(bufnr, M.ns_id(), safe_row, col, {
       hl_group = hl_group,
 
       -- these need to be set or else get_details doesn't return end_*s
       end_row = end_row,
       end_col = col,
     })
+  end
 
   local function get_details()
     if _ext_id == nil then
@@ -96,14 +99,32 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     }
   end
 
+  ---@param span Span
+  ---@param opts? vim.api.keyset.set_extmark
+  local function _update_extmark(span, opts)
+    local details = get_details()
+
+    vim.api.nvim_buf_set_extmark(
+      bufnr,
+      M.ns_id(),
+      span.start.row,
+      span.start.col,
+      vim.tbl_extend('force', details.details, {
+        id = _ext_id,
+        end_col = span.stop.col,
+        end_row = span.stop.row,
+      }, opts or {})
+    )
+  end
+
   local function get_span()
     local deets = get_details()
 
-    local end_row_ = deets.details.end_row or deets.row
+    local end_row = deets.details.end_row or deets.row
     local end_col = deets.details.end_col or deets.col
-    local start_row = math.min(deets.row, end_row_)
+    local start_row = math.min(deets.row, end_row)
     local start_col = math.min(deets.col, end_col)
-    end_row = math.max(deets.row, end_row_)
+    end_row = math.max(deets.row, end_row)
     end_col = math.max(deets.col, end_col)
 
     ---@type Span
@@ -119,37 +140,12 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     }
   end
 
-  local virt_text = ''
-
   local function set_virt_text(text, virt_hl_group, opts)
-    -- virtual text can't be multiline and doesn't wrap
-    -- this workaround will set the first line of the virt text at the mark
-    -- the other lines will start at the row under
-    -- this can be weird in some cases. If the virt text is intended to replace
-    -- a bit of inline text, e.g. foo<virt>baz -- in a multiline case the first
-    -- line goes at <virt> while the rest will start the line under, leaving the baz.
-    local span = get_span()
-    virt_text = text
-
-    local virt_lines = vim.tbl_map(function(line)
-      return { { line, virt_hl_group or _hl_group } }
-    end, vim.split(virt_text, '\n'))
-
-    local t = table.remove(virt_lines, 1)
-
-    vim.api.nvim_buf_set_extmark(
-      bufnr,
-      M.ns_id(),
-      span.start.row,
-      span.start.col,
+    _update_extmark(
+      get_span(),
       vim.tbl_deep_extend('force', {
-        id = _ext_id,
-        hl_group = _hl_group,
-        virt_text = t,
+        virt_text = { { text, virt_hl_group or 'Comment' } },
         virt_text_pos = 'inline',
-        virt_lines = #virt_lines > 0 and virt_lines or nil,
-        end_row = span.stop.row,
-        end_col = span.stop.col,
       }, opts or {})
     )
   end
@@ -177,20 +173,11 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
         lines
       )
 
-      local end_pos = end_delta(lines, span.start.row, span.start.col)
+      _update_extmark({
+        start = span.start,
+        stop = end_delta(lines, span.start.row, span.start.col),
+      })
 
-      vim.api.nvim_buf_set_extmark(
-        bufnr,
-        M.ns_id(),
-        span.start.row,
-        span.start.col,
-        {
-          id = _ext_id,
-          end_col = end_pos.col,
-          end_row = end_pos.row,
-          hl_group = _hl_group,
-        }
-      )
       _text = text
     end),
 
@@ -203,10 +190,6 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       if not ok and on_error then
         on_error(res)
       end
-    end),
-
-    add_virt = vim.schedule_wrap(function(text)
-      set_virt_text(virt_text .. text)
     end),
 
     add = vim.schedule_wrap(function(text)
@@ -228,21 +211,63 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
 
       vim.api.nvim_buf_set_text(bufnr, r, c, r, c, lines)
 
-      local end_pos = end_delta(lines, r, c)
+      _update_extmark({
+        start = span.start,
+        stop = end_delta(lines, r, c),
+      })
 
-      vim.api.nvim_buf_set_extmark(
+      _text = _text .. text
+      _did_add_text_to_undo = true
+    end),
+
+    add_line = vim.schedule_wrap(function(line)
+      local span = get_span()
+
+      if _did_add_text_to_undo and join_undo then
+        pcall(vim.cmd.undojoin) -- Errors if user did undo immediately before
+        -- e.g. during a stream
+      end
+
+      local last_next_lines = vim.api.nvim_buf_get_lines(
         bufnr,
-        M.ns_id(),
-        span.start.row,
-        span.start.col,
-        {
-          id = _ext_id,
-          end_col = end_pos.col,
-          end_row = end_pos.row,
-          hl_group = _hl_group, -- need to set hl_group every time we want to update the extmark
-        }
+        span.stop.row,
+        span.stop.row + 2,
+        false
       )
 
+      local last_line = last_next_lines[1]
+      local next_line = last_next_lines[2]
+
+      local lines = { line }
+      local lines_added = 1
+
+      if last_line ~= '' then
+        lines_added = lines_added + 1
+        table.insert(lines, 1, '')
+      end
+
+      if next_line ~= '' then
+        table.insert(lines, '')
+      end
+
+      vim.api.nvim_buf_set_text(
+        bufnr,
+        span.stop.row,
+        span.stop.col,
+        span.stop.row,
+        span.stop.col,
+        lines
+      )
+
+      _update_extmark({
+        start = span.start,
+        stop = {
+          row = span.stop.row + lines_added,
+          col = 0,
+        },
+      })
+
+      _text = _text .. '\n' .. line .. '\n'
       _did_add_text_to_undo = true
     end),
 
@@ -282,6 +307,10 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     end),
 
     delete = vim.schedule_wrap(function()
+      if _did_delete then
+        return
+      end
+
       local span = get_span()
 
       vim.api.nvim_buf_set_text(
@@ -294,6 +323,8 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
       )
 
       vim.api.nvim_buf_del_extmark(bufnr, M.ns_id(), _ext_id)
+      segments_cache[_ext_id] = nil
+      _did_delete = true
     end),
 
     ext_id = _ext_id,

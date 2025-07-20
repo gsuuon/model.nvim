@@ -126,10 +126,6 @@ local function _object(field_handlers, required_fields)
             in_object = false
             is_complete = true
             check_required_fields()
-            -- dshow({
-            --   note = 'saw end',
-            --   part = partial:sub(1, i),
-            -- })
             return i -- Return position where object ended
           end
 

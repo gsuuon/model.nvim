@@ -135,7 +135,10 @@ function M.request_completion(handlers, params, options)
         elseif waiting_first_response then
           waiting_first_response = false
           handlers.on_partial('') -- stop spinner, we have a response
-          stop_marquee = juice.spinner(handlers.segment, 'Thinking...')
+          stop_marquee = juice.spinner({
+            position = handlers.segment.get_span().stop,
+            label = 'Thinking...',
+          })
         end
       end
     end,

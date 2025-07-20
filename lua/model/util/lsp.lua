@@ -10,13 +10,6 @@ local function pull_diagnostics(bufnr, callback)
   vim.lsp.buf_request(bufnr, 'textDocument/diagnostic', {
     textDocument = vim.lsp.util.make_text_document_params(bufnr),
   }, function(err, result, context, config)
-    dshow({
-      err,
-      result,
-      context,
-      config,
-    })
-
     callback(err, result, context, config)
   end)
 end
