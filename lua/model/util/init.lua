@@ -541,6 +541,22 @@ function M.buf.prompt(callback, initial_content, title)
   vim.cmd.startinsert()
 end
 
+--- Resets stale buffer folds
+function M.buf.reset_mchat_folds(bufnr)
+  vim.api.nvim_buf_call(bufnr, function()
+    local foldexpr = vim.o.foldexpr
+
+    vim.o.foldexpr = 'manual' -- clears cached foldexpr values
+    vim.bo.filetype = 'mchat' -- clears treesitter fold cache
+
+    vim.schedule(function()
+      vim.api.nvim_buf_call(bufnr, function()
+        vim.o.foldexpr = foldexpr
+      end)
+    end)
+  end)
+end
+
 M.module = {}
 
 --- Re-require a module on access. Useful when developing a prompt library to avoid restarting nvim.

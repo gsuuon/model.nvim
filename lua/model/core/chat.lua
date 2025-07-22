@@ -485,6 +485,8 @@ function M.run_chat(opts)
       stop_spinner()
       sayer.finish()
 
+      util.buf.reset_mchat_folds(bufnr)
+
       if text then
         if chat.trail then
           seg.set_text(text)
