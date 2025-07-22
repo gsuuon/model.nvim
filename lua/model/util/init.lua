@@ -410,11 +410,25 @@ function M.position.is_greater_eq(a, b)
   return not M.position.is_less(a, b)
 end
 
--- pos is between start (inclusive) and final (exclusive)
--- false if pos == start == final
+-- pos is between start and stop inclusive
 function M.position.is_bounded(pos, start, stop)
-  -- stop.row can be nil? huh
-  return M.position.is_greater_eq(start, pos) and M.position.is_less(stop, pos)
+  if pos.row < start.row then
+    return false
+  end
+
+  if pos.row > stop.row then
+    return false
+  end
+
+  if pos.row == start.row and pos.col < start.col then
+    return false
+  end
+
+  if pos.row == stop.row and pos.col > stop.col then
+    return false
+  end
+
+  return true
 end
 
 ---@param pos Position

@@ -323,7 +323,10 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
         _data.original or {}
       )
 
-      vim.api.nvim_buf_del_extmark(bufnr, M.ns_id(), _ext_id)
+      if not vim.api.nvim_buf_del_extmark(bufnr, M.ns_id(), _ext_id) then
+        util.eshow('Tried to delete non-existing extmark')
+      end
+
       segments_cache[_ext_id] = nil
       _did_delete = true
     end),
