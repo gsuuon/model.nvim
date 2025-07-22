@@ -21,7 +21,7 @@ local function extract_chunk(data)
 end
 
 -- Reasoning content management
-local REASONING_DELIM_START = '<<<<<< reasoning\n'
+local REASONING_DELIM_START = '\n<<<<<< reasoning\n'
 local REASONING_DELIM_STOP = '\n>>>>>>\n'
 
 local function create_reason_handler(handler, show_reasoning)
@@ -34,7 +34,8 @@ local function create_reason_handler(handler, show_reasoning)
       reason = function(partial)
         if not is_reasoning then
           is_reasoning = true
-          handler.on_partial(REASONING_DELIM_START .. partial)
+          handler.on_partial(REASONING_DELIM_START)
+          handler.on_partial(partial)
         else
           handler.on_partial(partial)
         end
@@ -42,7 +43,8 @@ local function create_reason_handler(handler, show_reasoning)
       content = function(partial)
         if is_reasoning then
           is_reasoning = false
-          handler.on_partial(REASONING_DELIM_STOP .. partial)
+          handler.on_partial(REASONING_DELIM_STOP)
+          handler.on_partial(partial)
         else
           handler.on_partial(partial)
         end

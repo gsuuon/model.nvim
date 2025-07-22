@@ -53,29 +53,49 @@ end
 
 local function parse_data_sections(content)
   local data_sections = {}
+  local lines = type(content) == 'string' and vim.split(content, '\n')
+    or content
+  local current_section = nil
+  local current_label = nil
+  local current_content = {}
+  local regular_content = {}
 
-  local function consume_section(label, data_section_content)
-    table.insert(data_sections, {
-      label = label,
-      content = data_section_content,
-    })
-    return '\n'
+  for _, line in ipairs(lines) do
+    if current_section then
+      if line:match('^>>>>>>$') then
+        table.insert(data_sections, {
+          label = current_label,
+          content = table.concat(current_content, '\n'),
+        })
+        current_section = nil
+        current_label = nil
+        current_content = {}
+      else
+        table.insert(current_content, line)
+      end
+    else
+      local label = line:match('^<<<<<< (.+)$')
+      if label then
+        current_section = true
+        current_label = label
+      else
+        -- Regular content line
+        table.insert(regular_content, line)
+      end
+    end
   end
 
-  -- there must be a better way to do this
-  -- main issue is that we need the separators to be on their _own_ lines to match
-  -- we also need to match if the section contains _only_ a data section (so we get no newlines)
-  -- i've simply covered all the cases here. using `[\n]?` caused an infinite loop in one case.
-  -- maybe `%bxy` ? (though our delimiter is multichar)
-  local clean_content = content
-    :gsub('^<<<<<< (.-)\n(.-)\n>>>>>>\n', consume_section)
-    :gsub('\n<<<<<< (.-)\n(.-)\n>>>>>>\n', consume_section)
-    :gsub('\n<<<<<< (.-)\n(.-)\n>>>>>>$', consume_section)
-    :gsub('^<<<<<< (.-)\n(.-)\n>>>>>>$', consume_section)
+  -- Handle case where we have leftover content in current_section (unclosed section)
+  if current_section then
+    table.insert(data_sections, {
+      label = current_label,
+      content = table.concat(current_content, '\n'),
+    })
+  end
 
   return {
     data_sections = data_sections,
-    content = vim.trim(clean_content),
+    content = vim.trim(table.concat(regular_content, '\n')),
   }
 end
 
@@ -417,7 +437,13 @@ function M.run_chat(opts)
     'Chat prompt "' .. chat.chat .. '" not found in setup({chats = {..}})'
   )
 
-  local seg = segment.create_segment_at(#lines, 0)
+  local create_line = #lines
+
+  while lines[create_line] == '' do
+    create_line = create_line - 1
+  end
+
+  local seg = segment.create_segment_at(create_line, 0)
 
   if not chat.trail then
     seg.add_line('======')
@@ -435,8 +461,18 @@ function M.run_chat(opts)
   local handlers = {
     on_partial = function(text)
       stop_spinner()
-      seg.add(text)
       sayer.say(text)
+
+      -- Check if text matches exactly a delimiter pattern with optional newlines
+      local is_delimiter = text:match('^\n?======\n?$')
+        or text:match('^\n?<<<<<<.-\n?$')
+        or text:match('^\n?>>>>>>\n?$')
+
+      if is_delimiter then
+        seg.add_line(vim.trim(text))
+      else
+        seg.add(text)
+      end
 
       vim.schedule(function()
         emit_event('ModelChatPartial', {
@@ -453,7 +489,9 @@ function M.run_chat(opts)
         if chat.trail then
           seg.set_text(text)
         else
-          seg.set_text('\n======\n' .. text)
+          seg.set_text('')
+          seg.add_line('======')
+          seg.add(text)
         end
       else
         seg.add_line('======')

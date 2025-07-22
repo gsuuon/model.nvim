@@ -2,8 +2,8 @@ local util = require('model.util')
 local util_tools = require('model.util.tools')
 
 -- Tool handling utilities
-local TOOL_CALL_DELIM = '<<<<<< tool_calls\n'
-local TOOL_CALL_DELIM_END = '\n>>>>>>'
+local TOOL_CALL_DELIM = '\n<<<<<< tool_calls\n'
+local TOOL_CALL_DELIM_END = '\n>>>>>>\n'
 
 -- Emits tool calls in a data_section with contents as JSON encoded of type ToolCall
 local function create_tool_chunk_handlers(emit, equipped_tools)
@@ -17,7 +17,8 @@ local function create_tool_chunk_handlers(emit, equipped_tools)
       if not has_tool_calls then
         has_tool_calls = true
         -- the newline before is necessary, sometimes we already have several -- would be nice to skip this if we do to avoid unecessary ugly spacing
-        emit('\n' .. TOOL_CALL_DELIM .. '[\n')
+        emit(TOOL_CALL_DELIM)
+        emit('[\n')
       else
         emit('"\n  },\n')
       end
@@ -84,17 +85,22 @@ local function create_tool_handler(available_tools, allowed_tools)
       local function maybe_finish()
         if not complete and finished == total then
           complete = true
-          local result_str = ''
+
+          local result_strings = {}
+
           for id, content in pairs(results) do
-            result_str = result_str
-              .. string.format(
-                '\n<<<<<< tool_result: %s\n%s\n>>>>>>\n',
+            table.insert(
+              result_strings,
+              string.format(
+                '<<<<<< tool_result: %s\n%s\n>>>>>>',
                 id,
                 type(content) == 'string' and content
                   or vim.json.encode(content)
               )
+            )
           end
-          on_finish(result_str)
+
+          on_finish(table.concat(result_strings, '\n'))
         end
       end
 
