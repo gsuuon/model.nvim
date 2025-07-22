@@ -20,6 +20,7 @@ local M = {
 }
 
 local segments_cache = {}
+local undo_handlers_by_buf = {}
 
 function M.ns_id()
   if M._ns_id == nil then
@@ -150,7 +151,7 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
     )
   end
 
-  return {
+  local segment = {
     set_text = vim.schedule_wrap(function(text)
       if text == nil then
         return
@@ -335,6 +336,61 @@ local function create_segment_at(row, col, bufnr, hl_group, join_undo)
 
     data = _data,
   }
+
+  segment.bufnr = bufnr
+
+  -- Setup undo handler if not already set for this buffer
+  if not undo_handlers_by_buf[bufnr] then
+    undo_handlers_by_buf[bufnr] = true
+
+    -- Only override 'u' if it's not already mapped
+    if vim.fn.maparg('u', 'n') == '' then
+      vim.keymap.set('n', 'u', function()
+        vim.cmd('undo') -- Perform normal undo first
+        M.on_undo(bufnr) -- Then run our custom undo handler
+      end, { buffer = bufnr })
+    end
+  end
+
+  return segment
+end
+
+--- Handle undo event for a buffer
+---@param bufnr number
+function M.on_undo(bufnr)
+  vim.schedule(function()
+    -- Check all segments in this buffer
+    for ext_id, seg in pairs(segments_cache) do
+      if
+        seg.bufnr == bufnr
+        and not seg._did_delete
+        and seg.data.original ~= nil
+      then
+        local span = seg.get_span()
+        local ok, current_lines = pcall(
+          vim.api.nvim_buf_get_text,
+          bufnr,
+          span.start.row,
+          span.start.col,
+          span.stop.row,
+          span.stop.col,
+          {}
+        )
+
+        if ok then
+          local current_text = table.concat(current_lines, '\n')
+          local original_text = table.concat(seg.data.original, '\n')
+
+          if current_text == original_text then
+            seg.delete()
+          end
+        else
+          -- Segment is invalid (likely outside buffer range)
+          seg.delete()
+        end
+      end
+    end
+  end)
 end
 
 ---@param row integer
