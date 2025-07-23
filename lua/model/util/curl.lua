@@ -6,6 +6,11 @@ local M = {}
 local function build_args(opts, stream, with_headers)
   local args = {
     '-sS', -- silent (no progress) but show errors
+    '--retry',
+    '5',
+    '--retry-delay',
+    '2',
+    '--retry-all-errors',
   }
 
   if with_headers then
