@@ -9,7 +9,7 @@ if not vim.b.did_mchat_plugin then
     force = true,
   })
 
-  vim.api.nvim_create_user_command('MchatToolPresentation', function(cmd)
+  vim.api.nvim_create_user_command('MToolPresentAgain', function(cmd)
     local model = require('model')
     local tools = require('model.util.tools')
 
@@ -63,7 +63,7 @@ if not vim.b.did_mchat_plugin then
     buffer = true,
   })
 
-  vim.api.nvim_create_user_command('MchatToolAutoAcceptNames', function(cmd)
+  vim.api.nvim_create_user_command('MToolAutoAcceptByName', function(cmd)
     local model = require('model')
     local tools = require('model.util.tools')
 

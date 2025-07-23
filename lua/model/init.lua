@@ -36,6 +36,25 @@ local function command_request_completion(cmd_params)
   return provider.request_completion(prompt, args, want_visual_selection)
 end
 
+local function command_chat_completion(cmd_params)
+  local chat_name = table.remove(cmd_params.fargs, 1)
+  local instructions = table.concat(cmd_params.fargs, ' ')
+
+  if chat_name ~= nil and chat_name ~= '' then
+    local chat_prompt = assert(
+      vim.tbl_get(M.opts, 'chats', chat_name),
+      'Chat "' .. chat_name .. '" not found'
+    )
+
+    local want_visual_selection = cmd_params.range ~= 0
+
+    local source = input.get_source(want_visual_selection)
+    local input_context = input.get_input_context(source, instructions)
+
+    chat.start_chat_completion(chat_name, chat_prompt, input_context, source)
+  end
+end
+
 ---@diagnostic disable-next-line: unused-function, unused-local
 local function _command_request_multi_completion_streams(cmd_params)
   local prompt_names = cmd_params.fargs
@@ -289,15 +308,7 @@ local function setup_commands()
     desc = 'Select the completion under the cursor',
   })
 
-  vim.api.nvim_create_user_command('M', command_request_completion, {
-    range = true,
-    desc = 'Request completion of selection',
-    force = true,
-    nargs = '*',
-    complete = scopes.complete_arglead_prompt_names,
-  })
-
-  vim.api.nvim_create_user_command('Model', command_request_completion, {
+  vim.api.nvim_create_user_command('Mcompletion', command_request_completion, {
     range = true,
     desc = 'Request completion of selection',
     force = true,
@@ -358,36 +369,23 @@ local function setup_commands()
     return vim.fn.matchfuzzy(chat_names, arglead)
   end
 
-  vim.api.nvim_create_user_command(
-    'MchatCompletionContinue',
-    function(cmd_params)
-      local instructions = table.concat(cmd_params.fargs, ' ')
-
-      chat.continue_chat_completion(M.opts, instructions)
-    end,
-    {
-      nargs = '+',
-    }
-  )
-
-  vim.api.nvim_create_user_command('MchatCompletion', function(cmd_params)
-    local chat_name = table.remove(cmd_params.fargs, 1)
+  vim.api.nvim_create_user_command('Mcontinue', function(cmd_params)
     local instructions = table.concat(cmd_params.fargs, ' ')
 
-    if chat_name ~= nil and chat_name ~= '' then
-      local chat_prompt = assert(
-        vim.tbl_get(M.opts, 'chats', chat_name),
-        'Chat "' .. chat_name .. '" not found'
-      )
-
-      local want_visual_selection = cmd_params.range ~= 0
-
-      local source = input.get_source(want_visual_selection)
-      local input_context = input.get_input_context(source, instructions)
-
-      chat.start_chat_completion(chat_name, chat_prompt, input_context, source)
-    end
+    chat.continue_chat_completion(M.opts, instructions)
   end, {
+    nargs = '+',
+  })
+
+  vim.api.nvim_create_user_command('M', command_chat_completion, {
+    desc = 'Complete using a chat handler',
+    force = true,
+    range = true,
+    nargs = '*',
+    complete = complete_chat_names,
+  })
+
+  vim.api.nvim_create_user_command('Model', command_chat_completion, {
     desc = 'Complete using a chat handler',
     force = true,
     range = true,
@@ -503,6 +501,14 @@ local function setup_commands()
   vim.api.nvim_create_user_command('MCpaste', function()
     vim.api.nvim_put(vim.fn.split(qflist.get_text(), '\n'), 'l', true, true)
   end, {})
+  vim.api.nvim_create_user_command('MCimport', function()
+    qflist.import_current()
+  end, {})
+  vim.api.nvim_create_user_command('MCshow', function()
+    qflist.set_current()
+    vim.cmd('cope')
+  end, {})
+
   vim.api.nvim_create_user_command('Mterm', function(opts)
     local cmd = table.concat(opts.fargs or {}, ' ')
     local buf = vim.api.nvim_create_buf(false, true)
