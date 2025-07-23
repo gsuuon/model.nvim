@@ -91,7 +91,7 @@ User selection:
                 ]]):format(input),
     context.after,
     get_diagnostics(context.selection),
-    context.args == '' and '' or ('User instruction: ' .. context.args)
+    context.args == '' and '' or ('User instruction:\n' .. context.args)
   )
 end
 

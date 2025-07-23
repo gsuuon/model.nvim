@@ -270,7 +270,7 @@ end
 ---@param name string
 ---@return string
 function M.to_string(contents, name)
-  local result = name .. '\n'
+  local result_lines = { name }
 
   if not vim.tbl_isempty(contents.config) then
     -- TODO consider refactoring this so we're not treating system special
@@ -279,42 +279,46 @@ function M.to_string(contents, name)
     local without_system = util.table.without(contents.config, 'system')
 
     if without_system and not vim.tbl_isempty(without_system) then
-      result = result .. '---\n' .. vim.inspect(without_system) .. '\n---\n'
+      table.insert(result_lines, '---')
+      vim.list_extend(
+        result_lines,
+        vim.split(vim.inspect(without_system), '\n')
+      )
+      table.insert(result_lines, '---')
     end
 
     if contents.config.system then
-      result = result .. '> ' .. contents.config.system .. '\n'
+      table.insert(result_lines, '> ' .. contents.config.system)
     end
   end
 
   for i, message in ipairs(contents.messages) do
     if i ~= 1 then
-      result = result .. '\n======\n'
+      table.insert(result_lines, '======')
     end
 
     if message.data_sections then
       for _, section in ipairs(message.data_sections) do
-        result = result
-          .. string.format(
-            '<<<<<< %s\n%s\n>>>>>>\n',
-            section.label,
-            section.content
-          )
+        table.insert(result_lines, '<<<<<< ' .. section.label)
+        vim.list_extend(
+          result_lines,
+          vim.split(section.content, '\n', { trimempty = true })
+        )
+        table.insert(result_lines, '>>>>>>')
       end
     end
 
-    if message.role == 'user' then
-      result = result .. '\n' .. message.content .. '\n'
-    else
-      result = result .. message.content
-    end
+    vim.list_extend(
+      result_lines,
+      vim.split(message.content, '\n', { trimempty = true })
+    )
   end
 
   if #contents.messages % 2 == 0 then
-    result = result .. '\n======\n'
+    table.insert(result_lines, '======')
   end
 
-  return vim.fn.trim(result, '\n', 2) -- trim trailing newline
+  return table.concat(result_lines, '\n')
 end
 
 function M.build_contents(chat_prompt, input_context)
@@ -463,10 +467,9 @@ function M.run_chat(opts)
       stop_spinner()
       sayer.say(text)
 
-      -- Check if text matches exactly a delimiter pattern with optional newlines
-      local is_delimiter = text:match('^\n?======\n?$')
-        or text:match('^\n?<<<<<<.-\n?$')
-        or text:match('^\n?>>>>>>\n?$')
+      -- Check if text matches exactly a data delimiter pattern with newlines
+      local is_delimiter = text:match('^\n<<<<<<.-\n$')
+        or text:match('^\n>>>>>>\n$')
 
       if is_delimiter then
         seg.add_line(vim.trim(text))
