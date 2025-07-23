@@ -15,8 +15,8 @@ local M = {}
 
 ---@class ChatPrompt
 ---@field provider Provider The API provider for this prompt
----@field create fun(input: string, context: Context): string | ChatContents Converts input and context to the first message text or ChatContents
----@field run fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil ) ) Converts chat messages and config into completion request params
+---@field create? fun(input: string, context: Context): string | ChatContents Converts input and context to the first message text or ChatContents
+---@field run? fun(messages: ChatMessage[], config: ChatConfig): table | fun(resolve: fun(params: table): nil ) ) Converts chat messages and config into completion request params
 ---@field runOptions? fun(): table Builds additional options to merge into chat prompt options. E.g. for auth tokens that shouldn't be written to the chat config header.
 ---@field system? string System instruction
 ---@field params? table Static request parameters
@@ -321,9 +321,24 @@ function M.to_string(contents, name)
   return table.concat(result_lines, '\n')
 end
 
+--- Extends given chat prompt with provider's default chat prompt
+---@param chat_prompt ChatPrompt
+---@return ChatPrompt
+local function extend_with_default_prompt(chat_prompt)
+  if chat_prompt.provider and chat_prompt.provider.default_chat_prompt then
+    return vim.tbl_deep_extend(
+      'force',
+      {},
+      chat_prompt.provider.default_chat_prompt,
+      chat_prompt
+    )
+  end
+  return chat_prompt
+end
+
 function M.build_contents(chat_prompt, input_context)
-  local first_message_or_contents =
-    chat_prompt.create(input_context.input, input_context.context)
+  -- Extend with provider's default prompt first
+  chat_prompt = extend_with_default_prompt(chat_prompt)
 
   local config = {
     options = chat_prompt.options,
@@ -334,26 +349,42 @@ function M.build_contents(chat_prompt, input_context)
   ---@type ChatContents
   local chat_contents
 
-  if type(first_message_or_contents) == 'string' then
+  if type(chat_prompt.create) == 'function' then
+    local first_message_or_contents =
+      chat_prompt.create(input_context.input, input_context.context)
+
+    if type(first_message_or_contents) == 'string' then
+      chat_contents = {
+        config = config,
+        messages = {
+          {
+            role = 'user',
+            content = first_message_or_contents,
+          },
+        },
+      }
+    elseif type(first_message_or_contents) == 'table' then
+      chat_contents = vim.tbl_deep_extend(
+        'force',
+        { config = config },
+        first_message_or_contents
+      )
+    else
+      error(
+        'ChatPrompt.create() needs to return a string for the first message or an ChatContents'
+      )
+    end
+  else
+    -- If create function is missing, use a default implementation
     chat_contents = {
       config = config,
       messages = {
         {
           role = 'user',
-          content = first_message_or_contents,
+          content = input_context.input,
         },
       },
     }
-  elseif type(first_message_or_contents) == 'table' then
-    chat_contents = vim.tbl_deep_extend(
-      'force',
-      { config = config },
-      first_message_or_contents
-    )
-  else
-    error(
-      'ChatPrompt.create() needs to return a string for the first message or an ChatContents'
-    )
   end
 
   return chat_contents
@@ -391,8 +422,19 @@ end
 ---@param handlers StreamHandlers
 ---@param chat_prompt ChatPrompt
 local function create_chat_runner(chat, handlers, chat_prompt)
-  local run_params =
-    chat_prompt.run(chat.contents.messages, chat.contents.config)
+  -- Extend with provider's default prompt
+  chat_prompt = extend_with_default_prompt(chat_prompt)
+
+  local run_params = nil
+
+  if type(chat_prompt.run) == 'function' then
+    run_params = chat_prompt.run(chat.contents.messages, chat.contents.config)
+  else
+    -- Default run function if not provided
+    run_params = {
+      messages = chat.contents.messages,
+    }
+  end
 
   if run_params == nil then
     error('Chat prompt run() returned nil')

@@ -26,6 +26,24 @@ end
 --- }
 ---@class Provider
 local M = {
+  --- Default chat prompt for Anthropic provider
+  default_chat_prompt = {
+    provider = M,
+    create = function(input, context)
+      return context.selection and input or ''
+    end,
+    run = function(messages, config)
+      return vim.tbl_deep_extend('force', config.params or {}, {
+        messages = messages,
+        system = config.system,
+      })
+    end,
+    system = 'You are a helpful assistant',
+    params = {
+      model = 'claude-4-sonnet',
+    },
+  },
+
   request_completion = function(handler, params, options)
     options = options or {}
 

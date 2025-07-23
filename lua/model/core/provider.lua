@@ -16,6 +16,7 @@ local M = {}
 ---@class Provider
 ---@field request_completion fun(handler: StreamHandlers, params?: table, options?: table): function Request a completion stream from provider, returning a cancel callback. Call the handler methods to feed the completion parts back to the prompt runner, and call on_finish after the completion is done.
 ---@field default_prompt? Prompt
+---@field default_chat_prompt? ChatPrompt
 ---@field adapt? fun(prompt: StandardPrompt): table Adapt a standard prompt to params for this provider
 
 ---@alias ParamsBuilder fun(input: string, context: Context): table | fun(resolve: fun(params: table)) Converts input and context to request data. Returns the params to use for this request or a function that takes a callback which should be called with the params for this request.

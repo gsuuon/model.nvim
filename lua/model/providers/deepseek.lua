@@ -111,6 +111,26 @@ end
 
 -- Deepseek provider implementation
 local M = {
+  default_chat_prompt = {
+    provider = M,
+    create = function(input, context)
+      return context.selection and input or ''
+    end,
+    run = function(messages, config)
+      if config.system then
+        table.insert(messages, 1, {
+          role = 'system',
+          content = config.system,
+        })
+      end
+      return { messages = messages }
+    end,
+    system = 'You are a helpful assistant',
+    params = {
+      model = 'deepseek-chat',
+    },
+  },
+
   ---@param handler StreamHandlers
   request_completion = function(handler, params, options)
     options = options or {}
