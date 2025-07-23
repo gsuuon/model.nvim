@@ -6,7 +6,7 @@ local segment = require('model.util.segment')
 
 return {
   description = [[
-Edit a file by replacing the contents of a tree-sitter node. First use get_file_treesitter to identify nodes.
+Edit a file by replacing the contents of a target syntax node. You MUST FIRST use get_file_treesitter to get which nodes are valid targets.
 ]],
   parameters = {
     type = 'object',
@@ -92,7 +92,21 @@ Edit a file by replacing the contents of a tree-sitter node. First use get_file_
           path = complete
           files.show_diff(path, '', function(data)
             bufnr = data.new_bufnr
-            vim.api.nvim_buf_set_name(bufnr, 'edit_file_treesitter - ' .. path)
+            local ok, _ = pcall(function()
+              vim.api.nvim_buf_set_name(
+                bufnr,
+                'edit_file_treesitter - ' .. path
+              )
+            end)
+            if not ok then
+              local count = 1
+              local new_name
+              repeat
+                new_name = 'edit_file_treesitter - ' .. path .. ' - ' .. count
+                ok = pcall(vim.api.nvim_buf_set_name, bufnr, new_name)
+                count = count + 1
+              until ok
+            end
 
             local orig_lines =
               vim.api.nvim_buf_get_lines(data.orig_bufnr, 0, -1, false)

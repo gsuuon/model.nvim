@@ -18,8 +18,16 @@ local function top_level_nodes(bufnr, excludes)
   for child in root:iter_children() do
     if child:named() then
       local node_type = child:type()
+
       -- skip excluded node types
-      if not vim.tbl_contains(excludes, node_type) then
+      local should_exclude = false
+      for _, exclude in ipairs(excludes) do
+        if string.find(node_type, exclude, 1, true) then
+          should_exclude = true
+          break
+        end
+      end
+      if not should_exclude then
         local start_line = child:start()
         local first_line = vim.api.nvim_buf_get_lines(
           bufnr,

@@ -3,11 +3,9 @@ local files = require('model.util.files')
 
 return {
   description = [[
-Get the top-level tree-sitter nodes of a file. Returns an array of nodes with their name, start line number, and what the first line contains.
+Get the editable syntax nodes of a file. Returns an array of nodes with their name, start line number, and what the first line contains.
 
-If you read_file a file you may edit, it's useful to also get the treesitter nodes.
-
-Documentation comment nodes often appear above element nodes they describe. Comments are _separate_ nodes from the element itself. The comments above a function may describe it. For example, consecutive lines of comment nodes with no blank space are often doc strings.
+Format is `[node_name] (line #): [first line]`
 ]],
   parameters = {
     type = 'object',
@@ -33,8 +31,8 @@ Documentation comment nodes often appear above element nodes they describe. Comm
 
     local nodes = treesitter.file_top_level_nodes(
       args.path,
-      nil -- LLM may assume comments are part of function nodes if they're documentation
-      -- { 'comment' } We might make this an argument but it's likely to just confuse the LLM
+      -- nil -- LLM may assume comments are part of function nodes if they're documentation
+      { 'comment' } --  We might make this an argument but it's likely to just confuse the LLM
     )
 
     -- Format the nodes into a readable string
